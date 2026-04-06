@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 const OnboardingFlow: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -27,9 +28,9 @@ const OnboardingFlow: React.FC = () => {
         return <Step5Task onNext={nextStep} />;
       case 6:
         return (
-          <div className="text-center space-y-4">
-            <h2 className="text-2xl font-bold text-green-600">¡Onboarding completado!</h2>
-            <p className="text-gray-600">Tu equipo ya está configurado. Redirigiendo al dashboard...</p>
+          <div className="text-center space-y-4 animate-fade-in">
+            <h2 className="text-2xl font-bold text-success">¡Onboarding completado!</h2>
+            <p className="text-text-muted">Tu equipo ya está configurado. Redirigiendo al dashboard...</p>
             {setTimeout(() => (window.location.href = '/'), 3000) && null}
           </div>
         );
@@ -39,22 +40,29 @@ const OnboardingFlow: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 py-12">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-2xl w-full border border-gray-100">
-        <div className="mb-8">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 py-12 transition-colors duration-300">
+      <div className="glass-card p-8 md:p-12 max-w-2xl w-full border border-border/50 relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="mb-10 relative z-10">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold text-blue-600">SmartTrack</h1>
-            <span className="text-sm font-semibold text-gray-400">Paso {step} de 5</span>
+            <h1 className="text-2xl font-bold text-primary tracking-tight">SmartTrack</h1>
+            <span className="text-xs font-bold text-text-muted uppercase tracking-widest bg-surface px-3 py-1 rounded-full border border-border/50">
+              Paso {step} de 5
+            </span>
           </div>
-          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+          <div className="w-full bg-surface h-1.5 rounded-full overflow-hidden border border-border/20">
             <div
-              className="bg-blue-500 h-full transition-all duration-500"
+              className="bg-primary h-full transition-all duration-700 ease-out shadow-[0_0_10px_rgba(59,130,246,0.5)]"
               style={{ width: `${(step / 5) * 100}%` }}
             ></div>
           </div>
         </div>
 
-        {renderStep()}
+        <div className="relative z-10">
+          {renderStep()}
+        </div>
       </div>
     </div>
   );
@@ -64,24 +72,32 @@ const OnboardingFlow: React.FC = () => {
 const Step1Org = ({ onNext }: any) => {
   const [org, setOrg] = useState({ organization_name: '', country: 'Chile', team_name: '' });
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onNext(org); }} className="space-y-4">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">Crea tu organización y equipo</h2>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Nombre de la organización</label>
-        <input required type="text" placeholder="Nombre de la organización" className="w-full px-4 py-3 border rounded-xl" value={org.organization_name} onChange={(e) => setOrg({ ...org, organization_name: e.target.value })} />
+    <form onSubmit={(e) => { e.preventDefault(); onNext(org); }} className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-bold text-text-base">Crea tu organización y equipo</h2>
+        <p className="text-sm text-text-muted">Comencemos con los detalles básicos de tu espacio de trabajo.</p>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">País</label>
-        <select className="w-full px-4 py-3 border rounded-xl" value={org.country} onChange={(e) => setOrg({ ...org, country: e.target.value })}>
-          <option value="Chile">Chile</option>
-          <option value="Mexico">México</option>
-        </select>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Nombre de la organización</label>
+          <input required type="text" placeholder="Nombre de la organización" className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all" value={org.organization_name} onChange={(e) => setOrg({ ...org, organization_name: e.target.value })} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">País</label>
+            <select className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all appearance-none" value={org.country} onChange={(e) => setOrg({ ...org, country: e.target.value })}>
+              <option value="Chile">Chile</option>
+              <option value="Mexico">México</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Nombre del equipo</label>
+            <input required type="text" placeholder="Nombre de tu primer equipo" className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all" value={org.team_name} onChange={(e) => setOrg({ ...org, team_name: e.target.value })} />
+          </div>
+        </div>
       </div>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Nombre de tu primer equipo</label>
-        <input required type="text" placeholder="Nombre de tu primer equipo" className="w-full px-4 py-3 border rounded-xl" value={org.team_name} onChange={(e) => setOrg({ ...org, team_name: e.target.value })} />
-      </div>
-      <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg">Siguiente</button>
+      <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">Continuar</button>
     </form>
   );
 };
@@ -89,13 +105,22 @@ const Step1Org = ({ onNext }: any) => {
 const Step2Invite = ({ onNext, onSkip }: any) => {
   const [emails, setEmails] = useState('');
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-gray-800">Invita a tu equipo</h2>
-      <p className="text-sm text-gray-500 italic mb-4">(Opcional: puedes hacerlo más tarde)</p>
-      <textarea className="w-full px-4 py-3 border rounded-xl h-24" placeholder="emails separados por comas" value={emails} onChange={(e) => setEmails(e.target.value)} />
-      <div className="flex space-x-4">
-        <button onClick={onSkip} className="flex-1 bg-gray-100 text-gray-600 font-bold py-3 px-4 rounded-xl">Omitir</button>
-        <button onClick={() => onNext({ emails: emails.split(',').map(e => e.trim()) })} className="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-xl">Invitar y continuar</button>
+    <div className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-bold text-text-base">Invita a tu equipo</h2>
+        <p className="text-sm text-text-muted">SmartTrack es mejor en equipo. Agrega sus correos abajo.</p>
+      </div>
+
+      <textarea
+        className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl h-32 focus:bg-surface focus:border-primary outline-none transition-all"
+        placeholder="ejemplo1@empresa.com, ejemplo2@empresa.com"
+        value={emails}
+        onChange={(e) => setEmails(e.target.value)}
+      />
+
+      <div className="flex flex-col sm:flex-row gap-4 pt-2">
+        <button onClick={onSkip} className="flex-1 px-6 py-4 rounded-xl font-bold border border-border/50 text-text-muted hover:bg-surface transition-all">Omitir por ahora</button>
+        <button onClick={() => onNext({ emails: emails.split(',').map(e => e.trim()) })} className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">Invitar y continuar</button>
       </div>
     </div>
   );
@@ -103,19 +128,39 @@ const Step2Invite = ({ onNext, onSkip }: any) => {
 
 const Step3Skills = ({ onNext, onSkip }: any) => {
   const [selectedSkills, setSelectedSkills] = useState<number[]>([]);
+  const skills = ['React', 'FastAPI', 'MySQL', 'Python', 'DevOps', 'UI/UX', 'Management', 'Testing'];
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-semibold text-gray-800">Define tus skills</h2>
-      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2">
-        {['React', 'FastAPI', 'MySQL', 'Python'].map((s, idx) => (
-          <div key={idx} className={`p-3 border rounded-xl cursor-pointer ${selectedSkills.includes(idx) ? 'bg-blue-50 border-blue-400' : ''}`} onClick={() => setSelectedSkills(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])}>
+    <div className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-bold text-text-base">Define tus habilidades</h2>
+        <p className="text-sm text-text-muted">Esto ayuda al motor a sugerirte las mejores tareas.</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 custom-scrollbar">
+        {skills.map((s, idx) => (
+          <button
+            key={idx}
+            type="button"
+            className={`p-3 border rounded-xl text-xs font-bold transition-all ${
+              selectedSkills.includes(idx)
+                ? 'bg-primary/20 border-primary text-primary shadow-inner shadow-primary/10'
+                : 'bg-surface/50 border-border/50 text-text-muted hover:border-primary/50'
+            }`}
+            onClick={() => setSelectedSkills(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])}
+          >
             {s}
-          </div>
+          </button>
         ))}
       </div>
-      <div className="flex space-x-4 pt-4">
-        <button onClick={onSkip} className="flex-1 bg-gray-100 text-gray-600 font-bold py-3 px-4 rounded-xl">Omitir (Modo BASIC)</button>
-        <button onClick={() => onNext({ skill_ids: selectedSkills })} className="flex-1 bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg">Siguiente</button>
+
+      <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-border/20">
+        <button onClick={onSkip} className="flex-1 px-6 py-4 rounded-xl font-bold border border-border/50 text-text-muted hover:bg-surface transition-all">
+          Omitir (Modo BASIC)
+        </button>
+        <button onClick={() => onNext({ skill_ids: selectedSkills })} className="flex-1 bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">
+          Guardar y continuar
+        </button>
       </div>
     </div>
   );
@@ -124,27 +169,33 @@ const Step3Skills = ({ onNext, onSkip }: any) => {
 const Step4Project = ({ onNext }: any) => {
   const [project, setProject] = useState({ name: '', start_date: new Date().toISOString().split('T')[0], deadline: '', priority: 'Medium' });
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onNext(project); }} className="space-y-4">
-      <h2 className="text-xl font-semibold text-gray-800">Tu primer proyecto</h2>
-      <div>
-        <label className="block text-sm font-medium text-gray-700">Nombre del proyecto</label>
-        <input required type="text" placeholder="Nombre del proyecto" className="w-full px-4 py-3 border rounded-xl" value={project.name} onChange={(e) => setProject({ ...project, name: e.target.value })} />
+    <form onSubmit={(e) => { e.preventDefault(); onNext(project); }} className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-bold text-text-base">Tu primer proyecto</h2>
+        <p className="text-sm text-text-muted">¿En qué estará trabajando tu equipo esta semana?</p>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+
+      <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Inicio</label>
-          <input required type="date" className="w-full px-4 py-3 border rounded-xl" value={project.start_date} onChange={(e) => setProject({ ...project, start_date: e.target.value })} />
+          <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Nombre del proyecto</label>
+          <input required type="text" placeholder="Ej: Rediseño Web 2026" className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all" value={project.name} onChange={(e) => setProject({ ...project, name: e.target.value })} />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Prioridad</label>
-          <select className="w-full px-4 py-3 border rounded-xl" value={project.priority} onChange={(e) => setProject({ ...project, priority: e.target.value })}>
-            <option value="High">Alta</option>
-            <option value="Medium">Media</option>
-            <option value="Low">Baja</option>
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Fecha de inicio</label>
+            <input required type="date" className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all [color-scheme:dark]" value={project.start_date} onChange={(e) => setProject({ ...project, start_date: e.target.value })} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Prioridad</label>
+            <select className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all appearance-none" value={project.priority} onChange={(e) => setProject({ ...project, priority: e.target.value })}>
+              <option value="High">Alta</option>
+              <option value="Medium">Media</option>
+              <option value="Low">Baja</option>
+            </select>
+          </div>
         </div>
       </div>
-      <button type="submit" className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg">Crear Proyecto</button>
+      <button type="submit" className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">Crear Proyecto</button>
     </form>
   );
 };
@@ -161,23 +212,35 @@ const Step5Task = ({ onNext }: any) => {
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-800">Tu primera tarea y demo del motor</h2>
+    <div className="space-y-6 animate-fade-in">
+      <div className="space-y-1">
+        <h2 className="text-2xl font-bold text-text-base">Demo del Motor Inteligente</h2>
+        <p className="text-sm text-text-muted">Crea una tarea para ver cómo SmartTrack anticipa conflictos.</p>
+      </div>
+
       <div>
-        <label className="block text-sm font-medium text-gray-700">Nombre de la tarea</label>
-        <input required type="text" placeholder="Nombre de la tarea" className="w-full px-4 py-3 border rounded-xl" value={task.name} onChange={(e) => setTask({ ...task, name: e.target.value })} />
+        <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Nombre de la tarea</label>
+        <input required type="text" placeholder="Ej: Implementar Auth JWT" className="w-full px-4 py-3 border border-border/50 bg-surface/50 text-text-base rounded-xl focus:bg-surface focus:border-primary outline-none transition-all" value={task.name} onChange={(e) => setTask({ ...task, name: e.target.value })} />
       </div>
 
       {!motorResult ? (
-        <button onClick={handleCreate} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg">Crear Tarea y Validar</button>
+        <button onClick={handleCreate} className="w-full bg-primary hover:bg-primary-hover text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98]">
+          Validar Viabilidad
+        </button>
       ) : (
-        <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200 animate-in fade-in zoom-in">
+        <div className="bg-primary/10 p-6 rounded-2xl border border-primary/30 animate-in zoom-in duration-500">
           <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-blue-800">Resultado del motor</h3>
-            <span className="px-3 py-1 bg-blue-200 text-blue-800 text-xs font-bold rounded-full">{motorResult.motor_confidence.level} - {motorResult.motor_confidence.percentage}%</span>
+            <h3 className="font-bold text-primary">Resultado del motor</h3>
+            <span className="px-3 py-1 bg-primary text-white text-[10px] font-black rounded-full uppercase tracking-tighter">
+              {motorResult.motor_confidence.level} • {motorResult.motor_confidence.percentage}%
+            </span>
           </div>
-          <p className="text-blue-700 text-sm mb-4 italic">"{motorResult.suggestion}"</p>
-          <button onClick={() => onNext({})} className="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg">Finalizar Onboarding</button>
+          <p className="text-text-base text-sm mb-6 font-medium leading-relaxed italic">
+            "{motorResult.suggestion}"
+          </p>
+          <button onClick={() => onNext({})} className="w-full bg-success hover:bg-success/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-success/20 transition-all active:scale-[0.98]">
+            Finalizar y entrar al Dashboard
+          </button>
         </div>
       )}
     </div>

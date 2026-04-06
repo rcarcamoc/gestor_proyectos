@@ -1,0 +1,16 @@
+
+> frontend@0.0.0 dev
+> vite --host
+
+
+  VITE v8.0.3  ready in 440 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://192.168.0.2:5173/
+6:15:51 PM [vite] http proxy error: /auth/register
+Error: getaddrinfo ENOTFOUND backend
+    at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26)
+6:22:12 PM [vite] (client) hmr update /src/components/layout/DashboardLayout.tsx, /src/index.css
+6:22:21 PM [vite] (client) hmr update /src/components/layout/DashboardLayout.tsx, /src/index.css
+6:23:32 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/WeeklyGantt.tsx
+6:23:39 PM [vite] (client) hmr update /src/index.css, /src/components/dashboard/WeeklyGantt.tsx

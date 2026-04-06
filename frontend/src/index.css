@@ -1,1 +1,84 @@
 @import "tailwindcss";
+
+@theme {
+  /* Dark Theme (Default) */
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-hover: #334155;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-secondary: #64748b;
+  --color-text-base: #f8fafc;
+  --color-text-muted: #94a3b8;
+  --color-border: #334155;
+  --color-accent: #38bdf8;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* Custom palette matching the original but adaptive */
+  --color-accent-green: #10b981;
+  --color-accent-red: #ef4444;
+  --color-accent-yellow: #f59e0b;
+}
+
+/* Light Theme Overrides */
+.light {
+  --color-background: #f1f5f9;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f8fafc;
+  --color-text-base: #0f172a;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-secondary: #94a3b8;
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 transition-colors duration-300;
+  }
+  .light .glass {
+    @apply bg-black/[0.03] border-black/[0.05];
+  }
+  .glass-card {
+    @apply bg-surface/50 backdrop-blur-lg border border-border/50 shadow-xl rounded-xl transition-all duration-300;
+  }
+  .light .glass-card {
+    @apply bg-white shadow-sm border-border;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+body {
+  @apply bg-background text-text-base antialiased transition-colors duration-300;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Global input styling for legibility */
+input, textarea, select {
+  @apply text-text-base placeholder:text-text-muted bg-surface/50 border-border transition-all;
+}
+
+.light input, .light textarea, .light select {
+  @apply bg-white border-border text-text-base;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl transition-all shadow-lg;
+}

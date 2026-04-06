@@ -38,7 +38,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # DB URL from settings
-SQLALCHEMY_DATABASE_URL = "sqlite:///../temp.db"
+SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
 
 def run_migrations_offline() -> None:

@@ -15,7 +15,7 @@ class SmartEngine:
     def evaluate_level(self, user_id: int) -> Dict[str, Any]:
         has_skills = self.db.query(UserSkill).filter(UserSkill.user_id == user_id).first() is not None
         has_availability = self.db.query(UserAvailability).filter(UserAvailability.user_id == user_id).first() is not None
-        has_history = self.db.query(Task).filter(Task.status == "Completed").join(Task.project_id).first() is not None # Lógica simple historial
+        has_history = self.db.query(Task).filter(Task.status == "Completed").join(Task.project).first() is not None # Lógica simple historial
 
         if has_availability and has_skills and has_history:
             return {"level": "FULL", "percentage": 95, "label": "Precisión máxima", "is_estimated": False}

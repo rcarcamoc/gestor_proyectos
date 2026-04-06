@@ -25,7 +25,7 @@ def create_emergency_preview(
 
     # 1. Analizar impacto (Simulación MVP)
     # Buscamos todas las tareas activas de la organización
-    tasks = db.query(Task).join(Task.project_id).filter(
+    tasks = db.query(Task).join(Project).filter(
         Project.organization_id == current_user.organization_id,
         Task.status.in_(["Pending", "In Progress"])
     ).all()
@@ -70,7 +70,7 @@ def apply_emergency_plan(
         raise HTTPException(status_code=404, detail="Plan no encontrado o ya aplicado")
 
     # 1. Crear Snapshot antes de aplicar cambios
-    tasks = db.query(Task).join(Task.project_id).filter(
+    tasks = db.query(Task).join(Project).filter(
         Project.organization_id == current_user.organization_id,
         Task.status.in_(["Pending", "In Progress"])
     ).all()

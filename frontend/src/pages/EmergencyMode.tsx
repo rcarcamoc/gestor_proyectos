@@ -76,7 +76,7 @@ const EmergencyMode: React.FC = () => {
             <button
               onClick={handlePreview}
               disabled={!reason || isLoading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl hover:shadow-red-200 disabled:opacity-50"
+              className="w-full bg-red-600 hover:bg-red-700 text-text-base font-bold py-4 rounded-2xl transition-all shadow-xl hover:shadow-red-200 disabled:opacity-50"
             >
               {isLoading ? 'Analizando impacto...' : 'Analizar Impacto y Generar Preview'}
             </button>

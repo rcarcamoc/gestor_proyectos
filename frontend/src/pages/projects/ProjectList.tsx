@@ -2,16 +2,23 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/axios';
 import EngineStatus from '../../components/EngineStatus';
 import TimerWidget from '../../components/TimerWidget';
+import ProjectCreateModal from '../../components/ProjectCreateModal';
 
 const ProjectList: React.FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  useEffect(() => {
+  const fetchProjects = () => {
+    setIsLoading(true);
     api.get('/projects/')
       .then(res => setProjects(res.data))
       .catch(err => console.error(err))
       .finally(() => setIsLoading(false));
+  };
+
+  useEffect(() => {
+    fetchProjects();
   }, []);
 
   if (isLoading) return <div className="p-8 text-center">Cargando proyectos...</div>;
@@ -21,7 +28,12 @@ const ProjectList: React.FC = () => {
       <div className="flex-1">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Proyectos</h1>
-          <button className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold shadow-lg">Nuevo Proyecto</button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition-colors"
+          >
+            Nuevo Proyecto
+          </button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -54,6 +66,16 @@ const ProjectList: React.FC = () => {
         <TimerWidget taskId={1} taskName="Tarea Demo" />
         <EngineStatus />
       </div>
+
+      {isModalOpen && (
+        <ProjectCreateModal 
+          onClose={() => setIsModalOpen(false)} 
+          onSuccess={() => {
+            setIsModalOpen(false);
+            fetchProjects();
+          }} 
+        />
+      )}
     </div>
   );
 };

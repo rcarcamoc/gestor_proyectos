@@ -4,6 +4,9 @@ from app.core.db import SessionLocal
 from app.models.skill import Skill
 from app.models.holiday import Holiday
 from app.models.config import SystemConfig
+from app.models.user import User
+from app.models.organization import Organization
+from app.core.security import get_password_hash
 
 def seed_data():
     db = SessionLocal()
@@ -56,6 +59,25 @@ def seed_data():
         for key, val, desc in configs:
             if not db.query(SystemConfig).filter(SystemConfig.key == key).first():
                 db.add(SystemConfig(key=key, value=val, description=desc))
+
+        # 4. Default Admin Organization
+        org = db.query(Organization).filter(Organization.slug == "admin-org").first()
+        if not org:
+            org = Organization(name="Admin Organization", slug="admin-org", country="CL")
+            db.add(org)
+            db.flush()
+
+        # 5. Default Admin User
+        admin_email = "admin@smarttrack.com"
+        if not db.query(User).filter(User.email == admin_email).first():
+            admin_user = User(
+                organization_id=org.id,
+                email=admin_email,
+                password_hash=get_password_hash("admin123"),
+                full_name="Administrator",
+                role="owner"
+            )
+            db.add(admin_user)
 
         db.commit()
         print("Seed data inserted successfully.")

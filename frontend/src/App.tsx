@@ -5,7 +5,8 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import OnboardingFlow from './pages/onboarding/OnboardingFlow'
 import ProjectList from './pages/projects/ProjectList'
-import Dashboard from './pages/Dashboard'
+import { Home } from './pages/Home'
+import { DashboardLayout } from './components/layout/DashboardLayout'
 import EmergencyMode from './pages/EmergencyMode'
 import './App.css'
 
@@ -16,6 +17,14 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   if (!isAuthenticated) return <Navigate to="/login" />;
   return <>{children}</>;
 };
+
+const DashboardRoutes: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ProtectedRoute>
+    <DashboardLayout userName={"Admin User"} userRole={"owner"}>
+      {children}
+    </DashboardLayout>
+  </ProtectedRoute>
+);
 
 function AppContent() {
   return (
@@ -31,14 +40,6 @@ function AppContent() {
         } 
       />
       <Route 
-        path="/projects" 
-        element={
-          <ProtectedRoute>
-            <ProjectList />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
         path="/emergency" 
         element={
           <ProtectedRoute>
@@ -49,9 +50,33 @@ function AppContent() {
       <Route 
         path="/" 
         element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
+          <DashboardRoutes>
+            <Home />
+          </DashboardRoutes>
+        } 
+      />
+      <Route 
+        path="/projects" 
+        element={
+          <DashboardRoutes>
+            <ProjectList />
+          </DashboardRoutes>
+        } 
+      />
+      <Route 
+        path="/tasks" 
+        element={
+          <DashboardRoutes>
+            <div className="glass-card p-10 text-center"><h2 className="text-2xl font-bold">Tasks Management</h2><p className="text-text-muted mt-2">Coming soon...</p></div>
+          </DashboardRoutes>
+        } 
+      />
+      <Route 
+        path="/users" 
+        element={
+          <DashboardRoutes>
+            <div className="glass-card p-10 text-center"><h2 className="text-2xl font-bold">Users & Team</h2><p className="text-text-muted mt-2">Coming soon...</p></div>
+          </DashboardRoutes>
         } 
       />
       {/* Redirección por defecto */}

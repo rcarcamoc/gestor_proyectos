@@ -4,94 +4,118 @@ from sqlalchemy import func
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
-from app.models.task import Task, TaskMetric
+from app.models.task import Task, TaskAssignment
 from app.models.project import Project
-from app.models.team import Team, TeamMembership
+from app.models.team import Team
 from app.models.time import TimeEntry
-from datetime import datetime, timezone, date
-from typing import Any, List
+from datetime import datetime, timezone, date, timedelta
+from typing import Any, List, Optional
 
 router = APIRouter()
 
-@router.get("/member")
-def get_member_dashboard(
+@router.get("/summary")
+def get_dashboard_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    view_mode: str = "personal" # "personal" or "team"
 ) -> Any:
     today = date.today()
+    org_id = current_user.organization_id
     
-    # 1. Tareas de hoy
-    tasks_today = db.query(Task).join(Project).filter(
-        Task.status.in_(["Pending", "In Progress", "Blocked"]),
-        Task.start_date <= today
-    ).all() # Simplificado para MVP, idealmente filtrar por asignado en task_assignments
+    # Restrict team view to leaders/owners
+    if view_mode == "team" and current_user.role not in ["owner", "leader"]:
+        view_mode = "personal"
+
+    # Base query for tasks depending on view_mode
+    if view_mode == "personal":
+        tasks_query = db.query(Task).join(TaskAssignment).filter(
+            TaskAssignment.user_id == current_user.id
+        )
+    else:
+        tasks_query = db.query(Task).join(Project).filter(
+            Project.organization_id == org_id
+        )
+
+    # Calculate KPIs
+    active_projects = db.query(func.count(Project.id)).filter(
+        Project.organization_id == org_id,
+        Project.status.in_(["Planned", "In Progress"])
+    ).scalar() or 0
+
+    pending_tasks = tasks_query.filter(Task.status.in_(["Pending", "In Progress"])).count()
+    completed_tasks = tasks_query.filter(Task.status == "Completed").count()
+    blocked_tasks = tasks_query.filter(Task.status == "Blocked").count()
     
-    # 2. Tareas atrasadas
-    overdue_tasks = db.query(Task).filter(
+    overdue_tasks = tasks_query.filter(
         Task.status.in_(["Pending", "In Progress", "Blocked"]),
         Task.deadline < today
-    ).all()
-    
-    # 3. Timer activo
-    active_timer = db.query(TimeEntry).filter(
-        TimeEntry.user_id == current_user.id,
-        TimeEntry.ended_at == None
-    ).first()
-    
-    # 4. Carga proyectada (horas estimadas de tareas activas)
-    projected_load = db.query(func.sum(Task.estimated_hours)).filter(
-        Task.status.in_(["Pending", "In Progress"])
-    ).scalar() or 0.0
+    ).count()
 
     return {
-        "tasks_today": tasks_today,
-        "overdue_tasks_count": len(overdue_tasks),
-        "active_timer": active_timer,
-        "projected_load_hours": projected_load,
-        "daily_capacity_hours": 8.0 # Configurable en BD
+        "active_projects": active_projects,
+        "pending_tasks": pending_tasks,
+        "completed_tasks": completed_tasks,
+        "blocked_tasks": blocked_tasks,
+        "overdue_tasks": overdue_tasks,
+        "view_mode": view_mode
     }
 
-@router.get("/leader")
-def get_leader_dashboard(
+@router.get("/timeline")
+def get_timeline(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    view_mode: str = "personal", # "personal" or "team"
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None
 ) -> Any:
-    if current_user.role not in ["owner", "leader"]:
-        raise HTTPException(status_code=403, detail="No autorizado")
+    today = date.today()
+    start = start_date or (today - timedelta(days=today.weekday())) # Monday
+    end = end_date or (start + timedelta(days=14)) # Two weeks view
     
     org_id = current_user.organization_id
     
-    # 1. Estado global de tareas
-    task_stats = db.query(Task.status, func.count(Task.id)).join(Project).filter(
-        Project.organization_id == org_id
-    ).group_by(Task.status).all()
-    
-    # 2. Proyectos en riesgo (deadline próximo)
-    today = date.today()
-    projects_at_risk = db.query(Project).filter(
+    if view_mode == "team" and current_user.role not in ["owner", "leader"]:
+        view_mode = "personal"
+
+    # Fetch tasks that intersect with the given window
+    base_query = db.query(Task, Project.name.label("project_name")).join(Project, Task.project_id == Project.id).filter(
         Project.organization_id == org_id,
-        Project.deadline != None,
-        Project.deadline <= today + timedelta(days=7),
-        Project.status != "Completed"
-    ).all()
+        Task.start_date <= end,
+        Task.deadline >= start
+    )
     
-    # 3. Carga de equipo (Simulado para MVP)
-    team_members = db.query(User).filter(User.organization_id == org_id).all()
-    team_load = []
-    for member in team_members:
-        # Aquí iría la lógica del motor para calcular % de carga real
-        team_load.append({
-            "user_id": member.id,
-            "full_name": member.full_name,
-            "load_percentage": 75, # Hardcoded para demo
-            "status": "Balanced",
-            "motor_level": "BASIC" if not member.onboarding_completed else "HIGH"
+    if view_mode == "personal":
+        base_query = base_query.join(TaskAssignment, Task.id == TaskAssignment.task_id).filter(
+            TaskAssignment.user_id == current_user.id
+        )
+
+    tasks_data = base_query.all()
+    
+    timeline_tasks = []
+    for task, proj_name in tasks_data:
+        # Get assignees
+        assignees = db.query(User).join(TaskAssignment).filter(
+            TaskAssignment.task_id == task.id
+        ).all()
+        
+        assignee_data = [{"id": a.id, "name": a.full_name} for a in assignees]
+        
+        timeline_tasks.append({
+            "id": task.id,
+            "name": task.name,
+            "project_id": task.project_id,
+            "project_name": proj_name,
+            "status": task.status,
+            "priority": task.priority,
+            "start_date": task.start_date.isoformat() if task.start_date else None,
+            "deadline": task.deadline.isoformat() if task.deadline else None,
+            "assignees": assignee_data,
+            "estimated_hours": task.estimated_hours,
+            "actual_hours": task.actual_hours
         })
 
     return {
-        "task_stats": {status: count for status, count in task_stats},
-        "projects_at_risk": projects_at_risk,
-        "team_load": team_load
+        "start": start.isoformat(),
+        "end": end.isoformat(),
+        "tasks": timeline_tasks
     }
-
-from datetime import timedelta

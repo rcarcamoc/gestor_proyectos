@@ -1,0 +1,75 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: smarttrack_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-smarttrack}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_USER: ${DB_USER:-user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-pass}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smarttrack_network
+
+  adminer:
+    image: adminer
+    container_name: smarttrack_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    networks:
+      - smarttrack_network
+
+  backend:
+    build: ./backend
+    container_name: smarttrack_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smarttrack_network
+
+  frontend:
+    build: ./frontend
+    container_name: smarttrack_frontend
+    restart: always
+    depends_on:
+      - backend
+    env_file:
+      - .env
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    networks:
+      - smarttrack_network
+
+networks:
+  smarttrack_network:
+    driver: bridge
+
+volumes:
+  db_data:

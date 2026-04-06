@@ -1,70 +1,107 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
-import EngineStatus from '../../components/EngineStatus';
-import TimerWidget from '../../components/TimerWidget';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getProjects } from '../../api/projects';
 import ProjectCreateModal from '../../components/ProjectCreateModal';
+import { Folder, Calendar, Plus, MoreHorizontal } from 'lucide-react';
+import { cn } from "../../lib/utils";
 
 const ProjectList: React.FC = () => {
-  const [projects, setProjects] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const fetchProjects = () => {
-    setIsLoading(true);
-    api.get('/projects/')
-      .then(res => setProjects(res.data))
-      .catch(err => console.error(err))
-      .finally(() => setIsLoading(false));
-  };
+  const { data: projects, isLoading, refetch } = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
+  });
 
-  useEffect(() => {
-    fetchProjects();
-  }, []);
-
-  if (isLoading) return <div className="p-8 text-center">Cargando proyectos...</div>;
+  if (isLoading) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 flex flex-col lg:flex-row lg:space-x-8">
-      <div className="flex-1">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Proyectos</h1>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-blue-600 text-white px-6 py-2 rounded-xl font-semibold shadow-lg hover:bg-blue-700 transition-colors"
-          >
-            Nuevo Proyecto
-          </button>
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <Folder className="text-primary" size={24} />
+            Projects
+          </h2>
+          <p className="text-sm text-text-muted mt-1">Manage and track your active projects.</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {projects.map(p => (
-            <div key={p.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative">
-              <div className="flex justify-between items-start mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold ${p.priority === 'High' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium shadow-md shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105"
+        >
+          <Plus size={16} />
+          New Project
+        </button>
+      </div>
+
+      {/* Projects Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects?.length > 0 ? (
+          projects.map((p: any) => (
+            <div key={p.id} className="glass-card p-6 flex flex-col group relative overflow-hidden">
+              {/* Subtle gradient background element for card */}
+              <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-all" />
+              
+              <div className="flex justify-between items-start mb-4 relative z-10">
+                <span className={cn(
+                  "px-2.5 py-1 rounded-full text-xs font-medium border",
+                  p.priority === 'High' ? "bg-accent-red/10 text-accent-red border-accent-red/20" 
+                  : p.priority === 'Medium' ? "bg-accent-yellow/10 text-accent-yellow border-accent-yellow/20"
+                  : "bg-primary/10 text-primary border-primary/20"
+                )}>
                   {p.priority}
                 </span>
-                <span className="text-gray-400 text-xs">{p.status}</span>
+                
+                <button className="text-text-muted hover:text-white transition-colors">
+                  <MoreHorizontal size={18} />
+                </button>
               </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">{p.name}</h3>
-              <p className="text-gray-500 text-sm mb-6 line-clamp-2">{p.description || 'Sin descripción'}</p>
               
-              <div className="flex justify-between items-center text-xs text-gray-400 border-t pt-4">
-                <span>Inicio: {p.start_date}</span>
-                {p.deadline && <span>Vence: {p.deadline}</span>}
+              <h3 className="text-lg font-semibold text-white mb-2 relative z-10">{p.name}</h3>
+              <p className="text-sm text-text-muted mb-6 line-clamp-2 flex-grow relative z-10">
+                {p.description || "No description provided."}
+              </p>
+              
+              <div className="pt-4 border-t border-border/50 flex flex-col space-y-2 text-xs text-text-muted relative z-10">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1.5"><Calendar size={12} /> Start:</span>
+                  <span className="font-medium text-white/80">{p.start_date}</span>
+                </div>
+                {p.deadline && (
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1.5"><Calendar size={12} /> Deadline:</span>
+                    <span className="font-medium text-white/80">{p.deadline}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between pt-1">
+                  <span className="flex items-center gap-1.5">Status:</span>
+                  <span className="font-medium text-white/80">{p.status}</span>
+                </div>
               </div>
             </div>
-          ))}
-          {projects.length === 0 && (
-            <div className="col-span-full py-12 text-center bg-gray-100 rounded-2xl border-2 border-dashed border-gray-200">
-              <p className="text-gray-500">No hay proyectos activos.</p>
-            </div>
-          )}
-        </div>
-      </div>
-      
-      <div className="w-full lg:w-72 mt-8 lg:mt-0 space-y-6">
-        <TimerWidget taskId={1} taskName="Tarea Demo" />
-        <EngineStatus />
+          ))
+        ) : (
+          <div className="col-span-full py-16 text-center border-2 border-dashed border-border/50 rounded-xl bg-surface/30">
+            <Folder className="mx-auto text-text-muted/50 mb-3" size={48} />
+            <h3 className="text-lg font-medium text-white">No projects found</h3>
+            <p className="text-sm text-text-muted mt-1 mb-4">Start by creating your first project.</p>
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="text-primary hover:text-white transition-colors font-medium text-sm"
+            >
+              + Create Project
+            </button>
+          </div>
+        )}
       </div>
 
       {isModalOpen && (
@@ -72,7 +109,7 @@ const ProjectList: React.FC = () => {
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
-            fetchProjects();
+            refetch();
           }} 
         />
       )}

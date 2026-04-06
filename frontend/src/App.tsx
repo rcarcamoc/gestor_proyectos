@@ -8,6 +8,9 @@ import ProjectList from './pages/projects/ProjectList'
 import { Home } from './pages/Home'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import EmergencyMode from './pages/EmergencyMode'
+import { TaskList } from './pages/tasks/TaskList'
+import { TeamList } from './pages/users/TeamList'
+import { SettingsPage } from './pages/settings/Settings'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -67,7 +70,7 @@ function AppContent() {
         path="/tasks" 
         element={
           <DashboardRoutes>
-            <div className="glass-card p-10 text-center"><h2 className="text-2xl font-bold">Tasks Management</h2><p className="text-text-muted mt-2">Coming soon...</p></div>
+            <TaskList />
           </DashboardRoutes>
         } 
       />
@@ -75,7 +78,15 @@ function AppContent() {
         path="/users" 
         element={
           <DashboardRoutes>
-            <div className="glass-card p-10 text-center"><h2 className="text-2xl font-bold">Users & Team</h2><p className="text-text-muted mt-2">Coming soon...</p></div>
+            <TeamList />
+          </DashboardRoutes>
+        } 
+      />
+      <Route 
+        path="/settings" 
+        element={
+          <DashboardRoutes>
+            <SettingsPage />
           </DashboardRoutes>
         } 
       />

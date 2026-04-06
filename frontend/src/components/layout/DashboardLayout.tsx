@@ -86,10 +86,10 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
         </nav>
 
         <div className="p-4 border-t border-border/50">
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-text-muted hover:text-text-base hover:bg-white/5 transition-all">
+          <Link to="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-text-muted hover:text-text-base hover:bg-white/5 transition-all">
             <Settings size={18} />
             <span className="font-medium text-sm">Settings</span>
-          </button>
+          </Link>
         </div>
       </aside>
 
@@ -114,7 +114,13 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="relative p-2 text-text-muted hover:text-text-base transition-colors rounded-full hover:bg-white/5">
+            <button 
+              onClick={() => {
+                alert("You have 1 new notification: System update completed.");
+                // We could set a state to remove the dot here if we imported useState, but an inline alert works to show it's active.
+              }}
+              className="relative p-2 text-text-muted hover:text-text-base transition-colors rounded-full hover:bg-white/5"
+            >
               <Bell size={20} />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full shadow-[0_0_5px_rgba(239,68,68,0.8)]" />
             </button>

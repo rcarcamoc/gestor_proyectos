@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import api from '../api/axios';
+import { X, FolderPlus, AlertCircle } from 'lucide-react';
 
 interface ProjectCreateModalProps {
   onClose: () => void;
@@ -27,51 +28,54 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
       onSuccess();
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Error al crear el proyecto');
+      setError(err.response?.data?.detail || 'Failed to create project.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50 bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl p-8 relative animate-in fade-in zoom-in duration-300">
-        <button onClick={onClose} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors p-2">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+    <div className="fixed inset-0 flex items-center justify-center z-50 bg-background/80 backdrop-blur-md p-4 overflow-y-auto">
+      <div className="glass-card w-full max-w-lg p-8 relative animate-in fade-in zoom-in duration-300 border border-border/50">
+        <button 
+          onClick={onClose} 
+          className="absolute top-6 right-6 text-text-muted hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+        >
+          <X size={20} />
         </button>
         
-        <h2 className="text-2xl font-black text-gray-800 mb-6 flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">
-             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-60H6"/></svg>
+        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3 tracking-tight">
+          <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary border border-primary/30">
+             <FolderPlus size={20} />
           </div>
-          Nuevo Proyecto
+          New Project
         </h2>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-sm mb-6 flex items-center gap-3 border border-red-100">
-             <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div className="bg-accent-red/10 text-accent-red p-4 rounded-xl text-sm mb-6 flex items-center gap-3 border border-accent-red/20">
+             <AlertCircle size={18} className="flex-shrink-0" />
              {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Nombre del Proyecto</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Project Name</label>
             <input
               type="text"
               required
-              className="w-full px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none text-gray-800 placeholder-gray-300"
-              placeholder="Ej: Rediseño Web Dashboard"
+              className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white placeholder-text-muted/50"
+              placeholder="e.g.: Website Redesign"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Descripción (Opcional)</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Description (Optional)</label>
             <textarea
-              className="w-full px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none text-gray-800 placeholder-gray-300 min-h-[100px] resize-none"
-              placeholder="Describe el objetivo de este proyecto..."
+              className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white placeholder-text-muted/50 min-h-[100px] resize-none"
+              placeholder="Describe the main objectives..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -79,25 +83,25 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Fecha Inicio</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Start Date</label>
               <input
                 type="date"
                 required
-                className="w-full px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none text-gray-800"
+                className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white [color-scheme:dark]"
                 value={formData.start_date}
                 onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Prioridad</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Priority</label>
               <select
-                className="w-full px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all outline-none text-gray-800 appearance-none"
+                className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white appearance-none"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
-                <option value="Low">Baja</option>
-                <option value="Medium">Media</option>
-                <option value="High">Alta</option>
+                <option value="Low" className="bg-surface text-white">Low</option>
+                <option value="Medium" className="bg-surface text-white">Medium</option>
+                <option value="High" className="bg-surface text-white">High</option>
               </select>
             </div>
           </div>
@@ -105,9 +109,13 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           <button
             type="submit"
             disabled={isSubmitting}
-            className={`w-full py-4 rounded-2xl font-bold text-white shadow-xl shadow-blue-500/20 transition-all transform active:scale-[0.98] ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5'}`}
+            className={`w-full py-3.5 mt-2 rounded-xl font-semibold text-white shadow-lg transition-all transform active:scale-[0.98] ${
+              isSubmitting 
+                ? 'bg-surface border border-border/50 text-text-muted cursor-not-allowed' 
+                : 'bg-primary hover:bg-primary/90 shadow-primary/20 hover:-translate-y-0.5'
+            }`}
           >
-            {isSubmitting ? 'Creando...' : 'Crear Proyecto'}
+            {isSubmitting ? 'Creating...' : 'Create Project'}
           </button>
         </form>
       </div>

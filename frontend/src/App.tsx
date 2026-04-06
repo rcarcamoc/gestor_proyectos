@@ -24,7 +24,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const DashboardRoutes: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <ProtectedRoute>
-    <DashboardLayout userName={"Admin User"} userRole={"owner"}>
+    <DashboardLayout>
       {children}
     </DashboardLayout>
   </ProtectedRoute>

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
+import api from '../../api/axios';
 
 const OnboardingFlow: React.FC = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [onboardingData, setOnboardingData] = useState<any>({});
 
@@ -28,11 +31,7 @@ const OnboardingFlow: React.FC = () => {
         return <Step5Task onNext={nextStep} />;
       case 6:
         return (
-          <div className="text-center space-y-4 animate-fade-in">
-            <h2 className="text-2xl font-bold text-success">¡Onboarding completado!</h2>
-            <p className="text-text-muted">Tu equipo ya está configurado. Redirigiendo al dashboard...</p>
-            {setTimeout(() => (window.location.href = '/'), 3000) && null}
-          </div>
+          <OnboardingSuccess onFinish={() => navigate('/')} />
         );
       default:
         return <div>Fin del flujo</div>;
@@ -64,6 +63,22 @@ const OnboardingFlow: React.FC = () => {
           {renderStep()}
         </div>
       </div>
+    </div>
+  );
+};
+
+const OnboardingSuccess = ({ onFinish }: { onFinish: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onFinish();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onFinish]);
+
+  return (
+    <div className="text-center space-y-4 animate-fade-in">
+      <h2 className="text-2xl font-bold text-success">¡Onboarding completado!</h2>
+      <p className="text-text-muted">Tu equipo ya está configurado. Redirigiendo al dashboard...</p>
     </div>
   );
 };
@@ -128,7 +143,20 @@ const Step2Invite = ({ onNext, onSkip }: any) => {
 
 const Step3Skills = ({ onNext, onSkip }: any) => {
   const [selectedSkills, setSelectedSkills] = useState<number[]>([]);
-  const skills = ['React', 'FastAPI', 'MySQL', 'Python', 'DevOps', 'UI/UX', 'Management', 'Testing'];
+  const [skills, setSkills] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/skills')
+      .then(res => {
+        setSkills(res.data);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching skills", err);
+        setIsLoading(false);
+      });
+  }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -137,22 +165,28 @@ const Step3Skills = ({ onNext, onSkip }: any) => {
         <p className="text-sm text-text-muted">Esto ayuda al motor a sugerirte las mejores tareas.</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 custom-scrollbar">
-        {skills.map((s, idx) => (
-          <button
-            key={idx}
-            type="button"
-            className={`p-3 border rounded-xl text-xs font-bold transition-all ${
-              selectedSkills.includes(idx)
-                ? 'bg-primary/20 border-primary text-primary shadow-inner shadow-primary/10'
-                : 'bg-surface/50 border-border/50 text-text-muted hover:border-primary/50'
-            }`}
-            onClick={() => setSelectedSkills(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      {isLoading ? (
+        <div className="h-32 flex items-center justify-center">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-1 custom-scrollbar">
+          {skills.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              className={`p-3 border rounded-xl text-xs font-bold transition-all ${
+                selectedSkills.includes(s.id)
+                  ? 'bg-primary/20 border-primary text-primary shadow-inner shadow-primary/10'
+                  : 'bg-surface/50 border-border/50 text-text-muted hover:border-primary/50'
+              }`}
+              onClick={() => setSelectedSkills(prev => prev.includes(s.id) ? prev.filter(i => i !== s.id) : [...prev, s.id])}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-border/20">
         <button onClick={onSkip} className="flex-1 px-6 py-4 rounded-xl font-bold border border-border/50 text-text-muted hover:bg-surface transition-all">

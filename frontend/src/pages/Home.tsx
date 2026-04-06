@@ -1,4 +1,4 @@
-import { type FC, useState } from "react";
+import { type FC, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardSummary, getDashboardTimeline } from "../api/dashboard";
 import { KPIWidgets } from "../components/dashboard/KPIWidgets";
@@ -21,13 +21,11 @@ export const Home: FC = () => {
   });
 
   // Sync tasks to local state when loaded to allow client-side reordering
-  import("react").then(React => {
-    React.useEffect(() => {
-      if (timelineData?.tasks) {
-        setLocalTasks(timelineData.tasks);
-      }
-    }, [timelineData]);
-  });
+  useEffect(() => {
+    if (timelineData?.tasks) {
+      setLocalTasks(timelineData.tasks);
+    }
+  }, [timelineData]);
 
   const handleTasksReorder = (newTasks: any[]) => {
     setLocalTasks(newTasks);

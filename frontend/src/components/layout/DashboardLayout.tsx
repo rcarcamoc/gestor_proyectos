@@ -1,5 +1,6 @@
 import { type FC, type ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 import {
   LayoutDashboard,
   Users,
@@ -19,10 +20,12 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout: FC<DashboardLayoutProps> = ({
-  children,
-  userRole = "member",
-  userName = "User"
+  children
 }) => {
+  const { user } = useAuth();
+  const userRole = user?.role || "member";
+  const userName = user?.full_name || "User";
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const location = useLocation();
 

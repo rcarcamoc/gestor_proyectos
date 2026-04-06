@@ -6,7 +6,14 @@ from .security_simple import get_password_hash as hash_pwd, verify_password as v
 
 ALGORITHM = "HS256"
 
-def create_access_token(subject: Union[str, Any], organization_id: int, role: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    subject: Union[str, Any],
+    organization_id: int,
+    role: str,
+    user_id: int,
+    full_name: str,
+    expires_delta: Optional[timedelta] = None
+) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
@@ -15,7 +22,9 @@ def create_access_token(subject: Union[str, Any], organization_id: int, role: st
     to_encode = {
         "sub": str(subject),
         "exp": expire,
+        "user_id": user_id,
         "organization_id": organization_id,
+        "full_name": full_name,
         "role": role
     }
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=ALGORITHM)

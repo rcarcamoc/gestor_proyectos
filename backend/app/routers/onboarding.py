@@ -20,7 +20,7 @@ router = APIRouter()
 def get_onboarding_status(current_user: User = Depends(get_current_user)) -> Any:
     return {
         "onboarding_completed": current_user.onboarding_completed,
-        "current_step": 1 # Lógica simple para MVP, el frontend puede manejarlo o guardarlo en BD
+        "current_step": current_user.onboarding_step or 1
     }
 
 @router.post("/step1")
@@ -50,6 +50,10 @@ def onboarding_step1(
         role="leader"
     )
     db.add(membership)
+
+    user = db.query(User).filter(User.id == current_user.id).first()
+    user.onboarding_step = 2
+
     db.commit()
 
     return {"status": "ok", "team_id": team.id}
@@ -62,6 +66,9 @@ def onboarding_step2(
 ) -> Any:
     # Lógica de invitación (en MVP solo guardamos el registro de intención por ahora)
     # En un sistema real enviaríamos emails con tokens
+    user = db.query(User).filter(User.id == current_user.id).first()
+    user.onboarding_step = 3
+    db.commit()
     return {"status": "ok", "invited_count": len(data.emails)}
 
 @router.post("/step3/skills")
@@ -70,6 +77,8 @@ def onboarding_step3(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
+    user = db.query(User).filter(User.id == current_user.id).first()
+    user.onboarding_step = 4
     for skill_id in data.skill_ids:
         user_skill = UserSkill(
             user_id=current_user.id,
@@ -78,6 +87,16 @@ def onboarding_step3(
             source="self_declared"
         )
         db.add(user_skill)
+    db.commit()
+    return {"status": "ok"}
+
+@router.post("/step3/skip")
+def onboarding_step3_skip(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    user = db.query(User).filter(User.id == current_user.id).first()
+    user.onboarding_step = 4
     db.commit()
     return {"status": "ok"}
 
@@ -100,6 +119,10 @@ def onboarding_step4(
         created_by=current_user.id
     )
     db.add(project)
+
+    user = db.query(User).filter(User.id == current_user.id).first()
+    user.onboarding_step = 5
+
     db.commit()
     return {"status": "ok", "project_id": project.id}
 

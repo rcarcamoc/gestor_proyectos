@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, onboarding, projects, tasks, engine, time, dashboard, emergency
+from app.routers import auth, onboarding, projects, tasks, engine, time_tracking as time, dashboard, emergency
 from app.core.config import settings
 
 app = FastAPI(

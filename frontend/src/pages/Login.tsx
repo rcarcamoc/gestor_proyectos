@@ -19,6 +19,7 @@ const Login: React.FC = () => {
       const response = await api.post('/auth/login', { email, password });
       const { access_token, refresh_token } = response.data;
       login(access_token, refresh_token);
+      // navigation handled by useEffect in Login or by the flow
       navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Error logging in. Please check your credentials.');

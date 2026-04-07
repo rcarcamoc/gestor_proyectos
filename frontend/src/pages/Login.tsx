@@ -49,7 +49,7 @@ const Login: React.FC = () => {
             <input
               type="email"
               required
-              className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-muted/50 shadow-sm"
               placeholder="name@company.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -60,7 +60,7 @@ const Login: React.FC = () => {
             <input
               type="password"
               required
-              className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-muted/50 shadow-sm"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}

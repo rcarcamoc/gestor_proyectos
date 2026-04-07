@@ -59,7 +59,7 @@ const Register: React.FC = () => {
               type="text"
               name="full_name"
               required
-              className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-muted/50 shadow-sm"
               placeholder="John Doe"
               value={formData.full_name}
               onChange={handleChange}
@@ -71,7 +71,7 @@ const Register: React.FC = () => {
               type="email"
               name="email"
               required
-              className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-muted/50 shadow-sm"
               placeholder="john@example.com"
               value={formData.email}
               onChange={handleChange}
@@ -83,7 +83,7 @@ const Register: React.FC = () => {
               type="text"
               name="organization_name"
               required
-              className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-muted/50 shadow-sm"
               placeholder="Acme Corp"
               value={formData.organization_name}
               onChange={handleChange}
@@ -94,7 +94,7 @@ const Register: React.FC = () => {
               <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Country</label>
               <select
                 name="country"
-                className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all appearance-none cursor-pointer shadow-sm"
                 value={formData.country}
                 onChange={handleChange}
               >
@@ -109,7 +109,7 @@ const Register: React.FC = () => {
                 name="password"
                 required
                 minLength={8}
-                className="w-full px-4 py-3 rounded-xl border border-border/50 bg-surface/50 text-text-base focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all"
+                className="w-full px-4 py-3 rounded-xl border border-border bg-surface text-text-base focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-text-muted/50 shadow-sm"
                 placeholder="••••••••"
                 value={formData.password}
                 onChange={handleChange}

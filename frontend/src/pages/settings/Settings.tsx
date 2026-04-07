@@ -84,11 +84,11 @@ export const SettingsPage: FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Full Name</label>
-                    <input type="text" defaultValue="Admin User" className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all" />
+                    <input type="text" defaultValue="Admin User" className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all shadow-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Email Address</label>
-                    <input type="email" defaultValue="admin@smarttrack.com" className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all" />
+                    <input type="email" defaultValue="admin@smarttrack.com" className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all shadow-sm" />
                   </div>
                 </div>
               </div>
@@ -102,15 +102,15 @@ export const SettingsPage: FC = () => {
                 <div className="space-y-4 max-w-md">
                   <div>
                     <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Current Password</label>
-                    <input type="password" placeholder="••••••••" className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all" />
+                    <input type="password" placeholder="••••••••" className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base placeholder:text-text-muted/50 transition-all shadow-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">New Password</label>
-                    <input type="password" placeholder="Min 8 characters" className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all" />
+                    <input type="password" placeholder="Min 8 characters" className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base placeholder:text-text-muted/50 transition-all shadow-sm" />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Confirm New Password</label>
-                    <input type="password" placeholder="Min 8 characters" className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base transition-all" />
+                    <input type="password" placeholder="Min 8 characters" className="w-full px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none text-text-base placeholder:text-text-muted/50 transition-all shadow-sm" />
                   </div>
                 </div>
               </div>

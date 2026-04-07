@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* Dark Theme (Default) */
-  --color-background: #0f172a;
-  --color-surface: #1e293b;
-  --color-surface-hover: #334155;
+  /* Dynamic Theme Variables from CSS Variables below */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
   --color-primary: #3b82f6;
   --color-primary-hover: #2563eb;
-  --color-secondary: #64748b;
-  --color-text-base: #f8fafc;
-  --color-text-muted: #94a3b8;
-  --color-border: #334155;
+  --color-secondary: var(--secondary);
+  --color-text-base: var(--text-base);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
   --color-accent: #38bdf8;
   --color-success: #10b981;
   --color-warning: #f59e0b;
@@ -22,15 +22,41 @@
   --color-accent-yellow: #f59e0b;
 }
 
-/* Light Theme Overrides */
+/* Base Theme Configurations */
+:root {
+  /* Default: Dark Mode Variables (Original Palette) */
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-hover: #334155;
+  --text-base: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --secondary: #64748b;
+  color-scheme: dark;
+}
+
+/* Light Mode Overrides */
 .light {
-  --color-background: #f1f5f9;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f8fafc;
-  --color-text-base: #0f172a;
-  --color-text-muted: #64748b;
-  --color-border: #e2e8f0;
-  --color-secondary: #94a3b8;
+  --background: #f1f5f9;
+  --surface: #ffffff;
+  --surface-hover: #f8fafc;
+  --text-base: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --secondary: #94a3b8;
+  color-scheme: light;
+}
+
+/* Force dark vars if explictly needed */
+.dark {
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-hover: #334155;
+  --text-base: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --secondary: #64748b;
+  color-scheme: dark;
 }
 
 @layer utilities {
@@ -71,11 +97,17 @@ body {
 
 /* Global input styling for legibility */
 input, textarea, select {
-  @apply text-text-base placeholder:text-text-muted bg-surface/50 border-border transition-all;
+  @apply text-text-base placeholder:text-text-muted bg-surface/50 border border-border transition-all outline-none;
+  color: var(--text-base); /* Explicitly set to ensure it reactive correctly */
+}
+
+input:focus, textarea:focus, select:focus {
+  @apply border-primary ring-2 ring-primary/20 bg-surface;
 }
 
 .light input, .light textarea, .light select {
   @apply bg-white border-border text-text-base;
+  color: var(--text-base);
 }
 
 /* Button variants */

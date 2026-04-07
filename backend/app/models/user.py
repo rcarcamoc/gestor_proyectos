@@ -12,6 +12,7 @@ class User(Base):
     role = Column(String(50), nullable=False) # 'owner', 'leader', 'member'
     is_active = Column(Boolean, default=True)
     onboarding_completed = Column(Boolean, default=False)
+    onboarding_step = Column(Integer, default=1)
     created_at = Column(DateTime, server_default=func.now())
 
 class RefreshToken(Base):

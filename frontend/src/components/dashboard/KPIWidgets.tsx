@@ -59,8 +59,8 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
       {widgets.map((widget, i) => {
         const Icon = widget.icon;
         return (
-          <div 
-            key={i} 
+          <div
+            key={i}
             className={cn(
               "glass-card p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
               widget.border
@@ -69,7 +69,7 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
           >
             {/* Ambient Background Glow */}
             <div className={cn("absolute -right-6 -top-6 w-24 h-24 rounded-full blur-2xl transition-opacity opacity-50 group-hover:opacity-100", widget.bgDark)} />
-            
+
             <div className="relative z-10 flex items-start justify-between">
               <div>
                 <p className="text-text-muted text-sm font-medium mb-1">{widget.title}</p>
@@ -82,7 +82,7 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
                 <Icon size={20} className={cn(widget.pulse && "animate-pulse")} />
               </div>
             </div>
-            
+
             {/* Decorative line */}
             <div className="absolute bottom-0 left-0 h-1 bg-gradient-to-r from-transparent to-current opacity-20 w-full" style={{ color: "inherit" }} />
           </div>

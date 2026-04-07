@@ -50,7 +50,7 @@ const EmergencyMode: React.FC = () => {
     <div className="max-w-4xl mx-auto p-12">
       <div className="bg-white p-12 rounded-3xl shadow-2xl border border-gray-100 overflow-hidden relative">
         <div className="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
-        
+
         <header className="mb-8">
           <div className="flex items-center space-x-2 text-red-600 mb-2">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -66,17 +66,17 @@ const EmergencyMode: React.FC = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-bold text-gray-700 mb-2">¿Cuál es el motivo de la emergencia?</label>
-              <textarea 
+              <textarea
                 className="w-full px-6 py-4 rounded-2xl border-2 border-gray-100 focus:border-red-500 outline-none transition-all h-32"
                 placeholder="Ej: Ausencia de desarrollador senior por 3 días."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
               />
             </div>
-            <button 
+            <button
               onClick={handlePreview}
               disabled={!reason || isLoading}
-              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 rounded-2xl transition-all shadow-xl hover:shadow-red-200 disabled:opacity-50"
+              className="w-full bg-red-600 hover:bg-red-700 text-text-base font-bold py-4 rounded-2xl transition-all shadow-xl hover:shadow-red-200 disabled:opacity-50"
             >
               {isLoading ? 'Analizando impacto...' : 'Analizar Impacto y Generar Preview'}
             </button>
@@ -89,7 +89,7 @@ const EmergencyMode: React.FC = () => {
               <h3 className="font-bold text-red-800 mb-2">Resumen de Impacto</h3>
               <p className="text-red-700 italic text-sm">"{preview.impact_summary}"</p>
             </div>
-            
+
             <div className="bg-gray-50 p-6 rounded-2xl">
               <h4 className="font-bold text-gray-700 mb-4 text-sm uppercase">Cambios Propuestos</h4>
               <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
@@ -122,10 +122,10 @@ const EmergencyMode: React.FC = () => {
              </div>
              <h2 className="text-3xl font-bold text-gray-800 mb-2">Cambios Aplicados</h2>
              <p className="text-gray-500 mb-8">El equipo ha sido reprogramado con éxito.</p>
-             
+
              <div className="p-8 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
                 <p className="text-xs font-bold text-gray-400 uppercase mb-4">¿Quieres deshacer los cambios?</p>
-                <button 
+                <button
                   onClick={handleRollback}
                   disabled={isLoading}
                   className="bg-white border-2 border-red-500 text-red-500 px-8 py-3 rounded-2xl font-bold hover:bg-red-50 transition-colors shadow-sm"

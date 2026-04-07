@@ -30,7 +30,7 @@ const EngineStatus: React.FC = () => {
         <span className="text-xs font-bold">{motor_confidence.percentage}%</span>
       </div>
       <p className="text-xs italic mb-4">"{motor_confidence.label}"</p>
-      
+
       {improvement_suggestions.length > 0 && (
         <div className="mt-4 pt-4 border-t border-inherit">
           <p className="text-xs font-semibold mb-2">¿Cómo mejorar la precisión?</p>

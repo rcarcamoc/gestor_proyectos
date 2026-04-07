@@ -1,4 +1,4 @@
-import { type FC, useState } from "react";
+import { type FC, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getDashboardSummary, getDashboardTimeline } from "../api/dashboard";
 import { KPIWidgets } from "../components/dashboard/KPIWidgets";
@@ -21,13 +21,11 @@ export const Home: FC = () => {
   });
 
   // Sync tasks to local state when loaded to allow client-side reordering
-  import("react").then(React => {
-    React.useEffect(() => {
-      if (timelineData?.tasks) {
-        setLocalTasks(timelineData.tasks);
-      }
-    }, [timelineData]);
-  });
+  useEffect(() => {
+    if (timelineData?.tasks) {
+      setLocalTasks(timelineData.tasks);
+    }
+  }, [timelineData]);
 
   const handleTasksReorder = (newTasks: any[]) => {
     setLocalTasks(newTasks);
@@ -39,7 +37,7 @@ export const Home: FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white">Dashboard Overview</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-text-base">Dashboard Overview</h2>
           <p className="text-sm text-text-muted mt-1">Here's your productivity summary.</p>
         </div>
 
@@ -49,8 +47,8 @@ export const Home: FC = () => {
             onClick={() => setViewMode("personal")}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-md transition-all text-sm font-medium",
-              viewMode === "personal" 
-                ? "bg-primary text-white shadow-md shadow-primary/20" 
+              viewMode === "personal"
+                ? "bg-primary text-white shadow-md shadow-primary/20"
                 : "text-text-muted hover:text-text-base hover:bg-white/5"
             )}
           >
@@ -60,8 +58,8 @@ export const Home: FC = () => {
             onClick={() => setViewMode("team")}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-md transition-all text-sm font-medium",
-              viewMode === "team" 
-                ? "bg-primary text-white shadow-md shadow-primary/20" 
+              viewMode === "team"
+                ? "bg-primary text-white shadow-md shadow-primary/20"
                 : "text-text-muted hover:text-text-base hover:bg-white/5"
             )}
           >
@@ -78,10 +76,10 @@ export const Home: FC = () => {
       ) : (
         <>
           <KPIWidgets data={summary} />
-          
-          <WeeklyGantt 
-            tasks={localTasks} 
-            startDateStr={timelineData?.start} 
+
+          <WeeklyGantt
+            tasks={localTasks}
+            startDateStr={timelineData?.start}
             onTasksReorder={handleTasksReorder}
           />
         </>

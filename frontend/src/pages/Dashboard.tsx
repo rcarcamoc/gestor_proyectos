@@ -24,7 +24,7 @@ const Dashboard: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-800">Hola 👋</h1>
             <p className="text-gray-500 mt-1">Este es tu resumen para hoy.</p>
           </div>
-          <button 
+          <button
             onClick={() => window.location.href = '/emergency'}
             className="bg-red-50 text-red-600 px-4 py-2 rounded-xl text-sm font-bold border border-red-100 hover:bg-red-100 transition-colors"
           >
@@ -49,7 +49,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className={`p-6 rounded-2xl border shadow-sm ${data.overdue_tasks_count > 0 ? 'bg-red-50 border-red-100' : 'bg-white border-gray-100'}`}>
             <h3 className="text-xs font-bold text-gray-400 uppercase mb-4">Tareas Atrasadas</h3>
             <div className="flex items-center space-x-3">
@@ -67,7 +67,7 @@ const Dashboard: React.FC = () => {
             <h2 className="text-xl font-bold text-gray-800">Tareas para hoy</h2>
             <button onClick={() => window.location.href = '/projects'} className="text-blue-600 text-sm font-semibold hover:underline">Ver todo</button>
           </div>
-          
+
           <div className="space-y-3">
             {data.tasks_today?.map((t: any) => (
               <div key={t.id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between hover:border-blue-200 transition-colors">
@@ -97,7 +97,7 @@ const Dashboard: React.FC = () => {
       <div className="w-full lg:w-72 mt-8 lg:mt-0 space-y-6">
         <TimerWidget taskId={data.tasks_today?.[0]?.id || 1} taskName={data.tasks_today?.[0]?.name || "Tarea demo"} />
         <EngineStatus />
-        
+
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
           <h3 className="text-xs font-bold text-gray-400 uppercase mb-4">Atajos rápidos</h3>
           <ul className="space-y-2">

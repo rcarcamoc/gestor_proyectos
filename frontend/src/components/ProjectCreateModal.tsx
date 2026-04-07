@@ -37,14 +37,14 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50 bg-background/80 backdrop-blur-md p-4 overflow-y-auto">
       <div className="glass-card w-full max-w-lg p-8 relative animate-in fade-in zoom-in duration-300 border border-border/50">
-        <button 
-          onClick={onClose} 
-          className="absolute top-6 right-6 text-text-muted hover:text-white transition-colors p-2 rounded-full hover:bg-white/5"
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 text-text-muted hover:text-text-base transition-colors p-2 rounded-full hover:bg-white/5"
         >
           <X size={20} />
         </button>
-        
-        <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3 tracking-tight">
+
+        <h2 className="text-2xl font-bold text-text-base mb-6 flex items-center gap-3 tracking-tight">
           <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary border border-primary/30">
              <FolderPlus size={20} />
           </div>
@@ -64,7 +64,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
             <input
               type="text"
               required
-              className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white placeholder-text-muted/50"
+              className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base placeholder:text-text-muted/50 shadow-sm"
               placeholder="e.g.: Website Redesign"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -74,7 +74,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           <div>
             <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Description (Optional)</label>
             <textarea
-              className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white placeholder-text-muted/50 min-h-[100px] resize-none"
+              className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base placeholder:text-text-muted/50 min-h-[100px] resize-none shadow-sm"
               placeholder="Describe the main objectives..."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -87,7 +87,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
               <input
                 type="date"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white [color-scheme:dark]"
+                className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm"
                 value={formData.start_date}
                 onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
               />
@@ -95,13 +95,13 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
             <div>
               <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Priority</label>
               <select
-                className="w-full px-4 py-3 rounded-xl bg-surface/50 border border-border/50 focus:bg-surface focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-white appearance-none"
+                className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base appearance-none shadow-sm cursor-pointer"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
-                <option value="Low" className="bg-surface text-white">Low</option>
-                <option value="Medium" className="bg-surface text-white">Medium</option>
-                <option value="High" className="bg-surface text-white">High</option>
+                <option value="Low" className="text-text-base">Low</option>
+                <option value="Medium" className="text-text-base">Medium</option>
+                <option value="High" className="text-text-base">High</option>
               </select>
             </div>
           </div>
@@ -110,9 +110,9 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
             type="submit"
             disabled={isSubmitting}
             className={`w-full py-3.5 mt-2 rounded-xl font-semibold text-white shadow-lg transition-all transform active:scale-[0.98] ${
-              isSubmitting 
-                ? 'bg-surface border border-border/50 text-text-muted cursor-not-allowed' 
-                : 'bg-primary hover:bg-primary/90 shadow-primary/20 hover:-translate-y-0.5'
+              isSubmitting
+                ? 'bg-surface border border-border/50 text-text-muted cursor-not-allowed'
+                : 'bg-primary hover:bg-primary/90 shadow-primary/20 hover:-translate-y-0.5 text-white'
             }`}
           >
             {isSubmitting ? 'Creating...' : 'Create Project'}

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import OnboardingFlow from './pages/onboarding/OnboardingFlow'
@@ -23,7 +24,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
 const DashboardRoutes: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <ProtectedRoute>
-    <DashboardLayout userName={"Admin User"} userRole={"owner"}>
+    <DashboardLayout>
       {children}
     </DashboardLayout>
   </ProtectedRoute>
@@ -34,61 +35,61 @@ function AppContent() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route 
-        path="/onboarding" 
+      <Route
+        path="/onboarding"
         element={
           <ProtectedRoute>
             <OnboardingFlow />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/emergency" 
+      <Route
+        path="/emergency"
         element={
           <ProtectedRoute>
             <EmergencyMode />
           </ProtectedRoute>
-        } 
+        }
       />
-      <Route 
-        path="/" 
+      <Route
+        path="/"
         element={
           <DashboardRoutes>
             <Home />
           </DashboardRoutes>
-        } 
+        }
       />
-      <Route 
-        path="/projects" 
+      <Route
+        path="/projects"
         element={
           <DashboardRoutes>
             <ProjectList />
           </DashboardRoutes>
-        } 
+        }
       />
-      <Route 
-        path="/tasks" 
+      <Route
+        path="/tasks"
         element={
           <DashboardRoutes>
             <TaskList />
           </DashboardRoutes>
-        } 
+        }
       />
-      <Route 
-        path="/users" 
+      <Route
+        path="/users"
         element={
           <DashboardRoutes>
             <TeamList />
           </DashboardRoutes>
-        } 
+        }
       />
-      <Route 
-        path="/settings" 
+      <Route
+        path="/settings"
         element={
           <DashboardRoutes>
             <SettingsPage />
           </DashboardRoutes>
-        } 
+        }
       />
       {/* Redirección por defecto */}
       <Route path="*" element={<Navigate to="/" />} />
@@ -101,7 +102,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <AppContent />
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -1,7 +1,7 @@
 import { type FC, useMemo } from "react";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
-import { 
-  DndContext, 
+import {
+  DndContext,
   closestCenter,
   KeyboardSensor,
   PointerSensor,
@@ -43,7 +43,7 @@ const SortableTaskRow: FC<{ task: any, startDate: Date, daysCount: number }> = (
   // Calculate pill position
   const taskStart = task.start_date ? parseISO(task.start_date) : startDate;
   const taskEnd = task.deadline ? parseISO(task.deadline) : taskStart;
-  
+
   let leftOffsetDays = differenceInDays(taskStart, startDate);
   let durationDays = differenceInDays(taskEnd, taskStart) + 1; // inclusive
 
@@ -96,13 +96,13 @@ const SortableTaskRow: FC<{ task: any, startDate: Date, daysCount: number }> = (
         {Array.from({ length: daysCount }).map((_, i) => (
           <div key={i} className="flex-1 border-r border-border/20 border-dashed" />
         ))}
-        
+
         {/* Task Pill mapped over the correct days */}
         {durationDays > 0 && leftOffsetDays < daysCount && (
-          <div 
+          <div
             className="absolute top-1/2 -translate-y-1/2 h-8 rounded-md shadow-md flex items-center px-3 overflow-hidden cursor-pointer"
-            style={{ 
-              left: `calc((${leftOffsetDays} / ${daysCount}) * 100% + 4px)`, 
+            style={{
+              left: `calc((${leftOffsetDays} / ${daysCount}) * 100% + 4px)`,
               width: `calc((${durationDays} / ${daysCount}) * 100% - 8px)`
             }}
           >
@@ -124,8 +124,8 @@ const SortableTaskRow: FC<{ task: any, startDate: Date, daysCount: number }> = (
   );
 };
 
-export const WeeklyGantt: FC<{ 
-  tasks: any[], 
+export const WeeklyGantt: FC<{
+  tasks: any[],
   startDateStr: string,
   onTasksReorder?: (newTasks: any[]) => void
 }> = ({ tasks, startDateStr, onTasksReorder }) => {
@@ -187,12 +187,12 @@ export const WeeklyGantt: FC<{
           </div>
 
           {/* Sortable Tasks List */}
-          <DndContext 
+          <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext 
+            <SortableContext
               items={tasks.map(t => t.id)}
               strategy={verticalListSortingStrategy}
             >
@@ -203,11 +203,11 @@ export const WeeklyGantt: FC<{
                   </div>
                 ) : (
                   tasks.map((task) => (
-                    <SortableTaskRow 
-                      key={task.id} 
-                      task={task} 
-                      startDate={startDate} 
-                      daysCount={daysCount} 
+                    <SortableTaskRow
+                      key={task.id}
+                      task={task}
+                      startDate={startDate}
+                      daysCount={daysCount}
                     />
                   ))
                 )}

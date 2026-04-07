@@ -16,7 +16,7 @@ class SmartEngine:
         has_skills = self.db.query(UserSkill).filter(UserSkill.user_id == user_id).first() is not None
         has_availability = self.db.query(UserAvailability).filter(UserAvailability.user_id == user_id).first() is not None
         has_history = self.db.query(Task).filter(Task.status == "Completed").join(Task.project).first() is not None # Lógica simple historial
-        
+
         if has_availability and has_skills and has_history:
             return {"level": "FULL", "percentage": 95, "label": "Precisión máxima", "is_estimated": False}
         elif has_availability and has_skills:
@@ -27,24 +27,77 @@ class SmartEngine:
             return {"level": "DEGRADED", "percentage": 30, "label": "Datos mínimos", "is_estimated": True}
 
     def check_conflicts(self, task_id: int, user_id: int) -> Dict[str, Any]:
-        # En MVP: Detección simple basada en el nivel del motor
+        from app.models.task import TaskAssignment
+
         level_info = self.evaluate_level(user_id)
-        
-        # Simulación: Si el usuario ya tiene 3 tareas activas, hay conflicto
-        active_tasks_count = self.db.query(Task).filter(Task.status == "In Progress").count()
-        
-        has_conflicts = active_tasks_count >= 3
+        current_task = self.db.query(Task).filter(Task.id == task_id).first()
+
+        if not current_task:
+            return {"error": "Task not found"}
+
+        # Get system defaults
+        basic_hours = float(self.configs.get("engine_basic_hours_per_day", 8))
+        degraded_hours = float(self.configs.get("engine_degraded_hours_per_day", 6))
+        default_task_hours = float(self.configs.get("engine_default_task_hours", 4))
+
+        # Determine user daily capacity based on motor level
+        if level_info["level"] == "FULL":
+            # For FULL, we should ideally sum UserAvailability. For MVP simplicity, we use 8 if not found
+            availability = self.db.query(UserAvailability).filter(UserAvailability.user_id == user_id).all()
+            daily_capacity = sum([a.hours_available for a in availability]) / len(availability) if availability else 8.0
+        elif level_info["level"] == "HIGH":
+            daily_capacity = 8.0
+        elif level_info["level"] == "BASIC":
+            daily_capacity = basic_hours
+        else:
+            daily_capacity = degraded_hours
+
+        # Estimate task duration if missing
+        task_hours = current_task.estimated_hours or default_task_hours
+        task_start = current_task.start_date or date.today()
+        task_end = current_task.deadline or (task_start + timedelta(days=max(1, int(task_hours / daily_capacity))))
+
+        # Check for overlaps and load
+        # Get all tasks assigned to the user that overlap with this period
+        other_assignments = self.db.query(TaskAssignment).filter(
+            TaskAssignment.user_id == user_id,
+            TaskAssignment.task_id != task_id
+        ).all()
+
         conflicts = []
-        if has_conflicts:
+        total_load_in_period = 0.0
+
+        for assignment in other_assignments:
+            other_task = self.db.query(Task).filter(Task.id == assignment.task_id).first()
+            if not other_task or not other_task.start_date:
+                continue
+
+            o_start = other_task.start_date
+            o_end = other_task.deadline or (o_start + timedelta(days=1))
+
+            # Check overlap
+            if not (task_end < o_start or task_start > o_end):
+                # Simple load calculation: spread estimated hours over days
+                days = (o_end - o_start).days or 1
+                load_per_day = (other_task.estimated_hours or default_task_hours) / days
+                total_load_in_period += load_per_day
+
+        # Check if new task pushes user over capacity
+        new_task_days = (task_end - task_start).days or 1
+        new_task_load_per_day = task_hours / new_task_days
+
+        if (total_load_in_period + new_task_load_per_day) > daily_capacity:
             conflicts.append({
                 "type": "OVERLOAD",
-                "message": f"El usuario ya tiene {active_tasks_count} tareas en curso."
+                "message": f"Sobrecarga detectada: Carga diaria estimada ({total_load_in_period + new_task_load_per_day:.1f}h) excede capacidad ({daily_capacity}h)."
             })
-            
+
+        has_conflicts = len(conflicts) > 0
+
         return {
             "has_conflicts": has_conflicts,
             "conflicts": conflicts,
             "motor_confidence": level_info,
-            "suggestion": "Considerar reasignar a un miembro con menos carga." if has_conflicts else "Viabilidad confirmada.",
-            "warnings": ["Faltan datos de disponibilidad real"] if level_info["level"] in ["BASIC", "DEGRADED"] else []
+            "suggestion": "Intentar mover fechas o reasignar." if has_conflicts else "Carga balanceada.",
+            "warnings": ["Usando duraciones estimadas por falta de fechas"] if not current_task.deadline else []
         }

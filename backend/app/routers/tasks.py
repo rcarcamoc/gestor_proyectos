@@ -32,14 +32,14 @@ def create_task(
     project = db.query(Project).filter(Project.id == data.project_id, Project.organization_id == current_user.organization_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado en esta organización")
-    
+
     task = Task(
         **data.model_dump(),
         created_by=current_user.id
     )
     db.add(task)
     db.flush()
-    
+
     # Inicializar métricas
     metric = TaskMetric(
         task_id=task.id,
@@ -71,7 +71,7 @@ def update_task(
     task = db.query(Task).join(Project).filter(Task.id == task_id, Project.organization_id == current_user.organization_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
-    
+
     for key, val in data.model_dump(exclude_unset=True).items():
         setattr(task, key, val)
         # Actualizar métricas si cambian horas

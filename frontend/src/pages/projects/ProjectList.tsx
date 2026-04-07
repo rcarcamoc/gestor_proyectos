@@ -26,7 +26,7 @@ const ProjectList: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h2 className="text-2xl font-bold tracking-tight text-text-base flex items-center gap-2">
             <Folder className="text-primary" size={24} />
             Projects
           </h2>
@@ -49,42 +49,42 @@ const ProjectList: React.FC = () => {
             <div key={p.id} className="glass-card p-6 flex flex-col group relative overflow-hidden">
               {/* Subtle gradient background element for card */}
               <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 rounded-full bg-primary/10 blur-2xl group-hover:bg-primary/20 transition-all" />
-              
+
               <div className="flex justify-between items-start mb-4 relative z-10">
                 <span className={cn(
                   "px-2.5 py-1 rounded-full text-xs font-medium border",
-                  p.priority === 'High' ? "bg-accent-red/10 text-accent-red border-accent-red/20" 
+                  p.priority === 'High' ? "bg-accent-red/10 text-accent-red border-accent-red/20"
                   : p.priority === 'Medium' ? "bg-accent-yellow/10 text-accent-yellow border-accent-yellow/20"
                   : "bg-primary/10 text-primary border-primary/20"
                 )}>
                   {p.priority}
                 </span>
-                
-                <button className="text-text-muted hover:text-white transition-colors">
+
+                <button className="text-text-muted hover:text-text-base transition-colors">
                   <MoreHorizontal size={18} />
                 </button>
               </div>
-              
-              <h3 className="text-lg font-semibold text-white mb-2 relative z-10">{p.name}</h3>
+
+              <h3 className="text-lg font-semibold text-text-base mb-2 relative z-10">{p.name}</h3>
               <p className="text-sm text-text-muted mb-6 line-clamp-2 flex-grow relative z-10">
                 {p.description || "No description provided."}
               </p>
-              
+
               <div className="pt-4 border-t border-border/50 flex flex-col space-y-2 text-xs text-text-muted relative z-10">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5"><Calendar size={12} /> Start:</span>
-                  <span className="font-medium text-white/80">{p.start_date}</span>
+                  <span className="font-medium text-text-base/80">{p.start_date}</span>
                 </div>
                 {p.deadline && (
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5"><Calendar size={12} /> Deadline:</span>
-                    <span className="font-medium text-white/80">{p.deadline}</span>
+                    <span className="font-medium text-text-base/80">{p.deadline}</span>
                   </div>
                 )}
-                
+
                 <div className="flex items-center justify-between pt-1">
                   <span className="flex items-center gap-1.5">Status:</span>
-                  <span className="font-medium text-white/80">{p.status}</span>
+                  <span className="font-medium text-text-base/80">{p.status}</span>
                 </div>
               </div>
             </div>
@@ -92,11 +92,11 @@ const ProjectList: React.FC = () => {
         ) : (
           <div className="col-span-full py-16 text-center border-2 border-dashed border-border/50 rounded-xl bg-surface/30">
             <Folder className="mx-auto text-text-muted/50 mb-3" size={48} />
-            <h3 className="text-lg font-medium text-white">No projects found</h3>
+            <h3 className="text-lg font-medium text-text-base">No projects found</h3>
             <p className="text-sm text-text-muted mt-1 mb-4">Start by creating your first project.</p>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="text-primary hover:text-white transition-colors font-medium text-sm"
+              className="text-primary hover:text-text-base transition-colors font-medium text-sm"
             >
               + Create Project
             </button>
@@ -105,12 +105,12 @@ const ProjectList: React.FC = () => {
       </div>
 
       {isModalOpen && (
-        <ProjectCreateModal 
-          onClose={() => setIsModalOpen(false)} 
+        <ProjectCreateModal
+          onClose={() => setIsModalOpen(false)}
           onSuccess={() => {
             setIsModalOpen(false);
             refetch();
-          }} 
+          }}
         />
       )}
     </div>

@@ -6,16 +6,25 @@ from .security_simple import get_password_hash as hash_pwd, verify_password as v
 
 ALGORITHM = "HS256"
 
-def create_access_token(subject: Union[str, Any], organization_id: int, role: str, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(
+    subject: Union[str, Any],
+    organization_id: int,
+    role: str,
+    user_id: int,
+    full_name: str,
+    expires_delta: Optional[timedelta] = None
+) -> str:
     if expires_delta:
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.JWT_EXPIRY)
-    
+
     to_encode = {
-        "sub": str(subject), 
-        "exp": expire, 
-        "organization_id": organization_id, 
+        "sub": str(subject),
+        "exp": expire,
+        "user_id": user_id,
+        "organization_id": organization_id,
+        "full_name": full_name,
         "role": role
     }
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=ALGORITHM)
@@ -26,7 +35,7 @@ def create_refresh_token(subject: Union[str, Any], expires_delta: Optional[timed
         expire = datetime.now(timezone.utc) + expires_delta
     else:
         expire = datetime.now(timezone.utc) + timedelta(days=30)
-    
+
     to_encode = {"sub": str(subject), "exp": expire, "type": "refresh"}
     encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET, algorithm=ALGORITHM)
     return encoded_jwt

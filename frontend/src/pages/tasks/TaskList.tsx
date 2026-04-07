@@ -32,7 +32,7 @@ export const TaskList: FC = () => {
   const addTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
-    
+
     setTasks([
       {
         id: Date.now(),
@@ -45,7 +45,7 @@ export const TaskList: FC = () => {
       },
       ...tasks
     ]);
-    
+
     setNewTaskTitle("");
     setIsModalOpen(false);
   };
@@ -54,12 +54,12 @@ export const TaskList: FC = () => {
     // Tab filter
     if (filter === "Active" && task.status === "Done") return false;
     if (filter === "Completed" && task.status !== "Done") return false;
-    
+
     // Search filter
     if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
-    
+
     return true;
   });
 
@@ -68,7 +68,7 @@ export const TaskList: FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h2 className="text-2xl font-bold tracking-tight text-text-base flex items-center gap-2">
             <CheckSquare className="text-secondary" size={24} />
             Tasks Management
           </h2>
@@ -78,15 +78,15 @@ export const TaskList: FC = () => {
         <div className="flex gap-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search tasks..." 
+            <input
+              type="text"
+              placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-surface/50 border border-border/50 rounded-md text-sm text-white placeholder-text-muted outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
+              className="pl-9 pr-4 py-2 bg-surface/50 border border-border/50 rounded-md text-sm text-text-base placeholder-text-muted outline-none focus:border-secondary focus:ring-1 focus:ring-secondary"
             />
           </div>
-          <button 
+          <button
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-secondary text-white rounded-md text-sm font-medium shadow-md shadow-secondary/20 hover:bg-secondary/90 transition-all hover:scale-105"
           >
@@ -104,9 +104,9 @@ export const TaskList: FC = () => {
             onClick={() => setFilter(tab)}
             className={cn(
               "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-              filter === tab 
-                ? "bg-secondary/20 text-secondary border border-secondary/30" 
-                : "text-text-muted hover:text-white hover:bg-white/5"
+              filter === tab
+                ? "bg-secondary/20 text-secondary border border-secondary/30"
+                : "text-text-muted hover:text-text-base hover:bg-white/5"
             )}
           >
             {tab}
@@ -132,12 +132,12 @@ export const TaskList: FC = () => {
                 <tr key={task.id} className="hover:bg-white/5 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <button 
+                      <button
                         onClick={() => toggleTaskStatus(task.id)}
                         className={cn(
                           "w-5 h-5 rounded flex items-center justify-center border transition-colors",
-                          task.status === "Done" 
-                            ? "bg-accent-green/20 border-accent-green text-accent-green" 
+                          task.status === "Done"
+                            ? "bg-accent-green/20 border-accent-green text-accent-green"
                             : "border-text-muted/50 hover:border-secondary"
                         )}
                       >
@@ -145,7 +145,7 @@ export const TaskList: FC = () => {
                       </button>
                       <span className={cn(
                         "font-medium text-sm transition-all",
-                        task.status === "Done" ? "text-text-muted line-through" : "text-white group-hover:text-secondary"
+                        task.status === "Done" ? "text-text-muted line-through" : "text-text-base group-hover:text-secondary"
                       )}>
                         {task.title}
                       </span>
@@ -201,15 +201,15 @@ export const TaskList: FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-background/80 backdrop-blur-md p-4">
           <div className="glass-card w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-300 border border-border/50">
-            <button 
-              onClick={() => setIsModalOpen(false)} 
-              className="absolute top-4 right-4 text-text-muted hover:text-white transition-colors p-2"
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 text-text-muted hover:text-text-base transition-colors p-2"
             >
               <X size={20} />
             </button>
-            
-            <h2 className="text-xl font-bold text-white mb-6">Create New Task</h2>
-            
+
+            <h2 className="text-xl font-bold text-text-base mb-6">Create New Task</h2>
+
             <form onSubmit={addTask} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Task Title</label>
@@ -220,10 +220,10 @@ export const TaskList: FC = () => {
                   placeholder="What needs to be done?"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-secondary focus:ring-1 focus:ring-secondary outline-none text-white"
+                  className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-secondary focus:ring-1 focus:ring-secondary outline-none text-text-base"
                 />
               </div>
-              
+
               <button
                 type="submit"
                 className="w-full py-2.5 mt-2 bg-secondary text-white font-medium rounded-xl hover:bg-secondary/90 transition-all hover:-translate-y-0.5"

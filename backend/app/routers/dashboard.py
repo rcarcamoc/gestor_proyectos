@@ -21,7 +21,7 @@ def get_dashboard_summary(
 ) -> Any:
     today = date.today()
     org_id = current_user.organization_id
-    
+
     # Restrict team view to leaders/owners
     if view_mode == "team" and current_user.role not in ["owner", "leader"]:
         view_mode = "personal"
@@ -45,7 +45,7 @@ def get_dashboard_summary(
     pending_tasks = tasks_query.filter(Task.status.in_(["Pending", "In Progress"])).count()
     completed_tasks = tasks_query.filter(Task.status == "Completed").count()
     blocked_tasks = tasks_query.filter(Task.status == "Blocked").count()
-    
+
     overdue_tasks = tasks_query.filter(
         Task.status.in_(["Pending", "In Progress", "Blocked"]),
         Task.deadline < today
@@ -71,9 +71,9 @@ def get_timeline(
     today = date.today()
     start = start_date or (today - timedelta(days=today.weekday())) # Monday
     end = end_date or (start + timedelta(days=14)) # Two weeks view
-    
+
     org_id = current_user.organization_id
-    
+
     if view_mode == "team" and current_user.role not in ["owner", "leader"]:
         view_mode = "personal"
 
@@ -83,23 +83,23 @@ def get_timeline(
         Task.start_date <= end,
         Task.deadline >= start
     )
-    
+
     if view_mode == "personal":
         base_query = base_query.join(TaskAssignment, Task.id == TaskAssignment.task_id).filter(
             TaskAssignment.user_id == current_user.id
         )
 
     tasks_data = base_query.all()
-    
+
     timeline_tasks = []
     for task, proj_name in tasks_data:
         # Get assignees
         assignees = db.query(User).join(TaskAssignment).filter(
             TaskAssignment.task_id == task.id
         ).all()
-        
+
         assignee_data = [{"id": a.id, "name": a.full_name} for a in assignees]
-        
+
         timeline_tasks.append({
             "id": task.id,
             "name": task.name,

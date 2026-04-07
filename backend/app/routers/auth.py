@@ -20,7 +20,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
             status_code=400,
             detail="User with this email already exists",
         )
-    
+
     # 2. Crear la Organización
     organization = Organization(
         name=user_in.organization_name,
@@ -29,7 +29,7 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     )
     db.add(organization)
     db.flush() # Para obtener el ID de la organización
-    
+
     # 3. Crear el Usuario (como Owner por ser el que registra)
     new_user = User(
         organization_id=organization.id,
@@ -40,20 +40,26 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     )
     db.add(new_user)
     db.flush()
-    
+
     # 4. Generar tokens
-    access_token = create_access_token(subject=new_user.id, organization_id=organization.id, role="owner")
+    access_token = create_access_token(
+        subject=new_user.email,
+        organization_id=organization.id,
+        role="owner",
+        user_id=new_user.id,
+        full_name=new_user.full_name
+    )
     refresh_token_str = create_refresh_token(subject=new_user.id)
-    
+
     # 5. Guardar Refresh Token en BD
     refresh_token_db = RefreshToken(
         user_id=new_user.id,
-        token_hash=refresh_token_str, 
+        token_hash=refresh_token_str,
         expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
     )
     db.add(refresh_token_db)
     db.commit()
-    
+
     return {
         "access_token": access_token,
         "refresh_token": refresh_token_str,
@@ -71,7 +77,13 @@ def login(login_data: LoginRequest, db: Session = Depends(get_db)) -> Any:
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
 
-    access_token = create_access_token(subject=user.id, organization_id=user.organization_id, role=user.role)
+    access_token = create_access_token(
+        subject=user.email,
+        organization_id=user.organization_id,
+        role=user.role,
+        user_id=user.id,
+        full_name=user.full_name
+    )
     refresh_token_str = create_refresh_token(subject=user.id)
 
     refresh_token_db = RefreshToken(
@@ -93,27 +105,33 @@ def refresh(refresh_data: RefreshRequest, db: Session = Depends(get_db)) -> Any:
     payload = decode_token(refresh_data.refresh_token)
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=401, detail="Invalid refresh token")
-    
+
     user_id = payload.get("sub")
-    
+
     token_db = db.query(RefreshToken).filter(
         RefreshToken.token_hash == refresh_data.refresh_token,
         RefreshToken.revoked_at == None,
         RefreshToken.expires_at > datetime.now()
     ).first()
-    
+
     if not token_db:
         raise HTTPException(status_code=401, detail="Refresh token not found or revoked")
-    
+
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
     token_db.revoked_at = datetime.now()
-    
-    new_access_token = create_access_token(subject=user.id, organization_id=user.organization_id, role=user.role)
+
+    new_access_token = create_access_token(
+        subject=user.email,
+        organization_id=user.organization_id,
+        role=user.role,
+        user_id=user.id,
+        full_name=user.full_name
+    )
     new_refresh_token_str = create_refresh_token(subject=user.id)
-    
+
     new_token_db = RefreshToken(
         user_id=user.id,
         token_hash=new_refresh_token_str,

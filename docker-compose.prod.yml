@@ -21,7 +21,7 @@ services:
       - smarttrack_network_prod
 
   backend:
-    build: 
+    build:
       context: ./backend
     container_name: smarttrack_backend_prod
     restart: always

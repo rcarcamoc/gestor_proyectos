@@ -16,5 +16,5 @@ class Project(Base):
     deadline = Column(Date, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
-    
+
     tasks = relationship("Task", back_populates="project")

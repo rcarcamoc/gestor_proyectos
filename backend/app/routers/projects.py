@@ -24,7 +24,7 @@ def create_project(
 ) -> Any:
     if current_user.role not in ["owner", "leader"]:
         raise HTTPException(status_code=403, detail="No tienes permisos para crear proyectos")
-    
+
     project = Project(
         **data.model_dump(),
         organization_id=current_user.organization_id,
@@ -55,11 +55,11 @@ def update_project(
 ) -> Any:
     if current_user.role not in ["owner", "leader"]:
         raise HTTPException(status_code=403, detail="No tienes permisos para editar proyectos")
-    
+
     project = db.query(Project).filter(Project.id == project_id, Project.organization_id == current_user.organization_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado")
-    
+
     for key, val in data.model_dump(exclude_unset=True).items():
         setattr(project, key, val)
     db.commit()

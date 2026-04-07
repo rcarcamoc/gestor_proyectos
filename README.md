@@ -79,4 +79,6 @@ docker compose exec backend python app/seed.py
 4. Experimenta con el **Modo Emergencia** (solo líderes/owners) desde el botón en el dashboard.
 
 ---
-© 2026 SmartTrack MVP Team.
+© 2026 SmartTrack MVP Team
+
+

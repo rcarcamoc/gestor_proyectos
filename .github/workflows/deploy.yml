@@ -1,0 +1,53 @@
+name: Deploy SmartTrack to Oracle Cloud
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Execute Deployment via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: 22
+          script: |
+            echo "--- Starting Deployment to SmartTrack Production ---"
+            
+            # Navigate to the project directory
+            cd ~/gestor_proyectos || { echo "Directory not found! Cloning..."; git clone https://github.com/rcarcamoc/gestor_proyectos.git ~/gestor_proyectos; cd ~/gestor_proyectos; }
+            
+            # Pull latest changes
+            echo "Pulling latest code from main..."
+            git checkout main
+            git pull origin main
+            
+            # Verify Docker environment
+            if ! command -v docker-compose &> /dev/null
+            then
+                echo "docker-compose not found, trying 'docker compose'..."
+                DOCKER_CMD="docker compose"
+            else
+                DOCKER_CMD="docker-compose"
+            fi
+            
+            # Stop existing containers if any change was detected (optional but safer for DB/network)
+            # Or just use up -d --build which is usually enough for most cases
+            echo "Building and restarting containers with production configuration..."
+            $DOCKER_CMD -f docker-compose.prod.yml up -d --build
+            
+            # Clean up old images to save space on Always Free tier
+            echo "Cleaning up dangling images..."
+            docker image prune -f
+            
+            echo "--- Deployment Successful ---"

@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import { LanguageProvider } from './context/LanguageContext'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import OnboardingFlow from './pages/onboarding/OnboardingFlow'
@@ -103,7 +104,9 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <ThemeProvider>
-            <AppContent />
+            <LanguageProvider>
+              <AppContent />
+            </LanguageProvider>
           </ThemeProvider>
         </AuthProvider>
       </BrowserRouter>

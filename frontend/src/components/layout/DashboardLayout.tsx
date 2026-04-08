@@ -1,6 +1,7 @@
 import { type FC, type ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useTranslation } from "../../context/LanguageContext";
 import {
   LayoutDashboard,
   Users,
@@ -23,6 +24,7 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
   children
 }) => {
   const { user } = useAuth();
+  const { t, language, setLanguage } = useTranslation();
   const userRole = user?.role || "member";
   const userName = user?.full_name || "User";
 
@@ -30,11 +32,11 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
   const location = useLocation();
 
   const navItems = [
-    { name: "Dashboard", path: "/", icon: LayoutDashboard },
-    { name: "Projects", path: "/projects", icon: FolderKanban },
-    { name: "Tasks", path: "/tasks", icon: CheckSquare },
+    { name: t('dashboard'), path: "/", icon: LayoutDashboard },
+    { name: t('projects'), path: "/projects", icon: FolderKanban },
+    { name: t('tasks'), path: "/tasks", icon: CheckSquare },
     ...(userRole === "owner" || userRole === "leader"
-        ? [{ name: "Users & Team", path: "/users", icon: Users }]
+        ? [{ name: t('users_team'), path: "/users", icon: Users }]
         : []),
   ];
 
@@ -69,7 +71,7 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
 
             return (
               <Link
-                key={item.name}
+                key={item.path}
                 to={item.path}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative overflow-hidden",
@@ -91,7 +93,7 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
         <div className="p-4 border-t border-border/50">
           <Link to="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-text-muted hover:text-text-base hover:bg-white/5 transition-all">
             <Settings size={18} />
-            <span className="font-medium text-sm">Settings</span>
+            <span className="font-medium text-sm">{t('settings')}</span>
           </Link>
         </div>
       </aside>
@@ -112,15 +114,36 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
               <Menu size={20} />
             </button>
             <h1 className="text-xl font-semibold text-text-base hidden sm:block">
-              {navItems.find(i => i.path === location.pathname)?.name || 'Dashboard'}
+              {navItems.find(i => i.path === location.pathname)?.name || t('dashboard')}
             </h1>
           </div>
 
           <div className="flex items-center gap-4">
+            {/* Language Switcher */}
+            <div className="flex items-center gap-1 bg-surface/50 p-1 rounded-xl border border-border/50">
+              <button
+                onClick={() => setLanguage('en')}
+                className={cn(
+                  "px-2 py-1 rounded-lg text-xs font-bold transition-all",
+                  language === 'en' ? "bg-primary text-white shadow-sm" : "text-text-muted hover:text-text-base"
+                )}
+              >
+                EN
+              </button>
+              <button
+                onClick={() => setLanguage('es')}
+                className={cn(
+                  "px-2 py-1 rounded-lg text-xs font-bold transition-all",
+                  language === 'es' ? "bg-primary text-white shadow-sm" : "text-text-muted hover:text-text-base"
+                )}
+              >
+                ES
+              </button>
+            </div>
+
             <button
               onClick={() => {
                 alert("You have 1 new notification: System update completed.");
-                // We could set a state to remove the dot here if we imported useState, but an inline alert works to show it's active.
               }}
               className="relative p-2 text-text-muted hover:text-text-base transition-colors rounded-full hover:bg-white/5"
             >

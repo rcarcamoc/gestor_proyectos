@@ -97,8 +97,9 @@ body {
 
 /* Global input styling for legibility */
 input, textarea, select {
-  @apply text-text-base placeholder:text-text-muted bg-surface/50 border border-border transition-all outline-none;
-  color: var(--text-base); /* Explicitly set to ensure it reactive correctly */
+  @apply text-text-base placeholder:text-text-muted bg-surface border border-border transition-all outline-none;
+  color: var(--text-base) !important; /* Force visibility */
+  background-color: var(--surface);
 }
 
 input:focus, textarea:focus, select:focus {
@@ -107,7 +108,20 @@ input:focus, textarea:focus, select:focus {
 
 .light input, .light textarea, .light select {
   @apply bg-white border-border text-text-base;
+  color: #0f172a !important; /* Explicit dark color for light mode */
+  background-color: #ffffff;
+}
+
+/* Ensure options are legible in all browsers */
+option {
+  @apply bg-surface text-text-base;
+  background-color: var(--surface);
   color: var(--text-base);
+}
+
+.light option {
+  background-color: #ffffff;
+  color: #0f172a;
 }
 
 /* Button variants */

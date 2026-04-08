@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import api from '../api/axios';
 import { X, FolderPlus, AlertCircle } from 'lucide-react';
+import { useTranslation } from '../context/LanguageContext';
 
 interface ProjectCreateModalProps {
   onClose: () => void;
@@ -8,6 +9,7 @@ interface ProjectCreateModalProps {
 }
 
 const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSuccess }) => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -28,7 +30,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
       onSuccess();
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Failed to create project.');
+      setError(err.response?.data?.detail || t('error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -48,7 +50,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary border border-primary/30">
              <FolderPlus size={20} />
           </div>
-          New Project
+          {t('new_project')}
         </h2>
 
         {error && (
@@ -60,22 +62,22 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Project Name</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('project_name')}</label>
             <input
               type="text"
               required
               className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base placeholder:text-text-muted/50 shadow-sm"
-              placeholder="e.g.: Website Redesign"
+              placeholder={t('website_redesign_placeholder')}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Description (Optional)</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('description')}</label>
             <textarea
               className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base placeholder:text-text-muted/50 min-h-[100px] resize-none shadow-sm"
-              placeholder="Describe the main objectives..."
+              placeholder={t('objectives_placeholder')}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -83,7 +85,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Start Date</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('start_date')}</label>
               <input
                 type="date"
                 required
@@ -93,15 +95,15 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Priority</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('priority')}</label>
               <select
-                className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base appearance-none shadow-sm cursor-pointer"
+                className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm cursor-pointer"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
-                <option value="Low" className="text-text-base">Low</option>
-                <option value="Medium" className="text-text-base">Medium</option>
-                <option value="High" className="text-text-base">High</option>
+                <option value="Low">{t('low')}</option>
+                <option value="Medium">{t('medium')}</option>
+                <option value="High">{t('high')}</option>
               </select>
             </div>
           </div>
@@ -115,7 +117,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
                 : 'bg-primary hover:bg-primary/90 shadow-primary/20 hover:-translate-y-0.5 text-white'
             }`}
           >
-            {isSubmitting ? 'Creating...' : 'Create Project'}
+            {isSubmitting ? t('creating') : t('create_project')}
           </button>
         </form>
       </div>

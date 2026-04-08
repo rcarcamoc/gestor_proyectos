@@ -4,8 +4,10 @@ import { getProjects } from '../../api/projects';
 import ProjectCreateModal from '../../components/ProjectCreateModal';
 import { Folder, Calendar, Plus, MoreHorizontal } from 'lucide-react';
 import { cn } from "../../lib/utils";
+import { useTranslation } from '../../context/LanguageContext';
 
 const ProjectList: React.FC = () => {
+  const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: projects, isLoading, refetch } = useQuery({
@@ -28,9 +30,9 @@ const ProjectList: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-text-base flex items-center gap-2">
             <Folder className="text-primary" size={24} />
-            Projects
+            {t('projects')}
           </h2>
-          <p className="text-sm text-text-muted mt-1">Manage and track your active projects.</p>
+          <p className="text-sm text-text-muted mt-1">{t('manage_projects_desc')}</p>
         </div>
 
         <button
@@ -38,7 +40,7 @@ const ProjectList: React.FC = () => {
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium shadow-md shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105"
         >
           <Plus size={16} />
-          New Project
+          {t('new_project')}
         </button>
       </div>
 
@@ -57,7 +59,7 @@ const ProjectList: React.FC = () => {
                   : p.priority === 'Medium' ? "bg-accent-yellow/10 text-accent-yellow border-accent-yellow/20"
                   : "bg-primary/10 text-primary border-primary/20"
                 )}>
-                  {p.priority}
+                  {p.priority === 'High' ? t('high') : p.priority === 'Medium' ? t('medium') : t('low')}
                 </span>
 
                 <button className="text-text-muted hover:text-text-base transition-colors">
@@ -72,18 +74,18 @@ const ProjectList: React.FC = () => {
 
               <div className="pt-4 border-t border-border/50 flex flex-col space-y-2 text-xs text-text-muted relative z-10">
                 <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-1.5"><Calendar size={12} /> Start:</span>
+                  <span className="flex items-center gap-1.5"><Calendar size={12} /> {t('start_date')}:</span>
                   <span className="font-medium text-text-base/80">{p.start_date}</span>
                 </div>
                 {p.deadline && (
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1.5"><Calendar size={12} /> Deadline:</span>
+                    <span className="flex items-center gap-1.5"><Calendar size={12} /> {t('deadline')}:</span>
                     <span className="font-medium text-text-base/80">{p.deadline}</span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="flex items-center gap-1.5">Status:</span>
+                  <span className="flex items-center gap-1.5">{t('status')}:</span>
                   <span className="font-medium text-text-base/80">{p.status}</span>
                 </div>
               </div>
@@ -92,13 +94,13 @@ const ProjectList: React.FC = () => {
         ) : (
           <div className="col-span-full py-16 text-center border-2 border-dashed border-border/50 rounded-xl bg-surface/30">
             <Folder className="mx-auto text-text-muted/50 mb-3" size={48} />
-            <h3 className="text-lg font-medium text-text-base">No projects found</h3>
-            <p className="text-sm text-text-muted mt-1 mb-4">Start by creating your first project.</p>
+            <h3 className="text-lg font-medium text-text-base">{t('no_projects')}</h3>
+            <p className="text-sm text-text-muted mt-1 mb-4">{t('start_first_project')}</p>
             <button
               onClick={() => setIsModalOpen(true)}
               className="text-primary hover:text-text-base transition-colors font-medium text-sm"
             >
-              + Create Project
+              + {t('new_project')}
             </button>
           </div>
         )}

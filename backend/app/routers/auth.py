@@ -7,6 +7,7 @@ from app.core.config import settings
 from app.models.user import User, RefreshToken
 from app.models.organization import Organization
 from app.schemas.user import UserCreate, Token, LoginRequest, RefreshRequest
+import re
 from typing import Any
 
 router = APIRouter()
@@ -21,16 +22,36 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
             detail="User with this email already exists",
         )
 
-    # 2. Crear la Organización
+    # 2. Generar y verificar slug de organización único
+    org_slug = user_in.organization_name.lower().replace(" ", "-").strip("-")
+    # Limpiar caracteres especiales básicos para el slug
+    org_slug = re.sub(r'[^a-z0-9\-]', '', org_slug)
+    if not org_slug:
+        org_slug = "org"
+    
+    base_slug = org_slug
+    counter = 1
+    while db.query(Organization).filter(Organization.slug == org_slug).first():
+        org_slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    # 3. Crear la Organización
     organization = Organization(
         name=user_in.organization_name,
-        slug=user_in.organization_name.lower().replace(" ", "-"), # Slug simple para MVP
+        slug=org_slug,
         country=user_in.country
     )
     db.add(organization)
-    db.flush() # Para obtener el ID de la organización
+    try:
+        db.flush() # Para obtener el ID de la organización
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating organization: {str(e)}"
+        )
 
-    # 3. Crear el Usuario (como Owner por ser el que registra)
+    # 4. Crear el Usuario (como Owner por ser el que registra)
     new_user = User(
         organization_id=organization.id,
         email=user_in.email,
@@ -39,9 +60,17 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
         role="owner"
     )
     db.add(new_user)
-    db.flush()
+    
+    try:
+        db.flush()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creating user account: {str(e)}"
+        )
 
-    # 4. Generar tokens
+    # 5. Generar tokens
     access_token = create_access_token(
         subject=new_user.email,
         organization_id=organization.id,
@@ -51,14 +80,22 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     )
     refresh_token_str = create_refresh_token(subject=new_user.id)
 
-    # 5. Guardar Refresh Token en BD
+    # 6. Guardar Refresh Token en BD
     refresh_token_db = RefreshToken(
         user_id=new_user.id,
         token_hash=refresh_token_str,
         expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
     )
     db.add(refresh_token_db)
-    db.commit()
+    
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Final commit failed: {str(e)}"
+        )
 
     return {
         "access_token": access_token,

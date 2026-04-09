@@ -119,3 +119,51 @@ def get_timeline(
         "end": end.isoformat(),
         "tasks": timeline_tasks
     }
+
+@router.get("/member")
+def get_member_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    today = date.today()
+    
+    # 1. Tareas de hoy (asignadas al usuario)
+    tasks_today = db.query(Task).join(TaskAssignment).filter(
+        TaskAssignment.user_id == current_user.id,
+        Task.status.in_(["Pending", "In Progress", "Blocked"]),
+        Task.start_date <= today,
+        (Task.deadline >= today) | (Task.deadline == None)
+    ).all()
+
+    # 2. Conteo de tareas atrasadas
+    overdue_tasks_count = db.query(Task).join(TaskAssignment).filter(
+        TaskAssignment.user_id == current_user.id,
+        Task.status.in_(["Pending", "In Progress", "Blocked"]),
+        Task.deadline < today
+    ).count()
+
+    # 3. Carga proyectada (suma de horas estimadas de tareas activas esta semana)
+    # Definimos semana como hoy a +7 días para este MVP
+    next_week = today + timedelta(days=7)
+    projected_load = db.query(func.sum(Task.estimated_hours)).join(TaskAssignment).filter(
+        TaskAssignment.user_id == current_user.id,
+        Task.status.in_(["Pending", "In Progress", "Blocked"]),
+        Task.deadline >= today,
+        Task.deadline <= next_week
+    ).scalar() or 0.0
+
+    return {
+        "tasks_today": [
+            {
+                "id": t.id,
+                "name": t.name,
+                "project_id": t.project_id,
+                "status": t.status,
+                "priority": t.priority,
+                "estimated_hours": t.estimated_hours
+            } for t in tasks_today
+        ],
+        "overdue_tasks_count": overdue_tasks_count,
+        "projected_load_hours": float(projected_load),
+        "daily_capacity_hours": 8.0 # Default para MVP
+    }

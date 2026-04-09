@@ -19,6 +19,8 @@ class Task(Base):
     created_at = Column(DateTime, server_default=func.now())
 
     project = relationship("Project", back_populates="tasks")
+    assignments = relationship("TaskAssignment", back_populates="task")
+    dependencies = relationship("TaskDependency", foreign_keys="[TaskDependency.task_id]", back_populates="task")
 
 class TaskAssignment(Base):
     __tablename__ = "task_assignments"
@@ -28,6 +30,8 @@ class TaskAssignment(Base):
     user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     assigned_at = Column(DateTime, server_default=func.now())
     assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    task = relationship("Task", back_populates="assignments")
 
 class TaskDependency(Base):
     __tablename__ = "task_dependencies"
@@ -35,6 +39,8 @@ class TaskDependency(Base):
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), index=True, nullable=False)
     depends_on_task_id = Column(Integer, ForeignKey("tasks.id"), index=True, nullable=False)
+    
+    task = relationship("Task", foreign_keys=[task_id], back_populates="dependencies")
 
 class TaskMetric(Base):
     __tablename__ = "task_metrics"

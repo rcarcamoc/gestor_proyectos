@@ -6,6 +6,7 @@ venv/
 .env
 .env.production
 deploy_prod.ps1
+update_oracle.ps1
 
 # Node
 node_modules/

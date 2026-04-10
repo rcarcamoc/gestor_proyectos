@@ -8,8 +8,8 @@ export const TaskList: FC = () => {
   const [projects, setProjects] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const filter = "All";
-  const searchQuery = "";
+  const [filter] = useState("All");
+  const [searchQuery] = useState("");
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -55,6 +55,7 @@ export const TaskList: FC = () => {
         if (tId) {
            const res = await api.get(`/engine/suggest-assignees?task_id=${task_id}&team_id=${tId}`);
            setSuggestedAssignees(res.data.candidates);
+           console.log("Suggestions loaded", res.status);
         }
      } catch (e) { console.error(e); }
   }

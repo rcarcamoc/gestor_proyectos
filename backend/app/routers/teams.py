@@ -165,5 +165,11 @@ def add_member_direct(
         )
         db.add(invite)
         
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"CRITICAL ERROR in add_member_direct: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
     return {"status": "ok", "user_id": user.id}

@@ -12,7 +12,10 @@ export const TeamList: FC = () => {
   const [sendInvite, setSendInvite] = useState(true);
   const [availableSkills, setAvailableSkills] = useState<any[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<{skill_id: number, level: string}[]>([]);
+  const [currentSkillId, setCurrentSkillId] = useState("");
+  const [currentSkillLevel, setCurrentSkillLevel] = useState("intermediate");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [roleEditUser, setRoleEditUser] = useState<number | null>(null);
 
@@ -39,14 +42,27 @@ export const TeamList: FC = () => {
     e.preventDefault();
     if (!inviteEmail || !inviteName || !currentTeamId) return;
 
+    setIsSubmitting(true);
     try {
+      // Auto-add current selection if not already added
+      let finalSkills = [...selectedSkills];
+      if (currentSkillId) {
+          const sid = parseInt(currentSkillId);
+          if (!finalSkills.find(s => s.skill_id === sid)) {
+              finalSkills.push({ skill_id: sid, level: currentSkillLevel });
+          }
+      }
+
       await api.post(`/teams/${currentTeamId}/members`, { 
           email: inviteEmail, 
           full_name: inviteName,
           role: inviteRole,
           send_invite: sendInvite,
-          skills: selectedSkills
+          skills: finalSkills
       });
+      
+      if (currentTeamId) fetchMembers(currentTeamId);
+
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -55,11 +71,13 @@ export const TeamList: FC = () => {
         setInviteName("");
         setInviteRole("member");
         setSelectedSkills([]);
-        if (currentTeamId) fetchMembers(currentTeamId);
+        setCurrentSkillId("");
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Error adding member");
+      alert("Error: " + (err.response?.data?.detail || "Could not add member"));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -207,25 +225,36 @@ export const TeamList: FC = () => {
                 </div>
 
                 <div className="p-4 rounded-xl bg-surface/50 border border-border/50">
-                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Initial Skills</label>
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Technical Skills</label>
                     <div className="flex gap-2 mb-3">
-                       <select id="modalSkill" className="flex-1 text-xs rounded-lg bg-surface border border-border/50 text-text-base px-2 py-1.5 focus:outline-none">
+                       <select 
+                        value={currentSkillId}
+                        onChange={(e) => setCurrentSkillId(e.target.value)}
+                        className="flex-1 text-xs rounded-lg bg-surface border border-border/50 text-text-base px-2 py-1.5 focus:outline-none"
+                       >
                           <option value="">Select skill...</option>
                           {availableSkills.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                        </select>
-                       <select id="modalLevel" className="w-24 text-xs rounded-lg bg-surface border border-border/50 text-text-base px-2 py-1.5 focus:outline-none">
+                       <select 
+                        value={currentSkillLevel}
+                        onChange={(e) => setCurrentSkillLevel(e.target.value)}
+                        className="w-24 text-xs rounded-lg bg-surface border border-border/50 text-text-base px-2 py-1.5 focus:outline-none"
+                       >
                           <option value="basic">Basic</option>
                           <option value="intermediate">Int</option>
                           <option value="advanced">Adv</option>
                           <option value="expert">Exp</option>
                        </select>
-                       <button type="button" onClick={() => {
-                          const sid = parseInt((document.getElementById('modalSkill') as HTMLSelectElement).value);
-                          const lvl = (document.getElementById('modalLevel') as HTMLSelectElement).value;
-                          if (sid && !selectedSkills.find(ss => ss.skill_id === sid)) {
-                             setSelectedSkills([...selectedSkills, { skill_id: sid, level: lvl }]);
+                       <button 
+                        type="button" 
+                        onClick={() => {
+                          if (!currentSkillId) return;
+                          const sid = parseInt(currentSkillId);
+                          if (!selectedSkills.find(ss => ss.skill_id === sid)) {
+                             setSelectedSkills([...selectedSkills, { skill_id: sid, level: currentSkillLevel }]);
+                             setCurrentSkillId("");
                           }
-                       }} className="px-3 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold">+</button>
+                       }} className="px-3 bg-primary text-white hover:bg-primary/80 rounded-lg text-xs font-bold transition-all">Add</button>
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
@@ -240,9 +269,11 @@ export const TeamList: FC = () => {
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 mt-2 bg-accent-yellow text-background font-bold rounded-xl hover:bg-accent-yellow/90 transition-all shadow-lg shadow-accent-yellow/20"
+                  disabled={isSubmitting}
+                  className="w-full py-2.5 mt-2 bg-accent-yellow text-background font-bold rounded-xl hover:bg-accent-yellow/90 transition-all shadow-lg shadow-accent-yellow/20 disabled:opacity-50 flex justify-center items-center gap-2"
                 >
-                  Create and Add Member
+                  {isSubmitting ? <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" /> : null}
+                  {isSubmitting ? "Creating..." : "Create and Add Member"}
                 </button>
               </form>
             )}

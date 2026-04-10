@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from app.core.db import get_db
 from app.core.deps import get_current_user
 from app.models.user import User
@@ -132,7 +132,7 @@ def get_member_dashboard(
         TaskAssignment.user_id == current_user.id,
         Task.status.in_(["Pending", "In Progress", "Blocked"]),
         Task.start_date <= today,
-        (Task.deadline >= today) | (Task.deadline == None)
+        or_(Task.deadline >= today, Task.deadline == None)
     ).all()
 
     # 2. Conteo de tareas atrasadas

@@ -15,21 +15,23 @@ reusable_oauth2 = OAuth2PasswordBearer(
 def get_current_user(
     db: Session = Depends(get_db), token: str = Depends(reusable_oauth2)
 ) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+    )
     try:
         payload = jwt.decode(
             token, settings.JWT_SECRET, algorithms=[ALGORITHM]
         )
-        user_id: str = payload.get("sub")
+        # Access tokens have "user_id" (int) and "sub" (email string).
+        # We must use "user_id" — using int(sub) would raise ValueError.
+        user_id = payload.get("user_id")
         if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Could not validate credentials",
-            )
+            raise credentials_exception
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
+        raise credentials_exception
+    except Exception:
+        raise credentials_exception
     user = db.query(User).filter(User.id == int(user_id)).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

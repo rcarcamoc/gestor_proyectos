@@ -15,8 +15,8 @@ router = APIRouter()
 @router.post("/register", response_model=Token)
 def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
     # 1. Verificar si el usuario ya existe
-    user = db.query(User).filter(User.email == user_in.email).first()
-    if user:
+    existing_user = db.query(User).filter(User.email == user_in.email).first()
+    if existing_user:
         raise HTTPException(
             status_code=400,
             detail="User with this email already exists",
@@ -24,77 +24,66 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
 
     # 2. Generar y verificar slug de organización único
     org_slug = user_in.organization_name.lower().replace(" ", "-").strip("-")
-    # Limpiar caracteres especiales básicos para el slug
     org_slug = re.sub(r'[^a-z0-9\-]', '', org_slug)
     if not org_slug:
         org_slug = "org"
-    
+
     base_slug = org_slug
     counter = 1
     while db.query(Organization).filter(Organization.slug == org_slug).first():
         org_slug = f"{base_slug}-{counter}"
         counter += 1
 
-    # 3. Crear la Organización
-    organization = Organization(
-        name=user_in.organization_name,
-        slug=org_slug,
-        country=user_in.country
-    )
-    db.add(organization)
     try:
-        db.flush() # Para obtener el ID de la organización
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error creating organization: {str(e)}"
+        # 3. Crear la Organización y obtener su ID via flush
+        organization = Organization(
+            name=user_in.organization_name,
+            slug=org_slug,
+            country=user_in.country
         )
+        db.add(organization)
+        db.flush()  # organization.id queda disponible
 
-    # 4. Crear el Usuario (como Owner por ser el que registra)
-    new_user = User(
-        organization_id=organization.id,
-        email=user_in.email,
-        password_hash=get_password_hash(user_in.password),
-        full_name=user_in.full_name,
-        role="owner"
-    )
-    db.add(new_user)
-    
-    try:
-        db.flush()
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error creating user account: {str(e)}"
+        # 4. Crear el Usuario (Owner) con el organization_id ya conocido
+        new_user = User(
+            organization_id=organization.id,
+            email=user_in.email,
+            password_hash=get_password_hash(user_in.password),
+            full_name=user_in.full_name,
+            role="owner"
         )
+        db.add(new_user)
+        db.flush()  # new_user.id queda disponible
 
-    # 5. Generar tokens
-    access_token = create_access_token(
-        subject=new_user.email,
-        organization_id=organization.id,
-        role="owner",
-        user_id=new_user.id,
-        full_name=new_user.full_name
-    )
-    refresh_token_str = create_refresh_token(subject=new_user.id)
+        # 5. Generar tokens (ambos IDs ya están disponibles)
+        access_token = create_access_token(
+            subject=new_user.email,
+            organization_id=organization.id,
+            role="owner",
+            user_id=new_user.id,
+            full_name=new_user.full_name
+        )
+        refresh_token_str = create_refresh_token(subject=new_user.id)
 
-    # 6. Guardar Refresh Token en BD
-    refresh_token_db = RefreshToken(
-        user_id=new_user.id,
-        token_hash=refresh_token_str,
-        expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
-    )
-    db.add(refresh_token_db)
-    
-    try:
+        # 6. Guardar Refresh Token en BD
+        refresh_token_db = RefreshToken(
+            user_id=new_user.id,
+            token_hash=refresh_token_str,
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
+        )
+        db.add(refresh_token_db)
+
+        # 7. Commit atómico — si algo falla aquí, todo se revierte
         db.commit()
+
+    except HTTPException:
+        db.rollback()
+        raise
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"Final commit failed: {str(e)}"
+            detail=f"Error creating account: {str(e)}"
         )
 
     return {

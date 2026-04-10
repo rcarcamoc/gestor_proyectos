@@ -21,6 +21,17 @@ class UserSkillCreate(BaseModel):
     skill_id: int
     level: str = "intermediate"
 
+class UserSkillOut(BaseModel):
+    id: int
+    skill_id: int
+    skill_name: str
+    level: str
+    source: str
+    validated: bool
+
+    class Config:
+        from_attributes = True
+
 @router.get("/", response_model=List[SkillOut])
 def list_skills(
     db: Session = Depends(get_db),
@@ -28,11 +39,61 @@ def list_skills(
 ) -> Any:
     return db.query(Skill).filter(Skill.is_active == True).order_by(Skill.category, Skill.name).all()
 
-@router.get("/my-skills", response_model=List[SkillOut])
+@router.get("/my-skills", response_model=List[UserSkillOut])
 def get_my_skills(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
     user_skills = db.query(UserSkill).filter(UserSkill.user_id == current_user.id).all()
-    skill_ids = [us.skill_id for us in user_skills]
-    return db.query(Skill).filter(Skill.id.in_(skill_ids)).all()
+    results = []
+    for us in user_skills:
+        skill = db.query(Skill).filter(Skill.id == us.skill_id).first()
+        if skill:
+            results.append(UserSkillOut(
+                id=us.id,
+                skill_id=us.skill_id,
+                skill_name=skill.name,
+                level=us.level,
+                source=us.source,
+                validated=(us.source == 'leader_validated')
+            ))
+    return results
+
+@router.post("/my-skills", response_model=UserSkillOut)
+def add_my_skill(
+    data: UserSkillCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    # Check if exists
+    existing = db.query(UserSkill).filter(
+        UserSkill.user_id == current_user.id, 
+        UserSkill.skill_id == data.skill_id
+    ).first()
+    
+    if existing:
+        existing.level = data.level
+        existing.source = "self_declared"
+        db.commit()
+        db.refresh(existing)
+        us = existing
+    else:
+        us = UserSkill(
+            user_id=current_user.id,
+            skill_id=data.skill_id,
+            level=data.level,
+            source="self_declared"
+        )
+        db.add(us)
+        db.commit()
+        db.refresh(us)
+        
+    skill = db.query(Skill).filter(Skill.id == us.skill_id).first()
+    return UserSkillOut(
+        id=us.id,
+        skill_id=us.skill_id,
+        skill_name=skill.name if skill else "Unknown",
+        level=us.level,
+        source=us.source,
+        validated=False
+    )

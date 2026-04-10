@@ -1,47 +1,63 @@
-import { type FC, useState } from "react";
+import { type FC, useState, useEffect } from "react";
 import { Users, Mail, Shield, UserPlus, MoreVertical, X, CheckCircle2 } from "lucide-react";
 import { cn } from "../../lib/utils";
-
-// Mock data to demonstrate UI
-const INITIAL_TEAM = [
-  { id: 1, name: "Admin User", email: "admin@smarttrack.com", role: "Owner", status: "Active", avatar: "AU" },
-  { id: 2, name: "Maria Garcia", email: "maria@smarttrack.com", role: "Leader", status: "Active", avatar: "MG" },
-  { id: 3, name: "John Smith", email: "john@smarttrack.com", role: "Member", status: "Away", avatar: "JS" },
-  { id: 4, name: "Ana Martinez", email: "ana@smarttrack.com", role: "Member", status: "Offline", avatar: "AM" },
-];
+import api from "../../api/axios";
 
 export const TeamList: FC = () => {
-  const [team, setTeam] = useState(INITIAL_TEAM);
+  const [team, setTeam] = useState<any[]>([]);
+  const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState("Member");
+  const [inviteRole, setInviteRole] = useState("member");
   const [showSuccess, setShowSuccess] = useState(false);
+  
+  const [roleEditUser, setRoleEditUser] = useState<number | null>(null);
 
-  const handleInvite = (e: React.FormEvent) => {
+  const fetchMembers = async (tid: number) => {
+    try {
+      const res = await api.get(`/teams/${tid}/members`);
+      setTeam(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    api.get("/teams/").then(res => {
+      if (res.data.length > 0) {
+        setCurrentTeamId(res.data[0].id);
+        fetchMembers(res.data[0].id);
+      }
+    });
+  }, []);
+
+  const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail) return;
+    if (!inviteEmail || !currentTeamId) return;
 
-    // Show success message briefly
-    setShowSuccess(true);
+    try {
+      await api.post(`/teams/${currentTeamId}/invite`, { email: inviteEmail, role: inviteRole });
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        setIsInviteModalOpen(false);
+        setInviteEmail("");
+        setInviteRole("member");
+      }, 1500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    // Add mock user
-    const newUser = {
-      id: Date.now(),
-      name: inviteEmail.split("@")[0], // Mock name based on email
-      email: inviteEmail,
-      role: inviteRole,
-      status: "Offline", // Starts offline
-      avatar: inviteEmail.substring(0, 2).toUpperCase()
-    };
-
-    setTeam([...team, newUser]);
-
-    setTimeout(() => {
-      setShowSuccess(false);
-      setIsInviteModalOpen(false);
-      setInviteEmail("");
-      setInviteRole("Member");
-    }, 1500);
+  const handleChangeRole = async (user_id: number, new_role: string) => {
+    try {
+      await api.patch(`/teams/members/${user_id}`, { role: new_role });
+      setRoleEditUser(null);
+      if (currentTeamId) fetchMembers(currentTeamId);
+    } catch (err) {
+      console.error(err);
+      alert("Error updating role");
+    }
   };
 
   return (
@@ -65,48 +81,43 @@ export const TeamList: FC = () => {
         </button>
       </div>
 
-      {/* Team Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {team.map((member) => (
-          <div key={member.id} className="glass-card p-6 flex flex-col items-center text-center group relative overflow-hidden">
+          <div key={member.user_id} className="glass-card p-6 flex flex-col items-center text-center group relative overflow-hidden">
             {/* Background glowing orb */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
 
-            <button className="absolute top-4 right-4 text-text-muted hover:text-text-base transition-colors p-1 rounded-full hover:bg-white/10 z-20">
-              <MoreVertical size={18} />
-            </button>
+            <div className="absolute top-4 right-4 z-20">
+               <button onClick={() => setRoleEditUser(roleEditUser === member.user_id ? null : member.user_id)} className="text-text-muted hover:text-text-base transition-colors p-1 rounded-full hover:bg-white/10">
+                 <MoreVertical size={18} />
+               </button>
+               {roleEditUser === member.user_id && (
+                  <div className="absolute right-0 mt-2 w-32 bg-surface border border-border/50 rounded-lg shadow-xl z-30">
+                     <button onClick={() => handleChangeRole(member.user_id, 'owner')} className="w-full text-left px-4 py-2 text-xs hover:bg-white/5">Owner</button>
+                     <button onClick={() => handleChangeRole(member.user_id, 'leader')} className="w-full text-left px-4 py-2 text-xs hover:bg-white/5">Leader</button>
+                     <button onClick={() => handleChangeRole(member.user_id, 'member')} className="w-full text-left px-4 py-2 text-xs hover:bg-white/5">Member</button>
+                  </div>
+               )}
+            </div>
 
             {/* Avatar */}
             <div className="relative mb-4 z-10 mt-2">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-surface to-border/80 border border-border/50 flex items-center justify-center text-2xl font-bold text-text-base shadow-lg">
-                {member.avatar}
+              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-surface to-border/80 border border-border/50 flex items-center justify-center text-2xl font-bold text-text-base shadow-lg uppercase">
+                {member.full_name ? member.full_name.substring(0, 2) : member.email.substring(0, 2)}
               </div>
-              <div className={cn(
-                "absolute bottom-1 right-1 w-4 h-4 rounded-full border-2 border-[#09090b]",
-                member.status === "Active" ? "bg-accent-green" :
-                member.status === "Away" ? "bg-accent-yellow" : "bg-text-muted/50"
-              )} />
             </div>
 
             {/* Details */}
-            <h3 className="text-lg font-semibold text-text-base relative z-10">{member.name}</h3>
+            <h3 className="text-lg font-semibold text-text-base relative z-10">{member.full_name || 'User'}</h3>
             <p className="text-sm text-text-muted mb-4 relative z-10 flex items-center gap-1.5 justify-center">
               <Mail size={12} />
               {member.email}
             </p>
 
-            <div className="mt-auto w-full pt-4 border-t border-border/50 flex justify-between items-center relative z-10 text-sm">
-              <span className="flex items-center gap-1.5 text-text-muted">
-                <Shield size={14} className={member.role === "Owner" ? "text-accent-red" : "text-text-muted"} />
+            <div className="mt-auto w-full pt-4 border-t border-border/50 flex justify-center items-center relative z-10 text-sm">
+              <span className="flex items-center gap-1.5 text-text-muted uppercase text-xs font-bold tracking-wider">
+                <Shield size={14} className={member.role === "owner" ? "text-accent-red" : member.role === "leader" ? "text-accent-yellow" : "text-text-muted"} />
                 {member.role}
-              </span>
-              <span className={cn(
-                "text-xs font-medium px-2 py-0.5 rounded-md",
-                member.status === "Active" ? "bg-accent-green/10 text-accent-green" :
-                member.status === "Away" ? "bg-accent-yellow/10 text-accent-yellow" :
-                "bg-surface text-text-muted border border-border/50"
-              )}>
-                {member.status}
               </span>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { useTranslation } from '../../context/LanguageContext';
 const ProjectList: React.FC = () => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
 
   const { data: projects, isLoading, refetch } = useQuery({
     queryKey: ['projects'],
@@ -62,9 +63,16 @@ const ProjectList: React.FC = () => {
                   {p.priority === 'High' ? t('high') : p.priority === 'Medium' ? t('medium') : t('low')}
                 </span>
 
-                <button className="text-text-muted hover:text-text-base transition-colors">
-                  <MoreHorizontal size={18} />
-                </button>
+                <div className="relative">
+                  <button onClick={() => setMenuOpenId(menuOpenId === p.id ? null : p.id)} className="text-text-muted hover:text-text-base transition-colors">
+                    <MoreHorizontal size={18} />
+                  </button>
+                  {menuOpenId === p.id && (
+                    <div className="absolute right-0 mt-2 w-32 bg-surface border border-border/50 rounded-lg shadow-xl z-30">
+                       <button onClick={() => window.location.href = `/tasks?project=${p.id}`} className="w-full text-left px-4 py-2 text-xs hover:bg-white/5">Ver Tareas</button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <h3 className="text-lg font-semibold text-text-base mb-2 relative z-10">{p.name}</h3>

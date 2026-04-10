@@ -33,3 +33,13 @@ def check_task_conflicts(
     # Solo el líder puede chequear conflictos de otros o el mismo de los suyos
     engine = SmartEngine(db)
     return engine.check_conflicts(task_id, user_id)
+
+@router.get("/suggest-assignees")
+def suggest_assignees(
+    task_id: int,
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    engine = SmartEngine(db)
+    return engine.suggest_assignees(task_id, team_id)

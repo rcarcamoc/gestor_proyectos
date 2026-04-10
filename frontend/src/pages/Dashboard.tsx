@@ -2,17 +2,32 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import TimerWidget from '../components/TimerWidget';
 import EngineStatus from '../components/EngineStatus';
+import { useAuth } from '../context/AuthContext';
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
+  const [leaderData, setLeaderData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/dashboard/member')
-      .then(res => setData(res.data))
-      .catch(err => console.error(err))
-      .finally(() => setIsLoading(false));
-  }, []);
+    const fetchDashboard = async () => {
+      try {
+        const memberRes = await api.get('/dashboard/member');
+        setData({...memberRes.data, tasks_today: memberRes.data.tasks_today || []});
+        
+        if (user?.role === 'owner' || user?.role === 'leader') {
+           const leaderRes = await api.get('/dashboard/leader');
+           setLeaderData(leaderRes.data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDashboard();
+  }, [user]);
 
   if (isLoading) return <div className="p-12 text-center text-gray-500">Cargando tu dashboard...</div>;
   if (!data) return (
@@ -66,6 +81,36 @@ const Dashboard: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Leader View Integration */}
+        {(user?.role === 'owner' || user?.role === 'leader') && leaderData && (
+          <div className="bg-red-50 p-6 rounded-2xl border border-red-100 shadow-sm">
+            <h3 className="text-xl font-bold text-red-800 mb-4 tracking-tight">Leader Overview</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+               <div className="p-4 bg-white rounded-xl shadow-sm border border-red-50 text-center">
+                 <p className="text-3xl font-bold text-red-600">{leaderData.blocked_tasks_count}</p>
+                 <p className="text-xs text-gray-500 uppercase font-bold mt-1">Blocked Tasks</p>
+               </div>
+               <div className="p-4 bg-white rounded-xl shadow-sm border border-red-50 text-center">
+                 <p className="text-3xl font-bold text-red-600">{leaderData.projects_at_risk_count}</p>
+                 <p className="text-xs text-gray-500 uppercase font-bold mt-1">Projects at Risk</p>
+               </div>
+               <div className="p-4 bg-white rounded-xl shadow-sm border border-red-50 text-center">
+                 <p className="text-3xl font-bold text-red-600">{leaderData.overloaded_members?.length || 0}</p>
+                 <p className="text-xs text-gray-500 uppercase font-bold mt-1">Overloaded Members</p>
+               </div>
+               <div className="p-4 bg-white rounded-xl shadow-sm border border-red-50 text-center">
+                 <p className="text-3xl font-bold text-red-600">{leaderData.underutilized_members?.length || 0}</p>
+                 <p className="text-xs text-gray-500 uppercase font-bold mt-1">Underutilized Members</p>
+               </div>
+            </div>
+            {leaderData.overloaded_members?.length > 0 && (
+              <div className="mt-4 p-4 bg-white rounded-xl text-sm border border-red-200">
+                 <span className="font-bold text-red-700">Action Required:</span> Engine detects overloaded members: {leaderData.overloaded_members.map((m: any) => m.name).join(', ')}. Consider reassigning tasks.
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Lista de tareas */}
         <section>

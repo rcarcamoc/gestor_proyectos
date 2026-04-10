@@ -167,3 +167,72 @@ def get_member_dashboard(
         "projected_load_hours": float(projected_load),
         "daily_capacity_hours": 8.0 # Default para MVP
     }
+
+@router.get("/leader")
+def get_leader_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    if current_user.role not in ["owner", "leader"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    today = date.today()
+    org_id = current_user.organization_id
+
+    # 1. Blocked Tasks
+    blocked_tasks = db.query(Task).join(Project).filter(
+        Project.organization_id == org_id,
+        Task.status == "Blocked"
+    ).all()
+
+    # 2. Projects at risk (at least one blocked task or overdue task)
+    projects_at_risk_ids = [t.project_id for t in blocked_tasks]
+    overdue_tasks = db.query(Task).join(Project).filter(
+        Project.organization_id == org_id,
+        Task.status.in_(["Pending", "In Progress"]),
+        Task.deadline < today
+    ).all()
+    projects_at_risk_ids.extend([t.project_id for t in overdue_tasks])
+    projects_at_risk_count = len(set(projects_at_risk_ids))
+
+    # 3. Team Status (Overloaded / Underutilized based on active tasks vs capacity)
+    members = db.query(User).join(Team, Team.organization_id == org_id).all() # Simplification for MVP
+    
+    overloaded = []
+    underutilized = []
+    
+    from app.services.engine import SmartEngine
+    engine = SmartEngine(db)
+    
+    for m in members:
+        # Evaluate load
+        member_tasks = db.query(Task).join(TaskAssignment).filter(
+            TaskAssignment.user_id == m.id,
+            Task.status.in_(["Pending", "In Progress"])
+        ).all()
+        
+        load = sum([t.estimated_hours or 0.0 for t in member_tasks])
+        
+        # Engine check for confidence
+        engine_eval = engine.evaluate_level(m.id)
+        capacity = 8.0 * 5 # MVP static capacity
+        
+        mem_data = {
+            "id": m.id,
+            "name": m.full_name,
+            "load": load,
+            "capacity": capacity,
+            "engine_level": engine_eval["level"]
+        }
+        
+        if load > capacity:
+            overloaded.append(mem_data)
+        elif load < capacity * 0.5:
+            underutilized.append(mem_data)
+
+    return {
+        "blocked_tasks_count": len(blocked_tasks),
+        "projects_at_risk_count": projects_at_risk_count,
+        "overloaded_members": overloaded,
+        "underutilized_members": underutilized
+    }

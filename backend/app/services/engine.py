@@ -99,5 +99,41 @@ class SmartEngine:
             "conflicts": conflicts,
             "motor_confidence": level_info,
             "suggestion": "Intentar mover fechas o reasignar." if has_conflicts else "Carga balanceada.",
-            "warnings": ["Usando duraciones estimadas por falta de fechas"] if not current_task.deadline else []
+            "warnings": ["Usando duraciones estimadas por falta de fechas"] if not current_task.deadline else [],
+            "daily_capacity": daily_capacity,
+            "total_load_in_period": total_load_in_period,
+            "new_task_load_per_day": new_task_load_per_day
         }
+
+    def suggest_assignees(self, task_id: int, team_id: int) -> Dict[str, Any]:
+        from app.models.team import TeamMembership
+        members = self.db.query(TeamMembership).filter(TeamMembership.team_id == team_id).all()
+        
+        candidates = []
+        for member in members:
+            # Check conflicts for each member
+            eval_result = self.check_conflicts(task_id, member.user_id)
+            if "error" in eval_result:
+                continue
+            
+            # Additional metric: how much capacity is left
+            capacity_left = eval_result["daily_capacity"] - eval_result.get("total_load_in_period", 0)
+            
+            # Find user full_name and skills (basic matching for MVP)
+            user = self.db.query(User).filter(User.id == member.user_id).first()
+            user_skills_db = self.db.query(UserSkill).filter(UserSkill.user_id == member.user_id).all()
+            skills = [s.skill_id for s in user_skills_db]
+            
+            candidates.append({
+                "user_id": user.id,
+                "name": user.full_name,
+                "has_conflicts": eval_result["has_conflicts"],
+                "capacity_left": capacity_left,
+                "motor_level": eval_result["motor_confidence"]["level"],
+                "skills_count": len(skills),
+                "is_recommended": not eval_result["has_conflicts"] and capacity_left > 0
+            })
+            
+        # Rank: recommended first, then by capacity left descending
+        candidates.sort(key=lambda x: (x["is_recommended"], x["capacity_left"]), reverse=True)
+        return {"task_id": task_id, "team_id": team_id, "candidates": candidates}

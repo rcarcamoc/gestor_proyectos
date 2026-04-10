@@ -1,12 +1,32 @@
-import { type FC, useState } from "react";
-import { User, Lock, Palette, Save, AlertCircle, CheckCircle2, Moon, Sun } from "lucide-react";
+import { type FC, useState, useEffect } from "react";
+import { User, Lock, Palette, Save, AlertCircle, CheckCircle2, Moon, Sun, Star } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import api from "../../api/axios";
 
 export const SettingsPage: FC = () => {
-  const [activeTab, setActiveTab] = useState<"profile" | "security" | "appearance">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "security" | "appearance" | "skills">("profile");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const { theme, toggleTheme } = useTheme();
+
+  const [availableSkills, setAvailableSkills] = useState<{id: number, name: string}[]>([]);
+  const [mySkills, setMySkills] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeTab === "skills") {
+      api.get("/skills/").then(res => setAvailableSkills(res.data)).catch(console.error);
+      api.get("/skills/my-skills").then(res => setMySkills(res.data)).catch(console.error);
+    }
+  }, [activeTab]);
+
+  const addSkill = async (skill_id: number, level: string) => {
+    try {
+      await api.post("/skills/my-skills", { skill_id, level });
+      api.get("/skills/my-skills").then(res => setMySkills(res.data));
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const handleSave = () => {
     setIsSaving(true);
@@ -33,6 +53,7 @@ export const SettingsPage: FC = () => {
             { id: "profile", icon: User, label: "Profile Information" },
             { id: "security", icon: Lock, label: "Password & Security" },
             { id: "appearance", icon: Palette, label: "Appearance" },
+            { id: "skills", icon: Star, label: "My Skills" }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -153,6 +174,57 @@ export const SettingsPage: FC = () => {
                     </div>
                     {theme === 'light' && <div className="w-4 h-4 rounded-full bg-primary ring-2 ring-offset-2 ring-offset-surface ring-primary" />}
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Skills Tab */}
+            {activeTab === "skills" && (
+              <div className="space-y-6 animate-fade-in relative z-10">
+                <h3 className="text-lg font-semibold text-text-base mb-4">My Skills (Engine Configuration)</h3>
+                <p className="text-sm text-text-muted mb-6">Declare your skills to help the Smart Engine assign you relevant tasks.</p>
+
+                <div className="bg-surface p-6 rounded-xl border border-border/50">
+                   <h4 className="font-semibold text-sm mb-4">Add a new skill</h4>
+                   <div className="flex items-center gap-4">
+                     <select id="skillSelect" className="flex-1 px-4 py-2 rounded-lg bg-surface border border-border text-text-base">
+                        {availableSkills.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                     </select>
+                     <select id="levelSelect" className="w-40 px-4 py-2 rounded-lg bg-surface border border-border text-text-base">
+                        <option value="basic">Basic</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
+                        <option value="expert">Expert</option>
+                     </select>
+                     <button onClick={() => {
+                        const sid = parseInt((document.getElementById('skillSelect') as HTMLSelectElement).value);
+                        const lvl = (document.getElementById('levelSelect') as HTMLSelectElement).value;
+                        if (sid) addSkill(sid, lvl);
+                     }} className="px-4 py-2 bg-primary text-white rounded-lg font-bold">Add</button>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                  {mySkills.map(skill => (
+                    <div key={skill.id} className="p-4 rounded-xl border border-border/50 bg-surface flex justify-between items-center">
+                       <div>
+                         <h5 className="font-bold text-text-base">{skill.skill_name}</h5>
+                         <span className="text-xs text-text-muted capitalize">{skill.level}</span>
+                       </div>
+                       <div>
+                         {skill.validated ? (
+                            <span className="text-xs bg-green-500/10 text-green-500 px-2 py-1 rounded border border-green-500/20">Validated</span>
+                         ) : (
+                            <span className="text-xs bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded border border-yellow-500/20">Self Declared</span>
+                         )}
+                       </div>
+                    </div>
+                  ))}
+                  {mySkills.length === 0 && (
+                     <div className="col-span-full py-8 text-center text-text-muted">No skills declared yet.</div>
+                  )}
                 </div>
               </div>
             )}

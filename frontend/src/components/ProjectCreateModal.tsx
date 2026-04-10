@@ -26,7 +26,11 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
     setIsSubmitting(true);
     setError(null);
     try {
-      await api.post('/projects/', formData);
+      const dataToSend = { ...formData };
+      if (!dataToSend.deadline) {
+        delete (dataToSend as any).deadline;
+      }
+      await api.post('/projects/', dataToSend);
       onSuccess();
     } catch (err: any) {
       console.error(err);
@@ -95,17 +99,27 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('priority')}</label>
-              <select
-                className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm cursor-pointer"
-                value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-              >
-                <option value="Low">{t('low')}</option>
-                <option value="Medium">{t('medium')}</option>
-                <option value="High">{t('high')}</option>
-              </select>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Deadline (Optional)</label>
+              <input
+                type="date"
+                className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm"
+                value={formData.deadline}
+                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+              />
             </div>
+          </div>
+          
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('priority')}</label>
+            <select
+              className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm cursor-pointer"
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+            >
+              <option value="Low">{t('low')}</option>
+              <option value="Medium">{t('medium')}</option>
+              <option value="High">{t('high')}</option>
+            </select>
           </div>
 
           <button

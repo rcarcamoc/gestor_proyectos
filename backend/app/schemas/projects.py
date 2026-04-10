@@ -11,8 +11,14 @@ class ProjectBase(BaseModel):
     deadline: Optional[date] = None
     team_id: int
 
-class ProjectCreate(ProjectBase):
-    pass
+class ProjectCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    priority: str = "Medium"
+    status: str = "Planned"
+    start_date: date
+    deadline: Optional[date] = None
+    team_id: Optional[int] = None  # Si no se provee, se usa el primer equipo de la org
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None

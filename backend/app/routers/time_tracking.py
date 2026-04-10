@@ -11,14 +11,7 @@ from datetime import datetime, timezone
 
 router = APIRouter()
 
-@router.get("/{task_id}", response_model=List[schemas.TimeEntryResponse])
-def get_task_time_entries(
-    task_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-) -> Any:
-    return db.query(TimeEntry).filter(TimeEntry.task_id == task_id).all()
-
+# IMPORTANTE: /active-timer debe ir ANTES de /{task_id}
 @router.get("/active-timer", response_model=Optional[schemas.TimeEntryResponse])
 def get_active_timer(
     db: Session = Depends(get_db),
@@ -28,6 +21,14 @@ def get_active_timer(
         TimeEntry.user_id == current_user.id,
         TimeEntry.ended_at == None
     ).first()
+
+@router.get("/{task_id}", response_model=List[schemas.TimeEntryResponse])
+def get_task_time_entries(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    return db.query(TimeEntry).filter(TimeEntry.task_id == task_id).all()
 
 @router.post("/start/{task_id}")
 def start_timer(
@@ -45,11 +46,12 @@ def start_timer(
     entry = TimeEntry(
         task_id=task_id,
         user_id=current_user.id,
-        started_at=datetime.now(timezone.utc),
+        started_at=datetime.now(timezone.utc).replace(tzinfo=None),
         source="timer"
     )
     db.add(entry)
     db.commit()
+    db.refresh(entry)
     return {"status": "ok", "entry_id": entry.id}
 
 @router.post("/stop")
@@ -64,16 +66,18 @@ def stop_timer(
     if not entry:
         raise HTTPException(status_code=404, detail="No hay timer activo.")
 
-    entry.ended_at = datetime.now(timezone.utc)
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    entry.ended_at = now_naive
     delta = entry.ended_at - entry.started_at
     entry.duration_minutes = int(delta.total_seconds() / 60)
 
     metric = db.query(TaskMetric).filter(TaskMetric.task_id == entry.task_id).first()
     if metric:
-        metric.actual_hours += entry.duration_minutes / 60
-        metric.variance_hours = metric.actual_hours - metric.estimated_hours
-        if metric.estimated_hours > 0:
-            metric.variance_percent = (metric.variance_hours / metric.estimated_hours) * 100
+        metric.actual_hours = (metric.actual_hours or 0.0) + entry.duration_minutes / 60
+        estimated = metric.estimated_hours or 0.0
+        metric.variance_hours = metric.actual_hours - estimated
+        if estimated > 0:
+            metric.variance_percent = (metric.variance_hours / estimated) * 100
 
     db.commit()
     return {"status": "ok", "duration_minutes": entry.duration_minutes}
@@ -84,11 +88,14 @@ def log_manual(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
+    now_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    started = data.started_at.replace(tzinfo=None) if data.started_at else now_naive
+
     entry = TimeEntry(
         task_id=data.task_id,
         user_id=current_user.id,
-        started_at=data.started_at or datetime.now(timezone.utc),
-        ended_at=datetime.now(timezone.utc),
+        started_at=started,
+        ended_at=now_naive,
         duration_minutes=data.duration_minutes,
         source="manual",
         notes=data.notes
@@ -97,10 +104,11 @@ def log_manual(
 
     metric = db.query(TaskMetric).filter(TaskMetric.task_id == data.task_id).first()
     if metric:
-        metric.actual_hours += data.duration_minutes / 60
-        metric.variance_hours = metric.actual_hours - metric.estimated_hours
-        if metric.estimated_hours > 0:
-            metric.variance_percent = (metric.variance_hours / metric.estimated_hours) * 100
+        metric.actual_hours = (metric.actual_hours or 0.0) + data.duration_minutes / 60
+        estimated = metric.estimated_hours or 0.0
+        metric.variance_hours = metric.actual_hours - estimated
+        if estimated > 0:
+            metric.variance_percent = (metric.variance_hours / estimated) * 100
 
     db.commit()
     db.refresh(entry)

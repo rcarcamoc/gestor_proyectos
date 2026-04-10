@@ -4,6 +4,7 @@ from app.core.db import get_db
 from app.core.deps import get_current_user, get_current_organization_id
 from app.models.user import User
 from app.models.project import Project
+from app.models.team import Team
 from app.schemas import projects as schemas
 from typing import Any, List
 
@@ -25,8 +26,22 @@ def create_project(
     if current_user.role not in ["owner", "leader"]:
         raise HTTPException(status_code=403, detail="No tienes permisos para crear proyectos")
 
+    # Si no viene team_id, usar el primer equipo de la organización
+    team_id = data.team_id
+    if not team_id:
+        team = db.query(Team).filter(Team.organization_id == current_user.organization_id).first()
+        if not team:
+            raise HTTPException(status_code=400, detail="No hay equipos en tu organización. Completa el onboarding primero.")
+        team_id = team.id
+
     project = Project(
-        **data.model_dump(),
+        name=data.name,
+        description=data.description,
+        priority=data.priority,
+        status=data.status,
+        start_date=data.start_date,
+        deadline=data.deadline,
+        team_id=team_id,
         organization_id=current_user.organization_id,
         created_by=current_user.id
     )

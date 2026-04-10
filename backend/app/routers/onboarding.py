@@ -106,8 +106,13 @@ def onboarding_step4(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    # Obtener el primer equipo creado
+    # Obtener el primer equipo creado (obligatorio para crear proyecto)
     team = db.query(Team).filter(Team.organization_id == current_user.organization_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes completar el paso 1 (crear tu equipo) antes de crear un proyecto."
+        )
 
     project = Project(
         organization_id=current_user.organization_id,
@@ -119,11 +124,13 @@ def onboarding_step4(
         created_by=current_user.id
     )
     db.add(project)
+    db.flush()  # Para obtener project.id
 
     user = db.query(User).filter(User.id == current_user.id).first()
     user.onboarding_step = 5
 
     db.commit()
+    db.refresh(project)
     return {"status": "ok", "project_id": project.id}
 
 @router.post("/step5/task")
@@ -132,37 +139,50 @@ def onboarding_step5(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    # Obtener el proyecto creado en el paso anterior
-    project = db.query(Project).filter(Project.organization_id == current_user.organization_id).order_by(Project.id.desc()).first()
+    # Obtener el proyecto más reciente creado en el paso anterior
+    project = db.query(Project).filter(
+        Project.organization_id == current_user.organization_id
+    ).order_by(Project.id.desc()).first()
 
-    # Crear la tarea
-    task = Task(
-        project_id=project.id,
-        name=data.name,
-        estimated_hours=data.estimated_hours or 4.0, # Default de system_config en lógica real
-        created_by=current_user.id,
-        start_date=project.start_date
-    )
-    db.add(task)
-    db.flush()
+    if not project:
+        raise HTTPException(
+            status_code=400,
+            detail="Debes completar el paso 4 (crear un proyecto) primero."
+        )
 
-    # Inicializar métricas
-    metric = TaskMetric(
-        task_id=task.id,
-        estimated_hours=task.estimated_hours
-    )
-    db.add(metric)
+    try:
+        # Crear la tarea
+        task = Task(
+            project_id=project.id,
+            name=data.name,
+            estimated_hours=data.estimated_hours or 4.0,
+            created_by=current_user.id,
+            start_date=project.start_date
+        )
+        db.add(task)
+        db.flush()  # task.id disponible
 
-    # Marcar onboarding como completado
-    user = db.query(User).filter(User.id == current_user.id).first()
-    user.onboarding_completed = True
-    db.commit()
+        # Inicializar métricas
+        metric = TaskMetric(
+            task_id=task.id,
+            estimated_hours=task.estimated_hours or 0.0
+        )
+        db.add(metric)
 
-    # Respuesta simulada del motor para el MVP (lógica real en Entrega 6)
+        # Marcar onboarding como completado
+        user = db.query(User).filter(User.id == current_user.id).first()
+        user.onboarding_completed = True
+        user.onboarding_step = 6
+
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al crear tarea: {str(e)}")
+
     return {
         "status": "ok",
         "motor_confidence": {
-            "level": "BASIC" if not current_user.onboarding_completed else "HIGH",
+            "level": "BASIC",
             "percentage": 55,
             "label": "Estimación inicial",
             "is_estimated": True

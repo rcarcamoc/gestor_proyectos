@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, onboarding, projects, tasks, engine, time_tracking as time, dashboard, emergency
+from app.routers import auth, onboarding, projects, tasks, engine, time_tracking as time, dashboard, emergency, skills
 from app.core.config import settings
 
 app = FastAPI(
@@ -27,6 +27,7 @@ app.include_router(engine.router, prefix="/engine", tags=["engine"])
 app.include_router(time.router, prefix="/time", tags=["time"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 app.include_router(emergency.router, prefix="/emergency", tags=["emergency"])
+app.include_router(skills.router, prefix="/skills", tags=["skills"])
 
 @app.get("/health")
 def health_check():

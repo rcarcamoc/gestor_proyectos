@@ -15,6 +15,12 @@ const Dashboard: React.FC = () => {
   }, []);
 
   if (isLoading) return <div className="p-12 text-center text-gray-500">Cargando tu dashboard...</div>;
+  if (!data) return (
+    <div className="p-12 text-center text-gray-500">
+      <p className="text-lg font-semibold mb-2">No se pudo cargar el dashboard.</p>
+      <p className="text-sm">Intenta recargar la página.</p>
+    </div>
+  );
 
   return (
     <div className="max-w-6xl mx-auto p-6 flex flex-col lg:flex-row lg:space-x-8">

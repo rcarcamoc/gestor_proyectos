@@ -1,20 +1,25 @@
 import { type FC, useState, useEffect } from "react";
 import { User, Lock, Palette, Save, AlertCircle, CheckCircle2, Moon, Sun, Star } from "lucide-react";
 import { useTheme } from "../../context/ThemeContext";
+import { useAuth } from "../../context/AuthContext";
 import api from "../../api/axios";
 
 export const SettingsPage: FC = () => {
-  const [activeTab, setActiveTab] = useState<"profile" | "security" | "appearance" | "skills">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "security" | "appearance" | "skills" | "manage_skills">("profile");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const { theme, toggleTheme } = useTheme();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "owner" || user?.role === "leader";
 
   const [availableSkills, setAvailableSkills] = useState<{id: number, name: string}[]>([]);
   const [mySkills, setMySkills] = useState<any[]>([]);
 
   useEffect(() => {
-    if (activeTab === "skills") {
+    if (activeTab === "skills" || activeTab === "manage_skills") {
       api.get("/skills/").then(res => setAvailableSkills(res.data)).catch(console.error);
+    }
+    if (activeTab === "skills") {
       api.get("/skills/my-skills").then(res => setMySkills(res.data)).catch(console.error);
     }
   }, [activeTab]);
@@ -53,7 +58,8 @@ export const SettingsPage: FC = () => {
             { id: "profile", icon: User, label: "Profile Information" },
             { id: "security", icon: Lock, label: "Password & Security" },
             { id: "appearance", icon: Palette, label: "Appearance" },
-            { id: "skills", icon: Star, label: "My Skills" }
+            { id: "skills", icon: Star, label: "My Skills" },
+            ...(isAdmin ? [{ id: "manage_skills", icon: Palette, label: "Manage Skills (Admin)" }] : [])
           ].map((tab) => (
             <button
               key={tab.id}
@@ -226,6 +232,64 @@ export const SettingsPage: FC = () => {
                      <div className="col-span-full py-8 text-center text-text-muted">No skills declared yet.</div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Manage Skills Tab (Admin Only) */}
+            {activeTab === "manage_skills" && (
+              <div className="space-y-6 animate-fade-in relative z-10">
+                 <h3 className="text-lg font-semibold text-text-base mb-4">Core Skills Administrator</h3>
+                 <p className="text-sm text-text-muted">Define and manage the global skills list used by the Smart Engine.</p>
+
+                 <div className="bg-surface p-6 rounded-xl border border-border/50">
+                    <h4 className="font-semibold text-sm mb-4">Create New Skill</h4>
+                    <div className="flex flex-col sm:flex-row gap-4">
+                      <input id="newSkillName" type="text" placeholder="e.g. Docker, Python, Architecture" className="flex-1 px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary outline-none text-text-base" />
+                      <input id="newSkillCategory" type="text" placeholder="Category (e.g. Backend)" className="w-full sm:w-48 px-4 py-2.5 rounded-xl bg-surface border border-border focus:border-primary outline-none text-text-base" />
+                      <button onClick={async () => {
+                         const name = (document.getElementById('newSkillName') as HTMLInputElement).value;
+                         const category = (document.getElementById('newSkillCategory') as HTMLInputElement).value;
+                         if (!name) return;
+                         try {
+                            await api.post("/skills/", { name, category });
+                            setSaveMessage({ type: "success", text: "Skill created successfully!" });
+                            api.get("/skills/").then(res => setAvailableSkills(res.data));
+                            (document.getElementById('newSkillName') as HTMLInputElement).value = "";
+                            (document.getElementById('newSkillCategory') as HTMLInputElement).value = "";
+                         } catch (e) {
+                            setSaveMessage({ type: "error", text: "Error creating skill" });
+                         }
+                      }} className="px-6 py-2.5 bg-secondary text-white rounded-xl font-bold shadow-md shadow-secondary/20">Create Skill</button>
+                    </div>
+                 </div>
+
+                 <div className="overflow-hidden rounded-xl border border-border/50">
+                    <table className="w-full text-left bg-surface/30">
+                       <thead className="bg-surface/50 text-xs uppercase text-text-muted">
+                          <tr>
+                             <th className="px-6 py-3 font-semibold">Skill Name</th>
+                             <th className="px-6 py-3 font-semibold">Category</th>
+                             <th className="px-6 py-3 font-semibold text-right">Actions</th>
+                          </tr>
+                       </thead>
+                       <tbody className="divide-y divide-border/50">
+                          {availableSkills.map(s => (
+                             <tr key={s.id} className="hover:bg-white/5 transition-colors">
+                                <td className="px-6 py-4 font-medium text-text-base">{s.name}</td>
+                                <td className="px-6 py-4 text-sm text-text-muted">{s.category || '-'}</td>
+                                <td className="px-6 py-4 text-right">
+                                   <button onClick={async () => {
+                                      if (confirm(`Deactivate ${s.name}?`)) {
+                                         await api.delete(`/skills/${s.id}`);
+                                         api.get("/skills/").then(res => setAvailableSkills(res.data));
+                                      }
+                                   }} className="text-accent-red hover:underline text-xs">Delete</button>
+                                </td>
+                             </tr>
+                          ))}
+                       </tbody>
+                    </table>
+                 </div>
               </div>
             )}
 

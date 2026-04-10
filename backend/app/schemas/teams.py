@@ -35,3 +35,14 @@ class TeamRoleUpdate(BaseModel):
 class TeamInvite(BaseModel):
     email: EmailStr
     role: Optional[str] = "member"
+
+class TeamMemberSkill(BaseModel):
+    skill_id: int
+    level: str
+
+class TeamMemberAdd(BaseModel):
+    email: EmailStr
+    full_name: str
+    role: str = "member"
+    send_invite: bool = True
+    skills: List[TeamMemberSkill] = []

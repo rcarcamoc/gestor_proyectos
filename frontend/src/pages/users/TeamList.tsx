@@ -7,7 +7,11 @@ export const TeamList: FC = () => {
   const [currentTeamId, setCurrentTeamId] = useState<number | null>(null);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
+  const [sendInvite, setSendInvite] = useState(true);
+  const [availableSkills, setAvailableSkills] = useState<any[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<{skill_id: number, level: string}[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   
   const [roleEditUser, setRoleEditUser] = useState<number | null>(null);
@@ -28,23 +32,34 @@ export const TeamList: FC = () => {
         fetchMembers(res.data[0].id);
       }
     });
+    api.get("/skills/").then(res => setAvailableSkills(res.data));
   }, []);
 
-  const handleInvite = async (e: React.FormEvent) => {
+  const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail || !currentTeamId) return;
+    if (!inviteEmail || !inviteName || !currentTeamId) return;
 
     try {
-      await api.post(`/teams/${currentTeamId}/invite`, { email: inviteEmail, role: inviteRole });
+      await api.post(`/teams/${currentTeamId}/members`, { 
+          email: inviteEmail, 
+          full_name: inviteName,
+          role: inviteRole,
+          send_invite: sendInvite,
+          skills: selectedSkills
+      });
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         setIsInviteModalOpen(false);
         setInviteEmail("");
+        setInviteName("");
         setInviteRole("member");
+        setSelectedSkills([]);
+        if (currentTeamId) fetchMembers(currentTeamId);
       }, 1500);
     } catch (err) {
       console.error(err);
+      alert("Error adding member");
     }
   };
 
@@ -136,48 +151,98 @@ export const TeamList: FC = () => {
 
             <h2 className="text-xl font-bold text-text-base mb-6 flex items-center gap-2">
               <UserPlus size={20} className="text-accent-yellow" />
-              Invite Team Member
+              Add Team Member
             </h2>
 
             {showSuccess ? (
               <div className="flex flex-col items-center justify-center py-8 text-center animate-fade-in">
                 <CheckCircle2 size={48} className="text-accent-green mb-4" />
-                <h3 className="text-lg font-medium text-text-base">Invitation Sent!</h3>
-                <p className="text-text-muted text-sm mt-1">An email has been sent to {inviteEmail}</p>
+                <h3 className="text-lg font-medium text-text-base">Member Added!</h3>
+                <p className="text-text-muted text-sm mt-1">{inviteName} has been added to the team.</p>
               </div>
             ) : (
-              <form onSubmit={handleInvite} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    autoFocus
-                    placeholder="colleague@example.com"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-accent-yellow focus:ring-1 focus:ring-accent-yellow outline-none text-text-base"
-                  />
+              <form onSubmit={handleAddMember} className="space-y-4 max-h-[70vh] overflow-y-auto px-1 pr-2">
+                 <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Full Name</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="John Doe"
+                        value={inviteName}
+                        onChange={(e) => setInviteName(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-accent-yellow outline-none text-text-base"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Email</label>
+                      <input
+                        type="email"
+                        required
+                        placeholder="john@example.com"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-accent-yellow outline-none text-text-base"
+                      />
+                    </div>
+                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Role</label>
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-accent-yellow outline-none text-text-base appearance-none"
+                    >
+                      <option value="member">Member</option>
+                      <option value="leader">Leader</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-2 pt-6">
+                      <input type="checkbox" id="sendInvite" checked={sendInvite} onChange={e => setSendInvite(e.target.checked)} className="rounded bg-surface/50 border-border/50 text-accent-yellow" />
+                      <label htmlFor="sendInvite" className="text-xs text-text-muted cursor-pointer">Send Email Invitation</label>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Role</label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 focus:border-accent-yellow focus:ring-1 focus:ring-accent-yellow outline-none text-text-base appearance-none"
-                  >
-                    <option value="Member" className="bg-surface text-text-base">Member</option>
-                    <option value="Leader" className="bg-surface text-text-base">Leader</option>
-                    <option value="Owner" className="bg-surface text-text-base">Owner</option>
-                  </select>
+                <div className="p-4 rounded-xl bg-surface/50 border border-border/50">
+                    <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-3">Initial Skills</label>
+                    <div className="flex gap-2 mb-3">
+                       <select id="modalSkill" className="flex-1 text-xs rounded-lg bg-surface border border-border/50 text-text-base px-2 py-1.5 focus:outline-none">
+                          <option value="">Select skill...</option>
+                          {availableSkills.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                       </select>
+                       <select id="modalLevel" className="w-24 text-xs rounded-lg bg-surface border border-border/50 text-text-base px-2 py-1.5 focus:outline-none">
+                          <option value="basic">Basic</option>
+                          <option value="intermediate">Int</option>
+                          <option value="advanced">Adv</option>
+                          <option value="expert">Exp</option>
+                       </select>
+                       <button type="button" onClick={() => {
+                          const sid = parseInt((document.getElementById('modalSkill') as HTMLSelectElement).value);
+                          const lvl = (document.getElementById('modalLevel') as HTMLSelectElement).value;
+                          if (sid && !selectedSkills.find(ss => ss.skill_id === sid)) {
+                             setSelectedSkills([...selectedSkills, { skill_id: sid, level: lvl }]);
+                          }
+                       }} className="px-3 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-bold">+</button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
+                       {selectedSkills.map(ss => (
+                          <div key={ss.skill_id} className="flex items-center gap-1.5 px-2 py-1 bg-surface border border-border/50 rounded-lg text-[10px] text-text-base">
+                             <span>{availableSkills.find(s => s.id === ss.skill_id)?.name} ({ss.level})</span>
+                             <button type="button" onClick={() => setSelectedSkills(selectedSkills.filter(x => x.skill_id !== ss.skill_id))}><X size={10}/></button>
+                          </div>
+                       ))}
+                    </div>
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 mt-4 bg-accent-yellow text-background font-bold rounded-xl hover:bg-accent-yellow/90 transition-all hover:-translate-y-0.5"
+                  className="w-full py-2.5 mt-2 bg-accent-yellow text-background font-bold rounded-xl hover:bg-accent-yellow/90 transition-all shadow-lg shadow-accent-yellow/20"
                 >
-                  Send Invitation
+                  Create and Add Member
                 </button>
               </form>
             )}

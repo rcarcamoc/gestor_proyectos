@@ -12,7 +12,7 @@ export const SettingsPage: FC = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === "owner" || user?.role === "leader";
 
-  const [availableSkills, setAvailableSkills] = useState<{id: number, name: string}[]>([]);
+  const [availableSkills, setAvailableSkills] = useState<{id: number, name: string, category?: string}[]>([]);
   const [mySkills, setMySkills] = useState<any[]>([]);
 
   useEffect(() => {

@@ -1,6 +1,5 @@
 import { type FC, useState, useEffect } from "react";
 import { Users, Mail, Shield, UserPlus, MoreVertical, X, CheckCircle2 } from "lucide-react";
-import { cn } from "../../lib/utils";
 import api from "../../api/axios";
 
 export const TeamList: FC = () => {

@@ -1,16 +1,15 @@
 import { type FC, useState, useEffect } from "react";
-import { CheckSquare, Clock, AlertCircle, Plus, Search, X, Play, Square, Users } from "lucide-react";
+import { CheckSquare, Clock, AlertCircle, Plus, X, Play, Square, Users } from "lucide-react";
 import { cn } from "../../lib/utils";
 import api from "../../api/axios";
 
 export const TaskList: FC = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [filter, setFilter] = useState("All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const filter = "All";
+  const searchQuery = "";
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -24,7 +23,6 @@ export const TaskList: FC = () => {
   });
 
   const [suggestedAssignees, setSuggestedAssignees] = useState<any[]>([]);
-  const [selectedAssignee, setSelectedAssignee] = useState("");
 
   const fetchData = async () => {
     try {
@@ -36,8 +34,8 @@ export const TaskList: FC = () => {
       setTasks(tskRes.data);
       setProjects(prjRes.data);
       if (teamRes.data.length > 0) {
-        const memRes = await api.get(`/teams/${teamRes.data[0].id}/members`);
-        setTeamMembers(memRes.data);
+        // Fetching members for first team
+        await api.get(`/teams/${teamRes.data[0].id}/members`);
         setFormData(prev => ({...prev, team_id: teamRes.data[0].id} as any));
       }
     } catch (e) {
@@ -77,7 +75,7 @@ export const TaskList: FC = () => {
           estimated_hours: parseFloat(formData.estimated_hours.toString())
       };
       
-      const res = await api.post('/tasks/', postData);
+      await api.post('/tasks/', postData);
       
       // We don't have POST /assignments in MVP schemas, so for MVP we will ignore the actual DB assignment 
       // or we can add endpoints later. Since the requirement asks for suggest assignees, we showed the UI.

@@ -40,7 +40,11 @@ export const TeamList: FC = () => {
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail || !inviteName || !currentTeamId) return;
+    if (!currentTeamId) {
+      alert("No team found! You need to have an active team to add members.");
+      return;
+    }
+    if (!inviteEmail || !inviteName) return;
 
     setIsSubmitting(true);
     try {

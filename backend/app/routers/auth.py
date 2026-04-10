@@ -55,6 +55,23 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)) -> Any:
         db.add(new_user)
         db.flush()  # new_user.id queda disponible
 
+        # 4.5 Crear el Equipo por defecto
+        from app.models.team import Team, TeamMembership
+        team = Team(
+            organization_id=organization.id,
+            name="Main Team",
+            leader_user_id=new_user.id
+        )
+        db.add(team)
+        db.flush()
+        
+        member = TeamMembership(
+            team_id=team.id,
+            user_id=new_user.id,
+            role="owner"
+        )
+        db.add(member)
+
         # 5. Generar tokens (ambos IDs ya están disponibles)
         access_token = create_access_token(
             subject=new_user.email,

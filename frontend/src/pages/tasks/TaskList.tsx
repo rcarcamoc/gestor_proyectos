@@ -6,6 +6,7 @@ import api from "../../api/axios";
 export const TaskList: FC = () => {
   const [tasks, setTasks] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const [filter] = useState("All");
@@ -13,13 +14,16 @@ export const TaskList: FC = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningData, setWarningData] = useState<any>(null);
   const [currentTask, setCurrentTask] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: "",
     project_id: "",
     priority: "Medium",
-    estimated_hours: 4.0
+    estimated_hours: 4.0,
+    assignee_id: ""
   });
 
   const [suggestedAssignees, setSuggestedAssignees] = useState<any[]>([]);
@@ -35,7 +39,8 @@ export const TaskList: FC = () => {
       setProjects(prjRes.data);
       if (teamRes.data.length > 0) {
         // Fetching members for first team
-        await api.get(`/teams/${teamRes.data[0].id}/members`);
+        const membersRes = await api.get(`/teams/${teamRes.data[0].id}/members`);
+        setTeamMembers(membersRes.data || []);
         setFormData(prev => ({...prev, team_id: teamRes.data[0].id} as any));
       }
     } catch (e) {
@@ -67,22 +72,40 @@ export const TaskList: FC = () => {
        return;
     }
 
+    const postData = {
+        name: formData.name, 
+        project_id: parseInt(formData.project_id),
+        priority: formData.priority,
+        estimated_hours: parseFloat(formData.estimated_hours.toString()),
+        assignee_id: formData.assignee_id ? parseInt(formData.assignee_id) : undefined
+    };
+
+    // Predictive checking
+    if (postData.assignee_id) {
+       try {
+         const impactRes = await api.post('/engine/check-cross-project-impact', {
+             user_id: postData.assignee_id,
+             estimated_hours: postData.estimated_hours
+         });
+         if (impactRes.data.cross_project_warning?.has_impact) {
+             setWarningData({ ...impactRes.data.cross_project_warning, pendingData: postData });
+             setShowWarningModal(true);
+             return; // Stop and wait for user confirmation
+         }
+       } catch (e) {
+         console.warn("Could not check impact", e);
+       }
+    }
+
+    await confirmTaskCreation(postData);
+  };
+
+  const confirmTaskCreation = async (postData: any) => {
     try {
-      // 1. Create task
-      const postData = {
-          name: formData.name, 
-          project_id: parseInt(formData.project_id),
-          priority: formData.priority,
-          estimated_hours: parseFloat(formData.estimated_hours.toString())
-      };
-      
       await api.post('/tasks/', postData);
-      
-      // We don't have POST /assignments in MVP schemas, so for MVP we will ignore the actual DB assignment 
-      // or we can add endpoints later. Since the requirement asks for suggest assignees, we showed the UI.
-      
-      setFormData({ name: "", project_id: "", priority: "Medium", estimated_hours: 4.0 });
+      setFormData({ name: "", project_id: "", priority: "Medium", estimated_hours: 4.0, assignee_id: "" });
       setIsModalOpen(false);
+      setShowWarningModal(false);
       fetchData();
     } catch (err) {
       console.error(err);
@@ -226,13 +249,34 @@ export const TaskList: FC = () => {
              <div>
                 <h4 className="text-sm font-bold text-text-base mb-4 flex items-center gap-2"><Users size={16}/> Engine Suggestions (Assignees)</h4>
                 {suggestedAssignees.length === 0 ? <p className="text-xs text-text-muted">Loading suggestions or no team...</p> : (
-                   <div className="space-y-2">
+                   <div className="space-y-3">
                       {suggestedAssignees.map(c => (
-                         <div key={c.user_id} className="flex justify-between items-center bg-surface p-2 rounded border border-border/50 text-sm">
-                            <span>{c.name} {c.is_recommended && <span className="ml-2 text-xs bg-accent-green/20 text-accent-green px-1 rounded">Recommended</span>}</span>
-                            <div className="flex items-center gap-2">
-                               <span className="text-xs text-text-muted">Cap: {c.capacity_left}h left</span>
+                         <div key={c.user_id} className="flex flex-col bg-surface p-3 rounded-lg border border-border/50 text-sm">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="font-bold text-gray-800 dark:text-gray-200">
+                                  {c.name} 
+                                  {c.is_recommended && <span className="ml-2 text-xs bg-accent-green/20 text-accent-green px-2 py-0.5 rounded-full">Recomendado</span>}
+                                </span>
+                                <span className="font-bold text-blue-600">{c.score_total}% Match</span>
+                            </div>
+                            <p className="text-xs text-text-muted mb-2">{c.justification}</p>
+                            
+                            <div className="flex text-xs items-center gap-4 text-gray-500 w-full mb-1">
+                                <div className="flex-1">
+                                  <div className="flex justify-between mb-1"><span>Skills</span> <span>{c.match_percentage}%</span></div>
+                                  <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full"><div className="bg-purple-500 h-1.5 rounded-full" style={{width: `${c.match_percentage}%`}}></div></div>
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex justify-between mb-1"><span>Disp.</span> <span>{c.availability_percentage}%</span></div>
+                                  <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full"><div className="bg-green-500 h-1.5 rounded-full" style={{width: `${c.availability_percentage}%`}}></div></div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-xs mt-2 justify-end">
                                {!c.has_conflicts ? <CheckSquare size={14} className="text-accent-green"/> : <AlertCircle size={14} className="text-accent-red"/>}
+                               <span className={c.has_conflicts ? "text-accent-red font-semibold" : "text-text-muted"}>
+                                  {c.has_conflicts ? "Sobrecarga inminente" : "Libre de conflictos"}
+                               </span>
                             </div>
                          </div>
                       ))}
@@ -276,10 +320,63 @@ export const TaskList: FC = () => {
                     <input type="number" step="0.5" required value={formData.estimated_hours} onChange={e => setFormData({...formData, estimated_hours: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base" />
                  </div>
               </div>
+              <div>
+                <label className="block text-xs font-semibold text-text-muted uppercase mb-2 flex items-center justify-between">
+                  Assignee
+                  <button type="button" onClick={() => {/* Trigger suggestion panel here if desired */}} className="text-secondary hover:underline">Sugerir Asignación</button>
+                </label>
+                <select value={formData.assignee_id} onChange={e => setFormData({...formData, assignee_id: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base">
+                   <option value="">Unassigned</option>
+                   {teamMembers.map(m => (
+                      <option key={m.user_id} value={m.user_id}>{m.user?.full_name || `User ${m.user_id}`}</option>
+                   ))}
+                </select>
+              </div>
               <button type="submit" className="w-full py-2.5 mt-2 bg-secondary text-white font-medium rounded-xl hover:bg-secondary/90">
                 Add Task
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Warning Impact Modal */}
+      {showWarningModal && warningData && (
+        <div className="fixed inset-0 flex items-center justify-center z-[60] bg-background/90 backdrop-blur-md p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-lg p-6 relative border-2 border-accent-red/50 shadow-2xl animate-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-600 mb-4">
+              <AlertCircle size={32} />
+              <h2 className="text-xl font-bold">¡Riesgo de Sobrecarga Cross-Proyecto!</h2>
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              {warningData.recommendation}
+            </p>
+
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 mb-6">
+              <h3 className="font-bold text-red-800 dark:text-red-400 text-sm mb-2">Proyectos Afectados:</h3>
+              <ul className="list-disc list-inside text-sm text-red-700 dark:text-red-300">
+                {warningData.affected_projects?.map((proj: string, idx: number) => (
+                  <li key={idx}>{proj}</li>
+                ))}
+              </ul>
+              {warningData.affected_projects?.length === 0 && <span className="text-sm">Ninguno extra, carga pura del usuario excedida.</span>}
+            </div>
+
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
+              <button 
+                onClick={() => setShowWarningModal(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200"
+              >
+                Cancelar y reasignar
+              </button>
+              <button 
+                onClick={() => confirmTaskCreation(warningData.pendingData)}
+                className="px-4 py-2 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700"
+              >
+                Asignar de todas formas
+              </button>
+            </div>
           </div>
         </div>
       )}

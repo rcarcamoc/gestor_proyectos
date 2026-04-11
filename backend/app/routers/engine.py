@@ -43,3 +43,34 @@ def suggest_assignees(
 ) -> Any:
     engine = SmartEngine(db)
     return engine.suggest_assignees(task_id, team_id)
+
+from pydantic import BaseModel
+from typing import Optional
+
+class CrossProjectImpactRequest(BaseModel):
+    user_id: int
+    estimated_hours: float
+    start_date: Optional[str] = None
+    deadline: Optional[str] = None
+    exclude_task_id: Optional[int] = None
+
+@router.post("/check-cross-project-impact")
+def check_cross_project_impact(
+    req: CrossProjectImpactRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    from datetime import datetime
+    
+    start_d = datetime.fromisoformat(req.start_date).date() if req.start_date else None
+    end_d = datetime.fromisoformat(req.deadline).date() if req.deadline else None
+
+    engine = SmartEngine(db)
+    result = engine.check_cross_project_impact(
+        user_id=req.user_id,
+        estimated_hours=req.estimated_hours,
+        start_date=start_d,
+        deadline=end_d,
+        exclude_task_id=req.exclude_task_id
+    )
+    return {"cross_project_warning": result}

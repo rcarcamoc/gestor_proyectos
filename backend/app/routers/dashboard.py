@@ -236,3 +236,77 @@ def get_leader_dashboard(
         "overloaded_members": overloaded,
         "underutilized_members": underutilized
     }
+
+
+@router.get("/capacity")
+def get_capacity_dashboard(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+) -> Any:
+    """
+    Dashboard Ejecutivo de Carga (Portfolio View)
+    Retorna la capacidad y porcentaje de carga de cada miembro del equipo a nivel cross-proyecto.
+    """
+    if current_user.role not in ["owner", "leader"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+        
+    org_id = current_user.organization_id
+    
+    # 1. Obtener todos los miembros de la organización
+    members = db.query(User).filter(User.organization_id == org_id, User.is_active == True).all()
+    
+    from app.models.availability import UserAvailability
+    
+    capacity_data = []
+    
+    for member in members:
+        # Calcular capacidad semanal disponible real basada en base de datos
+        availabilities = db.query(UserAvailability).filter(UserAvailability.user_id == member.id).all()
+        if availabilities:
+            horas_disponibles = sum([a.hours_available for a in availabilities])
+        else:
+            # Default fallback si no ha configurado horarios
+            horas_disponibles = 40.0
+            
+        # Tareas activas asignadas a este usuario (Pending o In Progress)
+        active_tasks = db.query(Task).join(TaskAssignment).filter(
+            TaskAssignment.user_id == member.id,
+            Task.status.in_(["Pending", "In Progress"])
+        ).all()
+        
+        # Horas comprometidas (MVP: suma de todas las horas activas en horizonte cercano)
+        # Notas: en versión final esto filtra por las fechas semanales
+        horas_comprometidas = sum([t.estimated_hours or 0.0 for t in active_tasks])
+        
+        # Proyectos en los que participa
+        project_ids = list(set([t.project_id for t in active_tasks]))
+        projects = db.query(Project.name).filter(Project.id.in_(project_ids)).all() if project_ids else []
+        project_names = [p[0] for p in projects]
+        
+        # Porcentaje de carga
+        if horas_disponibles > 0:
+            porcentaje = (horas_comprometidas / horas_disponibles) * 100
+        else:
+            porcentaje = 100 if horas_comprometidas > 0 else 0
+            
+        # Estado de carga
+        if porcentaje < 50:
+            estado = "LIBRE"
+        elif porcentaje <= 80:
+            estado = "NORMAL"
+        elif porcentaje <= 95:
+            estado = "CARGADO"
+        else:
+            estado = "SOBRECARGADO"
+            
+        capacity_data.append({
+            "id": member.id,
+            "name": member.full_name,
+            "projects": project_names,
+            "horas_comprometidas": round(horas_comprometidas, 1),
+            "horas_disponibles": round(horas_disponibles, 1),
+            "porcentaje_carga": round(porcentaje, 1),
+            "estado": estado
+        })
+        
+    return capacity_data

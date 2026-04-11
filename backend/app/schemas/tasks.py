@@ -14,7 +14,7 @@ class TaskBase(BaseModel):
     actual_hours: Optional[float] = 0.0
 
 class TaskCreate(TaskBase):
-    pass
+    assignee_id: Optional[int] = None
 
 class TaskUpdate(BaseModel):
     name: Optional[str] = None
@@ -25,11 +25,13 @@ class TaskUpdate(BaseModel):
     deadline: Optional[date] = None
     estimated_hours: Optional[float] = None
     actual_hours: Optional[float] = None
+    assignee_id: Optional[int] = None
 
 class Task(TaskBase):
     id: int
     created_by: int
     created_at: datetime
+    cross_project_warning: Optional[dict] = None
 
     class Config:
         from_attributes = True

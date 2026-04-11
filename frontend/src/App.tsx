@@ -13,6 +13,7 @@ import EmergencyMode from './pages/EmergencyMode'
 import { TaskList } from './pages/tasks/TaskList'
 import { TeamList } from './pages/users/TeamList'
 import { SettingsPage } from './pages/settings/Settings'
+import CapacityDashboard from './pages/CapacityDashboard'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -57,6 +58,14 @@ function AppContent() {
         element={
           <DashboardRoutes>
             <Home />
+          </DashboardRoutes>
+        }
+      />
+      <Route
+        path="/capacity"
+        element={
+          <DashboardRoutes>
+            <CapacityDashboard />
           </DashboardRoutes>
         }
       />

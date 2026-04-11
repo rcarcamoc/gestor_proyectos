@@ -28,17 +28,35 @@ def create_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
+    from app.services.engine import SmartEngine
+    from app.models.task import TaskAssignment
+
     # Verificar proyecto pertenezca a la organización
     project = db.query(Project).filter(Project.id == data.project_id, Project.organization_id == current_user.organization_id).first()
     if not project:
         raise HTTPException(status_code=404, detail="Proyecto no encontrado en esta organización")
 
+    task_data = data.model_dump(exclude={'assignee_id'})
     task = Task(
-        **data.model_dump(),
+        **task_data,
         created_by=current_user.id
     )
     db.add(task)
     db.flush()
+
+    warning = None
+    if data.assignee_id:
+        # Evaluate engine impact
+        engine = SmartEngine(db)
+        warning = engine.check_cross_project_impact(
+            user_id=data.assignee_id,
+            estimated_hours=data.estimated_hours or 0,
+            start_date=data.start_date,
+            deadline=data.deadline
+        )
+        # Assing user
+        assignment = TaskAssignment(task_id=task.id, user_id=data.assignee_id)
+        db.add(assignment)
 
     # Inicializar métricas
     metric = TaskMetric(
@@ -48,6 +66,9 @@ def create_task(
     db.add(metric)
     db.commit()
     db.refresh(task)
+    
+    # Inject warning into the returned response manually since it's not a column
+    setattr(task, "cross_project_warning", warning)
     return task
 
 @router.get("/{task_id}", response_model=schemas.Task)
@@ -68,11 +89,15 @@ def update_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
+    from app.services.engine import SmartEngine
+    from app.models.task import TaskAssignment
+    
     task = db.query(Task).join(Project).filter(Task.id == task_id, Project.organization_id == current_user.organization_id).first()
     if not task:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
-    for key, val in data.model_dump(exclude_unset=True).items():
+    task_data = data.model_dump(exclude_unset=True, exclude={'assignee_id'})
+    for key, val in task_data.items():
         setattr(task, key, val)
         # Actualizar métricas si cambian horas
         if key in ["estimated_hours", "actual_hours"]:
@@ -83,6 +108,29 @@ def update_task(
                 if metric.estimated_hours and metric.estimated_hours > 0:
                     metric.variance_percent = (metric.variance_hours / metric.estimated_hours) * 100
 
+    warning = None
+    if data.assignee_id is not None:
+        # Check if assignment actually changes or we just evaluate
+        assignment = db.query(TaskAssignment).filter(TaskAssignment.task_id == task.id).first()
+        if assignment:
+            assignment.user_id = data.assignee_id
+        else:
+            assignment = TaskAssignment(task_id=task.id, user_id=data.assignee_id)
+            db.add(assignment)
+            
+    # Check impact if any relevant field was touched
+    assignment = db.query(TaskAssignment).filter(TaskAssignment.task_id == task.id).first()
+    if assignment and (data.assignee_id is not None or "estimated_hours" in task_data or "start_date" in task_data or "deadline" in task_data):
+        engine = SmartEngine(db)
+        warning = engine.check_cross_project_impact(
+            user_id=assignment.user_id,
+            estimated_hours=task.estimated_hours or 0,
+            start_date=task.start_date,
+            deadline=task.deadline,
+            exclude_task_id=task.id
+        )
+
     db.commit()
     db.refresh(task)
+    setattr(task, "cross_project_warning", warning)
     return task

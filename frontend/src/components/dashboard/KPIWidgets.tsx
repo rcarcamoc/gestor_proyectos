@@ -1,5 +1,6 @@
 import { type FC } from "react";
 import { FolderKanban, CheckSquare, Clock, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 
 interface KPIData {
@@ -11,6 +12,8 @@ interface KPIData {
 }
 
 export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
+  const navigate = useNavigate();
+
   if (!data) return null;
 
   const widgets = [
@@ -21,7 +24,8 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
       color: "text-primary",
       bgLight: "bg-primary/10",
       bgDark: "bg-primary/20",
-      border: "border-primary/20"
+      border: "border-primary/20",
+      action: () => navigate("/projects"),
     },
     {
       title: "Pending Tasks",
@@ -30,7 +34,8 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
       color: "text-warning",
       bgLight: "bg-warning/10",
       bgDark: "bg-warning/20",
-      border: "border-warning/20"
+      border: "border-warning/20",
+      action: () => navigate("/tasks?status=Pending"),
     },
     {
       title: "Completed",
@@ -39,7 +44,8 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
       color: "text-success",
       bgLight: "bg-success/10",
       bgDark: "bg-success/20",
-      border: "border-success/20"
+      border: "border-success/20",
+      action: () => navigate("/tasks?status=Completed"),
     },
     {
       title: "Action Needed",
@@ -50,7 +56,8 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
       bgLight: "bg-danger/10",
       bgDark: "bg-danger/20",
       border: "border-danger/20",
-      pulse: data.blocked_tasks + data.overdue_tasks > 0
+      pulse: data.blocked_tasks + data.overdue_tasks > 0,
+      action: () => navigate("/tasks?filter=ActionNeeded"),
     }
   ];
 
@@ -61,8 +68,9 @@ export const KPIWidgets: FC<{ data?: KPIData }> = ({ data }) => {
         return (
           <div
             key={i}
+            onClick={widget.action}
             className={cn(
-              "glass-card p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg",
+              "glass-card p-5 relative overflow-hidden group transition-all duration-300 hover:-translate-y-1 hover:shadow-lg cursor-pointer",
               widget.border
             )}
             style={{ animationDelay: `${i * 100}ms` }}

@@ -18,6 +18,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from app.db.session import engine
+from sqlalchemy import text
+
+@app.on_event("startup")
+def run_migrations():
+    with engine.begin() as conn:
+        try:
+            conn.execute(text("ALTER TABLE projects ADD COLUMN color VARCHAR(50) NULL AFTER created_at"))
+            print("Columna 'color' agregada a projects.")
+        except Exception:
+            pass # Ya existe
+        
+        try:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN completed_at DATETIME NULL AFTER created_at"))
+            print("Columna 'completed_at' agregada a tasks.")
+        except Exception:
+            pass # Ya existe
+
+
 # Routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(onboarding.router, prefix="/onboarding", tags=["onboarding"])

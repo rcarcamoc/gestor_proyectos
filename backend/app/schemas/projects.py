@@ -10,6 +10,7 @@ class ProjectBase(BaseModel):
     start_date: date
     deadline: Optional[date] = None
     team_id: int
+    color: Optional[str] = None
 
 class ProjectCreate(BaseModel):
     name: str
@@ -18,7 +19,8 @@ class ProjectCreate(BaseModel):
     status: str = "Planned"
     start_date: date
     deadline: Optional[date] = None
-    team_id: Optional[int] = None  # Si no se provee, se usa el primer equipo de la org
+    team_id: Optional[int] = None
+    color: Optional[str] = None
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
@@ -27,6 +29,7 @@ class ProjectUpdate(BaseModel):
     status: Optional[str] = None
     start_date: Optional[date] = None
     deadline: Optional[date] = None
+    color: Optional[str] = None
 
 class Project(ProjectBase):
     id: int

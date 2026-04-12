@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import api from '../api/axios';
-import { X, FolderPlus, AlertCircle } from 'lucide-react';
+import { X, FolderPlus, AlertCircle, Check } from 'lucide-react';
 import { useTranslation } from '../context/LanguageContext';
+
+const PALETTE = ["#3b82f6", "#8b5cf6", "#ec4899", "#10b981", "#f97316", "#ef4444", "#eab308", "#64748b"];
 
 interface ProjectCreateModalProps {
   onClose: () => void;
@@ -17,7 +19,8 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
     start_date: project?.start_date || new Date().toISOString().split('T')[0],
     deadline: project?.deadline || '',
     priority: project?.priority || 'Medium',
-    status: project?.status || 'Planned'
+    status: project?.status || 'Planned',
+    color: project?.color || PALETTE[Math.floor(Math.random() * PALETTE.length)]
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -116,7 +119,25 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           </div>
           
           <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('priority')}</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Color del Proyecto</label>
+            <div className="flex flex-wrap gap-3">
+               {PALETTE.map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setFormData({...formData, color: c})}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center transition-transform hover:scale-110 ${formData.color === c ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface scale-110' : 'opacity-80 hover:opacity-100'}`}
+                    style={{ backgroundColor: c }}
+                  >
+                    {formData.color === c && <Check size={14} className="text-white" />}
+                  </button>
+               ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('priority')}</label>
             <select
               className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm cursor-pointer"
               value={formData.priority}

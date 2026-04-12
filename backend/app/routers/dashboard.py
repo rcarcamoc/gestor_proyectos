@@ -78,12 +78,14 @@ def get_timeline(
         view_mode = "personal"
 
     # Fetch tasks that intersect with the window OR have no dates (so they show up as "to be scheduled")
-    base_query = db.query(Task, Project.name.label("project_name")).join(Project, Task.project_id == Project.id).filter(
+    base_query = db.query(Task, Project.name.label("project_name"), Project.color.label("project_color")).join(Project, Task.project_id == Project.id).filter(
         Project.organization_id == org_id,
         or_(
             (Task.start_date <= end) & (Task.deadline >= start),
             Task.start_date == None,
-            Task.deadline == None
+            Task.deadline == None,
+            Task.status != "Completed", # O ya estaba contemplado
+            (Task.status == "Completed") & (Task.completed_at >= (today - timedelta(days=7)))
         )
     )
 
@@ -95,7 +97,7 @@ def get_timeline(
     tasks_data = base_query.all()
 
     timeline_tasks = []
-    for task, proj_name in tasks_data:
+    for task, proj_name, proj_color in tasks_data:
         # Get assignees
         assignees = db.query(User).join(TaskAssignment, User.id == TaskAssignment.user_id).filter(
             TaskAssignment.task_id == task.id
@@ -114,7 +116,9 @@ def get_timeline(
             "deadline": task.deadline.isoformat() if task.deadline else (task.start_date.isoformat() if task.start_date else start.isoformat()),
             "assignees": assignee_data,
             "estimated_hours": task.estimated_hours or 0.0,
-            "actual_hours": task.actual_hours or 0.0
+            "actual_hours": task.actual_hours or 0.0,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "project_color": proj_color or "#3b82f6" 
         })
 
     return {

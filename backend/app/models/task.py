@@ -17,6 +17,7 @@ class Task(Base):
     actual_hours = Column(Float, default=0.0)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+    completed_at = Column(DateTime, nullable=True)
 
     project = relationship("Project", back_populates="tasks")
     assignments = relationship("TaskAssignment", back_populates="task")

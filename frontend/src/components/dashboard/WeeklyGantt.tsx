@@ -1,53 +1,28 @@
-import { type FC, useMemo } from "react";
+import { type FC, useMemo, useState } from "react";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Clock } from "lucide-react";
+import { GripVertical, Clock, CalendarClock, Play, AlertCircle, Ban, CheckCircle2, Flame, ChevronDown, ChevronRight, Eye, MessageSquare } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-// Project color palette mapping (dynamically generated or hardcoded for a few)
-const PROJECT_COLORS = [
-  "bg-blue-500", "bg-purple-500", "bg-pink-500", "bg-emerald-500", "bg-orange-500"
-];
+const StatusIcon = ({ status, priority }: { status: string, priority?: string }) => {
+  if (priority === 'High' || priority === 'Critical') return <Flame size={14} className="text-orange-500" />;
+  switch (status) {
+    case 'Scheduled': return <CalendarClock size={14} className="text-slate-400" />;
+    case 'In Progress': return <Play size={14} className="text-blue-500" />;
+    case 'Pending Response Op': return <span className="text-[12px]">👀</span>;
+    case 'Pending Response Client': return <span className="text-[12px]">💬</span>;
+    case 'Blocked': return <Ban size={14} className="text-red-500" />;
+    case 'Completed': return <CheckCircle2 size={14} className="text-green-500" />;
+    default: return <Clock size={14} className="text-slate-400" />;
+  }
+};
 
-// Sub-component for individual Task Row (Sortable)
-const SortableTaskRow: FC<{ task: any, startDate: Date, daysCount: number }> = ({ task, startDate, daysCount }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: task.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  // Calculate pill position
+const TaskRow: FC<{ task: any, startDate: Date, daysCount: number, colorClass: string }> = ({ task, startDate, daysCount, colorClass }) => {
   const taskStart = task.start_date ? parseISO(task.start_date) : startDate;
   const taskEnd = task.deadline ? parseISO(task.deadline) : taskStart;
 
   let leftOffsetDays = differenceInDays(taskStart, startDate);
   let durationDays = differenceInDays(taskEnd, taskStart) + 1; // inclusive
 
-  // Bound within the visible window
   if (leftOffsetDays < 0) {
     durationDays += leftOffsetDays;
     leftOffsetDays = 0;
@@ -56,67 +31,43 @@ const SortableTaskRow: FC<{ task: any, startDate: Date, daysCount: number }> = (
     durationDays = daysCount - leftOffsetDays;
   }
 
-  // Get color based on project
-  const colorClass = PROJECT_COLORS[task.project_id % PROJECT_COLORS.length];
+  // Parse color. Tailwinds classes vs hex.
+  const isHex = colorClass?.startsWith("#");
+  const bgStyle = isHex ? { backgroundColor: colorClass } : {};
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "group grid grid-cols-[250px_1fr] bg-surface/30 hover:bg-surface/60 border-b border-border/40 transition-colors focus-within:ring-2 ring-primary relative z-10",
-        isDragging && "z-50 shadow-2xl scale-[1.01] opacity-90 ring-1 ring-primary/50 cursor-grabbing bg-surface/80"
-      )}
-    >
-      {/* Task Info Column */}
-      <div className="flex items-center gap-3 p-3 border-r border-border/40">
-        <div {...attributes} {...listeners} className="text-text-muted hover:text-text-base cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity">
-          <GripVertical size={16} />
-        </div>
+    <div className="group grid grid-cols-[250px_1fr] bg-surface/10 hover:bg-surface/30 border-b border-border/20 transition-colors relative z-10 pl-4">
+      <div className="flex items-center gap-3 p-2 border-r border-border/40">
+        <StatusIcon status={task.status} priority={task.priority} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-text-base truncate">{task.name}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className={cn("inline-block w-2 h-2 rounded-full", colorClass)} />
-            <span className="text-xs text-text-muted truncate">{task.project_name}</span>
-          </div>
+          <p className="text-xs font-medium text-text-base truncate">{task.name}</p>
         </div>
-        {/* Assignee Avatar */}
         {task.assignees && task.assignees.length > 0 && (
           <div className="flex -space-x-2 mr-2">
-            <div className="w-6 h-6 rounded-full bg-secondary border border-surface flex items-center justify-center text-[10px] font-bold text-white uppercase" title={task.assignees[0].name}>
+            <div className="w-5 h-5 rounded-full bg-secondary border border-surface flex items-center justify-center text-[9px] font-bold text-white uppercase" title={task.assignees[0].name}>
               {task.assignees[0].name.substring(0,2)}
             </div>
           </div>
         )}
       </div>
 
-      {/* Timeline Grid (Background lines + Pill) */}
       <div className="relative flex">
-        {/* Background Day Cells */}
         {Array.from({ length: daysCount }).map((_, i) => (
-          <div key={i} className="flex-1 border-r border-border/20 border-dashed" />
+          <div key={i} className="flex-1 border-r border-border/10 border-dashed" />
         ))}
-
-        {/* Task Pill mapped over the correct days */}
         {durationDays > 0 && leftOffsetDays < daysCount && (
           <div
-            className="absolute top-1/2 -translate-y-1/2 h-8 rounded-md shadow-md flex items-center px-3 overflow-hidden cursor-pointer"
+            className="absolute top-1/2 -translate-y-1/2 h-6 rounded-md shadow-sm flex items-center px-2 py-0.5 overflow-hidden cursor-pointer"
             style={{
               left: `calc((${leftOffsetDays} / ${daysCount}) * 100% + 4px)`,
-              width: `calc((${durationDays} / ${daysCount}) * 100% - 8px)`
+              width: `calc((${durationDays} / ${daysCount}) * 100% - 8px)`,
+              ...bgStyle
             }}
           >
-            <div className={cn("absolute inset-0 opacity-80 backdrop-blur-sm", colorClass)} />
-            <div className="relative z-10 flex items-center gap-2 text-white text-xs font-medium w-full">
+            {!isHex && <div className={cn("absolute inset-0 opacity-60 backdrop-blur-sm", colorClass)} />}
+            <div className="relative z-10 flex items-center gap-1 text-white text-[10px] font-medium w-full">
               <span className="truncate flex-1">{task.status}</span>
-              {task.estimated_hours > 0 && (
-                <span className="flex items-center gap-1 opacity-80 shrink-0">
-                  <Clock size={12} /> {task.estimated_hours}h
-                </span>
-              )}
             </div>
-            {/* Visual shine effect on hover */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
           </div>
         )}
       </div>
@@ -124,59 +75,113 @@ const SortableTaskRow: FC<{ task: any, startDate: Date, daysCount: number }> = (
   );
 };
 
+const ProjectGroup: FC<{ project: any, startDate: Date, daysCount: number }> = ({ project, startDate, daysCount }) => {
+  const [expanded, setExpanded] = useState(false);
+  
+  // Calculate project bounds based on tasks
+  let pStart = startDate;
+  let pEnd = startDate;
+  
+  if (project.tasks.length > 0) {
+     const starts = project.tasks.map((t: any) => t.start_date ? parseISO(t.start_date).getTime() : startDate.getTime());
+     const ends = project.tasks.map((t: any) => t.deadline ? parseISO(t.deadline).getTime() : (t.start_date ? parseISO(t.start_date).getTime() : startDate.getTime()));
+     pStart = new Date(Math.min(...starts));
+     pEnd = new Date(Math.max(...ends));
+  }
+
+  let leftOffsetDays = differenceInDays(pStart, startDate);
+  let durationDays = differenceInDays(pEnd, pStart) + 1;
+
+  if (leftOffsetDays < 0) {
+    durationDays += leftOffsetDays;
+    leftOffsetDays = 0;
+  }
+  if (leftOffsetDays + durationDays > daysCount) {
+    durationDays = daysCount - leftOffsetDays;
+  }
+
+  const cClass = project.color || "#3b82f6";
+  const isHex = cClass.startsWith("#");
+  const bgStyle = isHex ? { backgroundColor: cClass } : {};
+
+  return (
+    <>
+      <div 
+        className="group grid grid-cols-[250px_1fr] bg-surface/50 border-b border-border/50 cursor-pointer hover:bg-surface/80 transition-colors"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <div className="flex items-center gap-2 p-3 border-r border-border/40 font-semibold text-sm">
+          {expanded ? <ChevronDown size={16} className="text-text-muted" /> : <ChevronRight size={16} className="text-text-muted" />}
+          <div className="w-3 h-3 rounded-sm" style={bgStyle} />
+          <span className="truncate">{project.name}</span>
+          <span className="ml-auto text-xs text-text-muted bg-surface/50 px-2 py-0.5 rounded-full">{project.tasks.length}</span>
+        </div>
+        <div className="relative flex">
+          {Array.from({ length: daysCount }).map((_, i) => (
+            <div key={i} className="flex-1 border-r border-border/20 border-dashed" />
+          ))}
+          {!expanded && durationDays > 0 && leftOffsetDays < daysCount && (
+            <div
+              className="absolute top-1/2 -translate-y-1/2 h-2 rounded-full opacity-60"
+              style={{
+                left: `calc((${leftOffsetDays} / ${daysCount}) * 100% + 4px)`,
+                width: `calc((${durationDays} / ${daysCount}) * 100% - 8px)`,
+                ...bgStyle
+              }}
+            >
+              {!isHex && <div className={cn("absolute inset-0 rounded-full", cClass)} />}
+            </div>
+          )}
+        </div>
+      </div>
+      {expanded && project.tasks.map((task: any) => (
+        <TaskRow key={task.id} task={task} startDate={startDate} daysCount={daysCount} colorClass={cClass} />
+      ))}
+    </>
+  );
+};
+
 export const WeeklyGantt: FC<{
   tasks: any[],
   startDateStr: string,
   onTasksReorder?: (newTasks: any[]) => void
-}> = ({ tasks, startDateStr, onTasksReorder }) => {
-  const sensors = useSensors(
-    usePointerSensor(),
-    useKeyboardSensor()
-  );
-
-  function usePointerSensor() {
-    return useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 }, // Prevents drag when just clicking inside the task
-    });
-  }
-
-  function useKeyboardSensor() {
-    return useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    });
-  }
-
-  const handleDragEnd = (event: any) => {
-    const { active, over } = event;
-    if (active.id !== over.id) {
-      const oldIndex = tasks.findIndex((t) => t.id === active.id);
-      const newIndex = tasks.findIndex((t) => t.id === over.id);
-      const reordered = arrayMove(tasks, oldIndex, newIndex);
-      onTasksReorder?.(reordered);
-    }
-  };
-
+}> = ({ tasks, startDateStr }) => {
+  
   const startDate = startDateStr ? parseISO(startDateStr) : new Date();
-  const daysCount = 14; // Showing 14 days
+  const daysCount = 14; 
 
   const daysLabels = useMemo(() => {
     return Array.from({ length: daysCount }).map((_, i) => addDays(startDate, i));
   }, [startDate, daysCount]);
 
+  // Group tasks by project
+  const groupedProjects = useMemo(() => {
+    const map: Record<number, { id: number, name: string, color: string, tasks: any[] }> = {};
+    tasks.forEach(t => {
+      if (!map[t.project_id]) {
+        map[t.project_id] = {
+          id: t.project_id,
+          name: t.project_name,
+          color: t.project_color,
+          tasks: []
+        };
+      }
+      map[t.project_id].tasks.push(t);
+    });
+    return Object.values(map);
+  }, [tasks]);
+
   return (
     <div className="glass-card rounded-xl overflow-hidden shadow-xl border border-border/50 animate-slide-up">
-      {/* Header */}
       <div className="p-4 border-b border-border/50 bg-surface/50 backdrop-blur flex justify-between items-center">
         <h3 className="font-semibold text-text-base">Interactive Timeline</h3>
-        <span className="text-xs text-text-muted bg-white/5 py-1 px-3 rounded-full border border-white/10">Drag rows to reorder priority</span>
+        <span className="text-xs text-text-muted bg-white/5 py-1 px-3 rounded-full border border-white/10">Click projects to expand tasks</span>
       </div>
 
-      {/* Grid Container */}
       <div className="w-full overflow-x-auto">
         <div className="min-w-[800px]">
-          {/* Days Header */}
           <div className="grid grid-cols-[250px_1fr] bg-surface/20 border-b border-border/60 uppercase tracking-widest text-[10px] text-text-muted font-bold select-none">
-            <div className="p-3 border-r border-border/40 flex items-center">Task Details</div>
+            <div className="p-3 border-r border-border/40 flex items-center">Project / Task Details</div>
             <div className="flex">
               {daysLabels.map((date, i) => (
                 <div key={i} className="flex-1 flex justify-center items-center p-2 border-r border-border/20 border-dashed text-center">
@@ -186,34 +191,17 @@ export const WeeklyGantt: FC<{
             </div>
           </div>
 
-          {/* Sortable Tasks List */}
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext
-              items={tasks.map(t => t.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              <div className="flex flex-col relative min-h-[150px]">
-                {tasks.length === 0 ? (
-                  <div className="p-10 text-center text-text-muted text-sm w-full absolute inset-0 flex items-center justify-center">
-                    No active tasks scheduled for this period.
-                  </div>
-                ) : (
-                  tasks.map((task) => (
-                    <SortableTaskRow
-                      key={task.id}
-                      task={task}
-                      startDate={startDate}
-                      daysCount={daysCount}
-                    />
-                  ))
-                )}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <div className="flex flex-col relative min-h-[150px]">
+             {groupedProjects.length === 0 ? (
+                <div className="p-10 text-center text-text-muted text-sm w-full absolute inset-0 flex items-center justify-center">
+                  No active projects or tasks scheduled for this period.
+                </div>
+             ) : (
+                groupedProjects.map((project) => (
+                  <ProjectGroup key={project.id} project={project} startDate={startDate} daysCount={daysCount} />
+                ))
+             )}
+          </div>
         </div>
       </div>
     </div>

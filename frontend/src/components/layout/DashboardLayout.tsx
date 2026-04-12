@@ -183,7 +183,7 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-80 bg-surface border border-border/50 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                <div className="absolute right-0 mt-2 w-80 bg-surface border border-border/50 rounded-xl shadow-2xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-top-2">
                   <div className="p-4 border-b border-border/50 flex justify-between items-center bg-surface/50">
                     <h3 className="font-bold text-sm text-text-base">Notificaciones</h3>
                     <button onClick={markAllRead} className="text-[10px] text-primary hover:underline uppercase font-bold">Marcar todo como leído</button>

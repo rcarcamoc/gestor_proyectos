@@ -16,5 +16,6 @@ class Project(Base):
     deadline = Column(Date, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+    color = Column(String(50), nullable=True) # Almacena clase de Tailwind o Hex
 
     tasks = relationship("Task", back_populates="project")

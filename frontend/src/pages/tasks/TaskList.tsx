@@ -1,5 +1,6 @@
 import { type FC, useState, useEffect } from "react";
-import { CheckSquare, Clock, AlertCircle, Plus, X, Play, Square, Users } from "lucide-react";
+import { CheckSquare, Clock, AlertCircle, Plus, X, Play, Square, Users, LayoutDashboard, Flame } from "lucide-react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import api from "../../api/axios";
 import { BinnacleWall } from "../../components/tasks/BinnacleWall";
@@ -10,8 +11,13 @@ export const TaskList: FC = () => {
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  const [filter] = useState("All");
-  const [searchQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  
+  const [filter, setFilter] = useState(searchParams.get("filter") || "All");
+  const [searchQuery, setSearchQuery] = useState("");
+  const initialProjectId = searchParams.get("project");
+  const initialStatus = searchParams.get("status");
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -153,11 +159,25 @@ export const TaskList: FC = () => {
   const filteredTasks = tasks.filter(task => {
     if (filter === "Active" && task.status === "Completed") return false;
     if (filter === "Completed" && task.status !== "Completed") return false;
+    if (filter === "ActionNeeded" && (task.status === "Completed" || task.status === "Pending")) {
+         // Dummy simplification: Only show Blocked or Overdue (we approximate overdue here or just rely on status)
+         if (task.status !== "Blocked") return false; 
+    }
+    
+    if (initialProjectId && task.project_id.toString() !== initialProjectId) return false;
+    if (initialStatus && task.status !== initialStatus) return false;
+
     if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) {
       return false;
     }
     return true;
   });
+
+  const clearFilters = () => {
+     setSearchParams({});
+     setFilter("All");
+     navigate("/tasks");
+  };
 
   if (isLoading) return <div className="p-12 text-center text-text-muted">Loading tasks...</div>;
 
@@ -171,6 +191,11 @@ export const TaskList: FC = () => {
             Tasks Management
           </h2>
           <p className="text-sm text-text-muted mt-1">Organize, prioritize, and track your tasks from DB.</p>
+          {(initialProjectId || initialStatus || filter !== "All") && (
+             <button onClick={clearFilters} className="mt-2 text-xs text-secondary hover:underline flex items-center gap-1">
+                <X size={12} /> Limpiar Filtros
+             </button>
+          )}
         </div>
 
         <div className="flex gap-3">

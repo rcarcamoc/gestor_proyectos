@@ -135,6 +135,12 @@ def update_task(
     
     # Bitácora automática si cambia el estado
     if "status" in task_data and task_data["status"] != old_status:
+        # Actualizar completed_at
+        if task_data["status"] == "Completed" and old_status != "Completed":
+            task.completed_at = datetime.now()
+        elif task_data["status"] != "Completed" and old_status == "Completed":
+            task.completed_at = None
+
         from app.models.task_log import TaskLog
         db.add(TaskLog(
             task_id=task.id,

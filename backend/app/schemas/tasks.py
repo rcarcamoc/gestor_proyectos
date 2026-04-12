@@ -12,6 +12,7 @@ class TaskBase(BaseModel):
     deadline: Optional[date] = None
     estimated_hours: Optional[float] = None
     actual_hours: Optional[float] = 0.0
+    completed_at: Optional[datetime] = None
 
 class TaskCreate(TaskBase):
     assignee_id: Optional[int] = None
@@ -31,6 +32,7 @@ class Task(TaskBase):
     id: int
     created_by: int
     created_at: datetime
+    completed_at: Optional[datetime] = None
     cross_project_warning: Optional[dict] = None
 
     class Config:

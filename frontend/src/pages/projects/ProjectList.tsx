@@ -9,6 +9,7 @@ import { useTranslation } from '../../context/LanguageContext';
 const ProjectList: React.FC = () => {
   const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<any>(null);
   const [menuOpenId, setMenuOpenId] = useState<number | null>(null);
 
   const { data: projects, isLoading, refetch } = useQuery({
@@ -37,7 +38,7 @@ const ProjectList: React.FC = () => {
         </div>
 
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => { setEditingProject(null); setIsModalOpen(true); }}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md text-sm font-medium shadow-md shadow-primary/20 hover:bg-primary/90 transition-all hover:scale-105"
         >
           <Plus size={16} />
@@ -70,6 +71,7 @@ const ProjectList: React.FC = () => {
                   {menuOpenId === p.id && (
                     <div className="absolute right-0 mt-2 w-32 bg-surface border border-border/50 rounded-lg shadow-xl z-30">
                        <button onClick={() => window.location.href = `/tasks?project=${p.id}`} className="w-full text-left px-4 py-2 text-xs hover:bg-white/5">Ver Tareas</button>
+                       <button onClick={() => { setEditingProject(p); setIsModalOpen(true); setMenuOpenId(null); }} className="w-full text-left px-4 py-2 text-xs hover:bg-white/5 text-primary">Editar</button>
                     </div>
                   )}
                 </div>
@@ -116,9 +118,11 @@ const ProjectList: React.FC = () => {
 
       {isModalOpen && (
         <ProjectCreateModal
-          onClose={() => setIsModalOpen(false)}
+          project={editingProject}
+          onClose={() => { setIsModalOpen(false); setEditingProject(null); }}
           onSuccess={() => {
             setIsModalOpen(false);
+            setEditingProject(null);
             refetch();
           }}
         />

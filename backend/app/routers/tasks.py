@@ -64,6 +64,17 @@ def create_task(
         estimated_hours=task.estimated_hours or 0.0
     )
     db.add(metric)
+
+    # Bitácora: Registro de creación
+    from app.models.task_log import TaskLog
+    db.add(TaskLog(
+        task_id=task.id, 
+        user_id=current_user.id, 
+        log_type="event", 
+        content=f"Tarea creada por {current_user.full_name}",
+        new_status=task.status
+    ))
+
     db.commit()
     db.refresh(task)
     
@@ -96,6 +107,7 @@ def update_task(
     if not task:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
 
+    old_status = task.status
     task_data = data.model_dump(exclude_unset=True, exclude={'assignee_id'})
     for key, val in task_data.items():
         setattr(task, key, val)
@@ -120,6 +132,31 @@ def update_task(
             
     # Check impact if any relevant field was touched
     assignment = db.query(TaskAssignment).filter(TaskAssignment.task_id == task.id).first()
+    
+    # Bitácora automática si cambia el estado
+    if "status" in task_data and task_data["status"] != old_status:
+        from app.models.task_log import TaskLog
+        db.add(TaskLog(
+            task_id=task.id,
+            user_id=current_user.id,
+            log_type="event",
+            content=f"Estado cambiado de {old_status} a {task_data['status']}",
+            old_status=old_status,
+            new_status=task_data["status"]
+        ))
+        
+        # Alerta al líder/owner si se bloquea
+        if task_data["status"] == "Blocked":
+            from app.models.notification import Notification
+            # Notificar al owner del proyecto
+            notif = Notification(
+                user_id=project.created_by,
+                type="block",
+                message=f"BLOQUEO: La tarea '{task.name}' ha sido bloqueada por {current_user.full_name}",
+                link="/tasks"
+            )
+            db.add(notif)
+
     if assignment and (data.assignee_id is not None or "estimated_hours" in task_data or "start_date" in task_data or "deadline" in task_data):
         engine = SmartEngine(db)
         warning = engine.check_cross_project_impact(

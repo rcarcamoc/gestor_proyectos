@@ -77,11 +77,14 @@ def get_timeline(
     if view_mode == "team" and current_user.role not in ["owner", "leader"]:
         view_mode = "personal"
 
-    # Fetch tasks that intersect with the given window
+    # Fetch tasks that intersect with the window OR have no dates (so they show up as "to be scheduled")
     base_query = db.query(Task, Project.name.label("project_name")).join(Project, Task.project_id == Project.id).filter(
         Project.organization_id == org_id,
-        Task.start_date <= end,
-        Task.deadline >= start
+        or_(
+            (Task.start_date <= end) & (Task.deadline >= start),
+            Task.start_date == None,
+            Task.deadline == None
+        )
     )
 
     if view_mode == "personal":
@@ -107,11 +110,11 @@ def get_timeline(
             "project_name": proj_name,
             "status": task.status,
             "priority": task.priority,
-            "start_date": task.start_date.isoformat() if task.start_date else None,
-            "deadline": task.deadline.isoformat() if task.deadline else None,
+            "start_date": task.start_date.isoformat() if task.start_date else start.isoformat(),
+            "deadline": task.deadline.isoformat() if task.deadline else (task.start_date.isoformat() if task.start_date else start.isoformat()),
             "assignees": assignee_data,
-            "estimated_hours": task.estimated_hours,
-            "actual_hours": task.actual_hours
+            "estimated_hours": task.estimated_hours or 0.0,
+            "actual_hours": task.actual_hours or 0.0
         })
 
     return {

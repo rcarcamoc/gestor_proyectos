@@ -6,17 +6,18 @@ import { useTranslation } from '../context/LanguageContext';
 interface ProjectCreateModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  project?: any;
 }
 
 const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSuccess }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    start_date: new Date().toISOString().split('T')[0],
-    deadline: '',
-    priority: 'Medium',
-    status: 'Planned'
+    name: project?.name || '',
+    description: project?.description || '',
+    start_date: project?.start_date || new Date().toISOString().split('T')[0],
+    deadline: project?.deadline || '',
+    priority: project?.priority || 'Medium',
+    status: project?.status || 'Planned'
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,12 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
       if (!dataToSend.deadline) {
         delete (dataToSend as any).deadline;
       }
-      await api.post('/projects/', dataToSend);
+      
+      if (project?.id) {
+        await api.patch(`/projects/${project.id}`, dataToSend);
+      } else {
+        await api.post('/projects/', dataToSend);
+      }
       onSuccess();
     } catch (err: any) {
       console.error(err);
@@ -54,7 +60,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary border border-primary/30">
              <FolderPlus size={20} />
           </div>
-          {t('new_project')}
+          {project ? "Editar Proyecto" : t('new_project')}
         </h2>
 
         {error && (
@@ -122,6 +128,20 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
             </select>
           </div>
 
+          <div>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('status')}</label>
+            <select
+              className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm cursor-pointer"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+            >
+              <option value="Planned">Planned</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Completed">Completed</option>
+              <option value="Archived">Archived</option>
+            </select>
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -131,7 +151,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
                 : 'bg-primary hover:bg-primary/90 shadow-primary/20 hover:-translate-y-0.5 text-white'
             }`}
           >
-            {isSubmitting ? t('creating') : t('create_project')}
+            {isSubmitting ? t('creating') : (project ? "Actualizar Proyecto" : t('create_project'))}
           </button>
         </form>
       </div>

@@ -1,4 +1,4 @@
-import { type FC, type ReactNode, useState } from "react";
+import { type FC, type ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LanguageContext";
@@ -29,7 +29,33 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
   const userName = user?.full_name || "User";
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const location = useLocation();
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get("/notifications/");
+      setNotifications(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // Polling cada 30s
+    return () => clearInterval(interval);
+  }, []);
+
+  const markAllRead = async () => {
+    try {
+      await api.post("/notifications/mark-all-read");
+      fetchNotifications();
+    } catch (e) { console.error(e); }
+  };
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   const navItems = [
     { name: t('dashboard'), path: "/", icon: LayoutDashboard },
@@ -141,15 +167,41 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
               </button>
             </div>
 
-            <button
-              onClick={() => {
-                alert("You have 1 new notification: System update completed.");
-              }}
-              className="relative p-2 text-text-muted hover:text-text-base transition-colors rounded-full hover:bg-white/5"
-            >
-              <Bell size={20} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full shadow-[0_0_5px_rgba(239,68,68,0.8)]" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  if (!showNotifications) fetchNotifications();
+                }}
+                className="relative p-2 text-text-muted hover:text-text-base transition-colors rounded-full hover:bg-white/5"
+              >
+                <Bell size={20} />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-danger rounded-full shadow-[0_0_5px_rgba(239,68,68,0.8)]" />
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-surface border border-border/50 rounded-xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="p-4 border-b border-border/50 flex justify-between items-center bg-surface/50">
+                    <h3 className="font-bold text-sm text-text-base">Notificaciones</h3>
+                    <button onClick={markAllRead} className="text-[10px] text-primary hover:underline uppercase font-bold">Marcar todo como leído</button>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-8 text-center text-text-muted text-xs">No tienes notificaciones.</div>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id} className={cn("p-4 border-b border-border/10 hover:bg-white/5 transition-colors cursor-pointer", !n.is_read && "bg-primary/5")}>
+                           <p className={cn("text-xs", !n.is_read ? "text-text-base font-semibold" : "text-text-muted")}>{n.message}</p>
+                           <span className="text-[10px] text-text-muted mt-1 block">{new Date(n.created_at).toLocaleTimeString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <div className="h-8 w-px bg-border/50" />
 

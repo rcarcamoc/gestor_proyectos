@@ -2,6 +2,7 @@ import { type FC, useState, useEffect } from "react";
 import { CheckSquare, Clock, AlertCircle, Plus, X, Play, Square, Users } from "lucide-react";
 import { cn } from "../../lib/utils";
 import api from "../../api/axios";
+import { BinnacleWall } from "../../components/tasks/BinnacleWall";
 
 export const TaskList: FC = () => {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -19,11 +20,16 @@ export const TaskList: FC = () => {
   const [currentTask, setCurrentTask] = useState<any>(null);
 
   const [formData, setFormData] = useState({
+    id: null as number | null,
     name: "",
     project_id: "",
     priority: "Medium",
     estimated_hours: 4.0,
-    assignee_id: ""
+    assignee_id: "",
+    status: "Pending",
+    description: "",
+    start_date: "",
+    deadline: ""
   });
 
   const [suggestedAssignees, setSuggestedAssignees] = useState<any[]>([]);
@@ -97,15 +103,34 @@ export const TaskList: FC = () => {
        }
     }
 
-    await confirmTaskCreation(postData);
+    if (formData.id) {
+       await confirmTaskUpdate(postData, formData.id);
+    } else {
+       await confirmTaskCreation(postData);
+    }
+  };
+
+  const confirmTaskUpdate = async (postData: any, id: number) => {
+    try {
+      await api.patch(`/tasks/${id}`, postData);
+      resetForm();
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Error updating task");
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ id: null, name: "", project_id: "", priority: "Medium", estimated_hours: 4.0, assignee_id: "", status: "Pending", description: "", start_date: "", deadline: "" });
+    setIsModalOpen(false);
+    setShowWarningModal(false);
   };
 
   const confirmTaskCreation = async (postData: any) => {
     try {
       await api.post('/tasks/', postData);
-      setFormData({ name: "", project_id: "", priority: "Medium", estimated_hours: 4.0, assignee_id: "" });
-      setIsModalOpen(false);
-      setShowWarningModal(false);
+      resetForm();
       fetchData();
     } catch (err) {
       console.error(err);
@@ -240,10 +265,36 @@ export const TaskList: FC = () => {
 
                 <div>
                    <h4 className="text-sm font-bold text-accent-red mb-2 flex items-center gap-2"><AlertCircle size={16}/> Emergency Logic</h4>
-                   <button onClick={() => { updateTaskStatus(currentTask.id, 'Blocked'); alert("Task pushed as Critical to Engine.") }} className="w-full bg-accent-red text-white text-xs font-bold py-2 rounded-lg text-center shadow shadow-accent-red/20">
+                   <button onClick={() => { updateTaskStatus(currentTask.id, 'Blocked'); alert("Task pushed as Critical to Engine.") }} className="w-full bg-accent-red text-white text-xs font-bold py-2 rounded-lg text-center shadow shadow-accent-red/20 mb-2">
                       Mark as Critical (Emergency)
                    </button>
+                   <button 
+                     onClick={() => {
+                       setFormData({
+                         id: currentTask.id,
+                         name: currentTask.name,
+                         project_id: currentTask.project_id.toString(),
+                         priority: currentTask.priority,
+                         estimated_hours: currentTask.estimated_hours,
+                         assignee_id: currentTask.assignee_id?.toString() || "",
+                         status: currentTask.status,
+                         description: currentTask.description || "",
+                         start_date: currentTask.start_date || "",
+                         deadline: currentTask.deadline || ""
+                       });
+                       setIsDetailOpen(false);
+                       setIsModalOpen(true);
+                     }}
+                     className="w-full bg-surface text-text-base border border-border/50 text-xs font-bold py-2 rounded-lg text-center"
+                   >
+                      Editar Detalles / Fechas
+                   </button>
                 </div>
+             </div>
+
+             {/* Bitácora / Muro Section */}
+             <div className="border-t border-border/50 pt-6 mb-6">
+                <BinnacleWall taskId={currentTask.id} />
              </div>
 
              <div>
@@ -291,8 +342,8 @@ export const TaskList: FC = () => {
       {isModalOpen && (
         <div className="fixed inset-0 flex items-center justify-center z-50 bg-background/80 backdrop-blur-md p-4">
           <div className="glass-card w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-300 border border-border/50">
-            <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-text-muted"><X size={20} /></button>
-            <h2 className="text-xl font-bold text-text-base mb-6">Create New Task</h2>
+            <button onClick={() => { setIsModalOpen(false); resetForm(); }} className="absolute top-4 right-4 text-text-muted"><X size={20} /></button>
+            <h2 className="text-xl font-bold text-text-base mb-6">{formData.id ? "Edit Task" : "Create New Task"}</h2>
             <form onSubmit={addTask} className="space-y-4">
               <div>
                 <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Task Title</label>
@@ -320,6 +371,28 @@ export const TaskList: FC = () => {
                     <input type="number" step="0.5" required value={formData.estimated_hours} onChange={e => setFormData({...formData, estimated_hours: parseFloat(e.target.value)})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base" />
                  </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                 <div>
+                    <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Start Date</label>
+                    <input type="date" value={formData.start_date} onChange={e => setFormData({...formData, start_date: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base text-xs" />
+                 </div>
+                 <div>
+                    <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Deadline</label>
+                    <input type="date" value={formData.deadline} onChange={e => setFormData({...formData, deadline: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base text-xs" />
+                 </div>
+              </div>
+              <div>
+                 <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Status</label>
+                 <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base">
+                    <option value="Pending">Pendiente</option>
+                    <option value="Scheduled">Programada</option>
+                    <option value="In Progress">En Curso</option>
+                    <option value="Pending Response Op">Pendiente Respuesta Operación</option>
+                    <option value="Pending Response Client">Pendiente Respuesta Cliente</option>
+                    <option value="Blocked">Bloqueada</option>
+                    <option value="Completed">Completada</option>
+                 </select>
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-text-muted uppercase mb-2 flex items-center justify-between">
                   Assignee
@@ -333,7 +406,7 @@ export const TaskList: FC = () => {
                 </select>
               </div>
               <button type="submit" className="w-full py-2.5 mt-2 bg-secondary text-white font-medium rounded-xl hover:bg-secondary/90">
-                Add Task
+                {formData.id ? "Actualizar Tarea" : "Add Task"}
               </button>
             </form>
           </div>

@@ -9,7 +9,7 @@ interface ProjectCreateModalProps {
   project?: any;
 }
 
-const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSuccess }) => {
+const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSuccess, project }) => {
   const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: project?.name || '',

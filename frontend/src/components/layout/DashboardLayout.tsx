@@ -2,6 +2,7 @@ import { type FC, type ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTranslation } from "../../context/LanguageContext";
+import api from "../../api/axios";
 import {
   LayoutDashboard,
   Users,

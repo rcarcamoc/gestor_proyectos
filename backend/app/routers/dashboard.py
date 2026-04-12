@@ -97,7 +97,7 @@ def get_timeline(
     timeline_tasks = []
     for task, proj_name in tasks_data:
         # Get assignees
-        assignees = db.query(User).join(TaskAssignment).filter(
+        assignees = db.query(User).join(TaskAssignment, User.id == TaskAssignment.user_id).filter(
             TaskAssignment.task_id == task.id
         ).all()
 

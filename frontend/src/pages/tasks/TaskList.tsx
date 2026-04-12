@@ -167,7 +167,8 @@ export const TaskList: FC = () => {
     if (initialProjectId && task.project_id.toString() !== initialProjectId) return false;
     if (initialStatus && task.status !== initialStatus) return false;
 
-    if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+    const searchString: string = searchQuery;
+    if (searchString && !task.name.toLowerCase().includes(searchString.toLowerCase())) {
       return false;
     }
     return true;

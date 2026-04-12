@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.db.session import engine
+from app.core.db import engine
 from sqlalchemy import text
 
 @app.on_event("startup")

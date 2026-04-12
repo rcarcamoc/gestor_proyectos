@@ -55,7 +55,7 @@ def create_task(
             deadline=data.deadline
         )
         # Assing user
-        assignment = TaskAssignment(task_id=task.id, user_id=data.assignee_id)
+        assignment = TaskAssignment(task_id=task.id, user_id=data.assignee_id, assigned_by=current_user.id)
         db.add(assignment)
 
     # Inicializar métricas
@@ -115,7 +115,7 @@ def update_task(
         if assignment:
             assignment.user_id = data.assignee_id
         else:
-            assignment = TaskAssignment(task_id=task.id, user_id=data.assignee_id)
+            assignment = TaskAssignment(task_id=task.id, user_id=data.assignee_id, assigned_by=current_user.id)
             db.add(assignment)
             
     # Check impact if any relevant field was touched

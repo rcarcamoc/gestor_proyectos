@@ -154,7 +154,7 @@ def refresh(refresh_data: RefreshRequest, db: Session = Depends(get_db)) -> Any:
     token_db = db.query(RefreshToken).filter(
         RefreshToken.token_hash == refresh_data.refresh_token,
         RefreshToken.revoked_at == None,
-        RefreshToken.expires_at > datetime.now()
+        RefreshToken.expires_at > datetime.now(timezone.utc).replace(tzinfo=None)
     ).first()
 
     if not token_db:
@@ -178,7 +178,7 @@ def refresh(refresh_data: RefreshRequest, db: Session = Depends(get_db)) -> Any:
     new_token_db = RefreshToken(
         user_id=user.id,
         token_hash=new_refresh_token_str,
-        expires_at=datetime.now() + timedelta(days=30)
+        expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
     )
     db.add(new_token_db)
     db.commit()

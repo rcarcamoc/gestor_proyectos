@@ -1,5 +1,5 @@
 import { type FC, useState, useEffect } from "react";
-import { CheckSquare, Clock, AlertCircle, Plus, X, Play, Square, Users, LayoutDashboard, Flame } from "lucide-react";
+import { CheckSquare, Clock, AlertCircle, Plus, X, Play, Square, Users } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import api from "../../api/axios";
@@ -15,7 +15,7 @@ export const TaskList: FC = () => {
   const navigate = useNavigate();
   
   const [filter, setFilter] = useState(searchParams.get("filter") || "All");
-  const [searchQuery, setSearchQuery] = useState("");
+  const searchQuery = ""; // hardcoded for now since no input changes it in current scope, or just remove if we don't need it.
   const initialProjectId = searchParams.get("project");
   const initialStatus = searchParams.get("status");
   

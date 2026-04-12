@@ -1,6 +1,6 @@
 import { type FC, useMemo, useState } from "react";
 import { format, addDays, differenceInDays, parseISO } from "date-fns";
-import { GripVertical, Clock, CalendarClock, Play, AlertCircle, Ban, CheckCircle2, Flame, ChevronDown, ChevronRight, Eye, MessageSquare } from "lucide-react";
+import { Clock, CalendarClock, Play, Ban, CheckCircle2, Flame, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "../../lib/utils";
 
 const StatusIcon = ({ status, priority }: { status: string, priority?: string }) => {

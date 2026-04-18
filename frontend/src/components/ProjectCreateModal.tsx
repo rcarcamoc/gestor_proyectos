@@ -63,7 +63,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center text-primary border border-primary/30">
              <FolderPlus size={20} />
           </div>
-          {project ? "Editar Proyecto" : t('new_project')}
+          {project ? t('edit_project') : t('new_project')}
         </h2>
 
         {error && (
@@ -108,7 +108,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Deadline (Optional)</label>
+              <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('deadline')}</label>
               <input
                 type="date"
                 className="w-full px-4 py-3 rounded-xl bg-surface border border-border focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all outline-none text-text-base shadow-sm"
@@ -119,7 +119,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
           </div>
           
           <div>
-            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Color del Proyecto</label>
+            <label className="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">{t('project_color')}</label>
             <div className="flex flex-wrap gap-3">
                {PALETTE.map(c => (
                   <button
@@ -156,10 +156,10 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
               >
-                <option value="Planned">Planned</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-                <option value="Archived">Archived</option>
+                <option value="Planned">{t('planned')}</option>
+                <option value="In Progress">{t('in_progress')}</option>
+                <option value="Completed">{t('completed')}</option>
+                <option value="Archived">{t('archived')}</option>
               </select>
             </div>
           </div>
@@ -173,7 +173,7 @@ const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({ onClose, onSucc
                 : 'bg-primary hover:bg-primary/90 shadow-primary/20 hover:-translate-y-0.5 text-white'
             }`}
           >
-            {isSubmitting ? t('creating') : (project ? "Actualizar Proyecto" : t('create_project'))}
+            {isSubmitting ? t('creating') : (project ? t('update_project') : t('create_project'))}
           </button>
         </form>
       </div>

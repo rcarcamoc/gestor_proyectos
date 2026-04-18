@@ -185,12 +185,12 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
               {showNotifications && (
                 <div className="absolute right-0 mt-2 w-80 bg-surface border border-border/50 rounded-xl shadow-2xl overflow-hidden z-[9999] animate-in fade-in slide-in-from-top-2">
                   <div className="p-4 border-b border-border/50 flex justify-between items-center bg-surface/50">
-                    <h3 className="font-bold text-sm text-text-base">Notificaciones</h3>
-                    <button onClick={markAllRead} className="text-[10px] text-primary hover:underline uppercase font-bold">Marcar todo como leído</button>
+                    <h3 className="font-bold text-sm text-text-base">{t('notifications')}</h3>
+                    <button onClick={markAllRead} className="text-[10px] text-primary hover:underline uppercase font-bold">{t('mark_all_read')}</button>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
                     {notifications.length === 0 ? (
-                      <div className="p-8 text-center text-text-muted text-xs">No tienes notificaciones.</div>
+                      <div className="p-8 text-center text-text-muted text-xs">{t('no_notifications')}</div>
                     ) : (
                       notifications.map(n => (
                         <div key={n.id} className={cn("p-4 border-b border-border/10 hover:bg-white/5 transition-colors cursor-pointer", !n.is_read && "bg-primary/5")}>

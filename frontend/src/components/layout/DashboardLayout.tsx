@@ -11,7 +11,8 @@ import {
   Settings,
   Bell,
   Menu,
-  X
+  X,
+  LogOut
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -24,7 +25,7 @@ interface DashboardLayoutProps {
 export const DashboardLayout: FC<DashboardLayoutProps> = ({
   children
 }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { t, language, setLanguage } = useTranslation();
   const userRole = user?.role || "member";
   const userName = user?.full_name || "User";
@@ -117,11 +118,18 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
           })}
         </nav>
 
-        <div className="p-4 border-t border-border/50">
+        <div className="p-4 border-t border-border/50 space-y-1">
           <Link to="/settings" className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-text-muted hover:text-text-base hover:bg-white/5 transition-all">
             <Settings size={18} />
             <span className="font-medium text-sm">{t('settings')}</span>
           </Link>
+          <button 
+            onClick={logout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg w-full text-danger hover:bg-danger/10 transition-all text-left"
+          >
+            <LogOut size={18} />
+            <span className="font-medium text-sm">{t('logout')}</span>
+          </button>
         </div>
       </aside>
 

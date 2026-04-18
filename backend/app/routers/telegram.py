@@ -111,3 +111,43 @@ def get_telegram_status(
         "is_linked": account is not None,
         "telegram_chat_id": account.telegram_chat_id if account else None
     }
+
+@router.get("/linked-accounts")
+def get_all_linked_accounts(db: Session = Depends(get_db)):
+    """
+    Retorna todas las cuentas de Telegram vinculadas (uso interno).
+    """
+    accounts = db.query(TelegramAccount).filter(TelegramAccount.activo == True).all()
+    return [{"telegram_chat_id": acc.telegram_chat_id, "user_id": acc.user_id} for acc in accounts]
+
+@router.get("/leader-accounts")
+def get_leader_linked_accounts(db: Session = Depends(get_db)):
+    """
+    Retorna cuentas de Telegram vinculadas de usuarios con rol leader u owner (uso interno).
+    """
+    accounts = db.query(TelegramAccount).join(User).filter(
+        TelegramAccount.activo == True,
+        User.role.in_(['owner', 'leader'])
+    ).all()
+    return [{"telegram_chat_id": acc.telegram_chat_id, "user_id": acc.user_id} for acc in accounts]
+
+@router.get("/pending-alerts")
+def get_pending_alerts(db: Session = Depends(get_db)):
+    """
+    Placeholder para obtener alertas pendientes.
+    """
+    return []
+
+@router.post("/mark-alert-sent")
+def mark_alert_sent(alert_id: int, db: Session = Depends(get_db)):
+    """
+    Placeholder para marcar alerta como enviada.
+    """
+    return {"status": "ok"}
+
+@router.get("/stalled-tasks")
+def get_stalled_tasks(db: Session = Depends(get_db)):
+    """
+    Placeholder para obtener tareas estancadas.
+    """
+    return []

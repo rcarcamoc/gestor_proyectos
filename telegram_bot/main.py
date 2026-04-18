@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from vincular_handler import vincular_handler
 from summary_handler import get_resumen
 from writing_handler import redactar_handler
+from focus_handler import focus_handler, stop_focus_handler
 from scheduler_service import setup_scheduler
 
 load_dotenv()
@@ -38,6 +39,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/tareas - Lista de tus tareas activas\n"
         "/nuevo - Crear un nuevo proyecto o tarea\n"
         "/redactar - Asistente de redacción con IA\n"
+        "/enfocar - Iniciar modo enfoque (Pomodoro)\n"
+        "/parar - Detener modo enfoque\n"
         "/ayuda - Mostrar este mensaje"
     )
     await update.message.reply_text(help_text)
@@ -55,6 +58,8 @@ if __name__ == '__main__':
         application.add_handler(help_handler)
         application.add_handler(vincular_handler)
         application.add_handler(redactar_handler)
+        application.add_handler(focus_handler)
+        application.add_handler(stop_focus_handler)
         application.add_handler(CommandHandler('resumen', get_resumen))
 
         setup_scheduler(application)

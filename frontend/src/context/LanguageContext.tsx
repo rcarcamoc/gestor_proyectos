@@ -20,7 +20,6 @@ export const translations: Translations = {
   'create': { en: 'Create', es: 'Crear' },
   'cancel': { en: 'Cancel', es: 'Cancelar' },
   'save': { en: 'Save', es: 'Guardar' },
-  'logout': { en: 'Logout', es: 'Cerrar Sesión' },
   'loading': { en: 'Loading...', es: 'Cargando...' },
   'error': { en: 'Error', es: 'Error' },
   'notifications': { en: 'Notifications', es: 'Notificaciones' },

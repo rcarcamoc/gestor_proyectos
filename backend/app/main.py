@@ -18,12 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from app.core.db import engine
+from app.core.db import engine as db_engine
 from sqlalchemy import text
 
 @app.on_event("startup")
 def run_migrations():
-    with engine.begin() as conn:
+    with db_engine.begin() as conn:
         try:
             conn.execute(text("ALTER TABLE projects ADD COLUMN color VARCHAR(50) NULL AFTER created_at"))
             print("Columna 'color' agregada a projects.")

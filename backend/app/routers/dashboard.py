@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 from app.core.db import get_db
 from app.core.deps import get_current_user
@@ -77,14 +76,17 @@ def get_timeline(
     if view_mode == "team" and current_user.role not in ["owner", "leader"]:
         view_mode = "personal"
 
-    # Fetch tasks that intersect with the window OR have no dates (so they show up as "to be scheduled")
-    base_query = db.query(Task, Project.name.label("project_name"), Project.color.label("project_color")).join(Project, Task.project_id == Project.id).filter(
+    # Optimized query with joinedload
+    base_query = db.query(Task).options(
+        joinedload(Task.project),
+        joinedload(Task.assignments).joinedload(TaskAssignment.user)
+    ).join(Project, Task.project_id == Project.id).filter(
         Project.organization_id == org_id,
         or_(
             (Task.start_date <= end) & (Task.deadline >= start),
             Task.start_date == None,
             Task.deadline == None,
-            Task.status != "Completed", # O ya estaba contemplado
+            Task.status != "Completed", 
             (Task.status == "Completed") & (Task.completed_at >= (today - timedelta(days=7)))
         )
     )
@@ -97,19 +99,14 @@ def get_timeline(
     tasks_data = base_query.all()
 
     timeline_tasks = []
-    for task, proj_name, proj_color in tasks_data:
-        # Get assignees
-        assignees = db.query(User).join(TaskAssignment, User.id == TaskAssignment.user_id).filter(
-            TaskAssignment.task_id == task.id
-        ).all()
-
-        assignee_data = [{"id": a.id, "name": a.full_name} for a in assignees]
+    for task in tasks_data:
+        assignee_data = [{"id": a.user.id, "name": a.user.full_name} for a in task.assignments if a.user]
 
         timeline_tasks.append({
             "id": task.id,
             "name": task.name,
             "project_id": task.project_id,
-            "project_name": proj_name,
+            "project_name": task.project.name if task.project else "Unknown",
             "status": task.status,
             "priority": task.priority,
             "start_date": task.start_date.isoformat() if task.start_date else start.isoformat(),
@@ -118,7 +115,7 @@ def get_timeline(
             "estimated_hours": task.estimated_hours or 0.0,
             "actual_hours": task.actual_hours or 0.0,
             "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-            "project_color": proj_color or "#3b82f6" 
+            "project_color": task.project.color if task.project and task.project.color else "#3b82f6" 
         })
 
     return {
@@ -134,7 +131,7 @@ def get_member_dashboard(
 ) -> Any:
     today = date.today()
     
-    # 1. Tareas de hoy (asignadas al usuario)
+    # 1. Tareas de hoy (asignadas al usuario) - Con joinedload para evitar subconsultas si se requiere
     tasks_today = db.query(Task).join(TaskAssignment).filter(
         TaskAssignment.user_id == current_user.id,
         Task.status.in_(["Pending", "In Progress", "Blocked"]),
@@ -150,7 +147,6 @@ def get_member_dashboard(
     ).count()
 
     # 3. Carga proyectada (suma de horas estimadas de tareas activas esta semana)
-    # Definimos semana como hoy a +7 días para este MVP
     next_week = today + timedelta(days=7)
     projected_load = db.query(func.sum(Task.estimated_hours)).join(TaskAssignment).filter(
         TaskAssignment.user_id == current_user.id,
@@ -193,35 +189,39 @@ def get_leader_dashboard(
     ).all()
 
     # 2. Projects at risk (at least one blocked task or overdue task)
-    projects_at_risk_ids = [t.project_id for t in blocked_tasks]
-    overdue_tasks = db.query(Task).join(Project).filter(
+    overdue_tasks_query = db.query(Task.project_id).join(Project).filter(
         Project.organization_id == org_id,
         Task.status.in_(["Pending", "In Progress"]),
         Task.deadline < today
-    ).all()
-    projects_at_risk_ids.extend([t.project_id for t in overdue_tasks])
-    projects_at_risk_count = len(set(projects_at_risk_ids))
-
-    # 3. Team Status (Overloaded / Underutilized based on active tasks vs capacity)
-    members = db.query(User).join(Team, Team.organization_id == org_id).all() # Simplification for MVP
+    ).distinct()
     
+    projects_at_risk_ids = {t.project_id for t in blocked_tasks}
+    projects_at_risk_ids.update({p[0] for p in overdue_tasks_query.all()})
+    projects_at_risk_count = len(projects_at_risk_ids)
+
+    # 3. Team Status (Optimizado pre-calculando carga)
+    members = db.query(User).filter(User.organization_id == org_id).all()
+    
+    # Pre-calcular todas las tareas activas para todos los miembros para evitar N+1
+    active_tasks_by_user = {}
+    all_active_tasks = db.query(TaskAssignment.user_id, func.sum(Task.estimated_hours)).join(Task).filter(
+        Task.status.in_(["Pending", "In Progress"])
+    ).group_by(TaskAssignment.user_id).all()
+    
+    for user_id, total_hours in all_active_tasks:
+        active_tasks_by_user[user_id] = total_hours or 0.0
+
     overloaded = []
     underutilized = []
     
     from app.services.engine import SmartEngine
-    engine = SmartEngine(db)
+    engine_service = SmartEngine(db)
     
     for m in members:
-        # Evaluate load
-        member_tasks = db.query(Task).join(TaskAssignment).filter(
-            TaskAssignment.user_id == m.id,
-            Task.status.in_(["Pending", "In Progress"])
-        ).all()
+        load = active_tasks_by_user.get(m.id, 0.0)
         
-        load = sum([t.estimated_hours or 0.0 for t in member_tasks])
-        
-        # Engine check for confidence
-        engine_eval = engine.evaluate_level(m.id)
+        # El motor sigue siendo semi-costoso pero solo se evalúa nivel superficial
+        engine_eval = engine_service.evaluate_level(m.id)
         capacity = 8.0 * 5 # MVP static capacity
         
         mem_data = {
@@ -244,16 +244,11 @@ def get_leader_dashboard(
         "underutilized_members": underutilized
     }
 
-
 @router.get("/capacity")
 def get_capacity_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> Any:
-    """
-    Dashboard Ejecutivo de Carga (Portfolio View)
-    Retorna la capacidad y porcentaje de carga de cada miembro del equipo a nivel cross-proyecto.
-    """
     if current_user.role not in ["owner", "leader"]:
         raise HTTPException(status_code=403, detail="Not authorized")
         
@@ -264,31 +259,40 @@ def get_capacity_dashboard(
     
     from app.models.availability import UserAvailability
     
+    # Pre-fetch availabilities
+    availabilities_by_user = {}
+    all_avails = db.query(UserAvailability).filter(UserAvailability.user_id.in_([m.id for m in members])).all()
+    for a in all_avails:
+        if a.user_id not in availabilities_by_user:
+            availabilities_by_user[a.user_id] = 0.0
+        availabilities_by_user[a.user_id] += float(a.hours_available)
+
+    # Pre-fetch active tasks count and hours
+    tasks_info_by_user = {}
+    active_tasks = db.query(TaskAssignment.user_id, Task).join(Task).filter(
+        Task.status.in_(["Pending", "In Progress"])
+    ).all()
+    
+    for user_id, task in active_tasks:
+        if user_id not in tasks_info_by_user:
+            tasks_info_by_user[user_id] = {"hours": 0.0, "project_ids": set()}
+        tasks_info_by_user[user_id]["hours"] += float(task.estimated_hours or 0.0)
+        tasks_info_by_user[user_id]["project_ids"].add(task.project_id)
+
+    # Pre-fetch project names
+    all_project_ids = set()
+    for info in tasks_info_by_user.values():
+        all_project_ids.update(info["project_ids"])
+    
+    project_names = {p.id: p.name for p in db.query(Project.id, Project.name).filter(Project.id.in_(all_project_ids)).all()} if all_project_ids else {}
+
     capacity_data = []
     
     for member in members:
-        # Calcular capacidad semanal disponible real basada en base de datos
-        availabilities = db.query(UserAvailability).filter(UserAvailability.user_id == member.id).all()
-        if availabilities:
-            horas_disponibles = sum([a.hours_available for a in availabilities])
-        else:
-            # Default fallback si no ha configurado horarios
-            horas_disponibles = 40.0
-            
-        # Tareas activas asignadas a este usuario (Pending o In Progress)
-        active_tasks = db.query(Task).join(TaskAssignment).filter(
-            TaskAssignment.user_id == member.id,
-            Task.status.in_(["Pending", "In Progress"])
-        ).all()
-        
-        # Horas comprometidas (MVP: suma de todas las horas activas en horizonte cercano)
-        # Notas: en versión final esto filtra por las fechas semanales
-        horas_comprometidas = sum([t.estimated_hours or 0.0 for t in active_tasks])
-        
-        # Proyectos en los que participa
-        project_ids = list(set([t.project_id for t in active_tasks]))
-        projects = db.query(Project.name).filter(Project.id.in_(project_ids)).all() if project_ids else []
-        project_names = [p[0] for p in projects]
+        horas_disponibles = availabilities_by_user.get(member.id, 40.0)
+        info = tasks_info_by_user.get(member.id, {"hours": 0.0, "project_ids": set()})
+        horas_comprometidas = info["hours"]
+        names = [project_names[pid] for pid in info["project_ids"] if pid in project_names]
         
         # Porcentaje de carga
         if horas_disponibles > 0:
@@ -309,7 +313,7 @@ def get_capacity_dashboard(
         capacity_data.append({
             "id": member.id,
             "name": member.full_name,
-            "projects": project_names,
+            "projects": names,
             "horas_comprometidas": round(horas_comprometidas, 1),
             "horas_disponibles": round(horas_disponibles, 1),
             "porcentaje_carga": round(porcentaje, 1),

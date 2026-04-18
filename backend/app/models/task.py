@@ -33,6 +33,7 @@ class TaskAssignment(Base):
     assigned_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     
     task = relationship("Task", back_populates="assignments")
+    user = relationship("User")
 
 class TaskDependency(Base):
     __tablename__ = "task_dependencies"

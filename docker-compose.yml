@@ -67,6 +67,27 @@ services:
     networks:
       - smarttrack_network
 
+  redis:
+    image: redis:alpine
+    container_name: smarttrack_redis
+    restart: always
+    networks:
+      - smarttrack_network
+
+  telegram-bot:
+    build: ./telegram_bot
+    container_name: smarttrack_telegram_bot
+    restart: always
+    depends_on:
+      - backend
+      - redis
+    env_file:
+      - .env
+    volumes:
+      - ./telegram_bot:/app
+    networks:
+      - smarttrack_network
+
 networks:
   smarttrack_network:
     driver: bridge

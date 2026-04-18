@@ -12,7 +12,8 @@ import {
   Bell,
   Menu,
   X,
-  LogOut
+  LogOut,
+  Send
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -66,6 +67,7 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
     ...(userRole === "owner" || userRole === "leader"
         ? [{ name: t('users_team'), path: "/users", icon: Users }]
         : []),
+    { name: "Telegram Bot", path: "/vincular", icon: Send },
   ];
 
   return (

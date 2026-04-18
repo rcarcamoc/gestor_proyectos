@@ -14,6 +14,7 @@ import { TaskList } from './pages/tasks/TaskList'
 import { TeamList } from './pages/users/TeamList'
 import { SettingsPage } from './pages/settings/Settings'
 import CapacityDashboard from './pages/CapacityDashboard'
+import TelegramVinculation from './pages/TelegramVinculation'
 import './App.css'
 
 const queryClient = new QueryClient()
@@ -58,6 +59,14 @@ function AppContent() {
         element={
           <DashboardRoutes>
             <Home />
+          </DashboardRoutes>
+        }
+      />
+      <Route
+        path="/vincular"
+        element={
+          <DashboardRoutes>
+            <TelegramVinculation />
           </DashboardRoutes>
         }
       />

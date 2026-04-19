@@ -37,7 +37,11 @@ async def check_and_send_alerts(context: ContextTypes.DEFAULT_TYPE):
                     )
 
                     # Registrar envío para evitar duplicados
-                    await client.post(f"{BACKEND_URL}/telegram/mark-alert-sent", json={"alert_id": alert['id']})
+                    await client.post(f"{BACKEND_URL}/telegram/mark-alert-sent", json={
+                        "task_id": alert['task_id'],
+                        "tipo": alert['tipo'],
+                        "telegram_chat_id": chat_id
+                    })
 
         except Exception as e:
             logging.error(f"Error en scheduler de alertas: {e}")

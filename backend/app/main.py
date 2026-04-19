@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, onboarding, projects, tasks, engine, time_tracking as time, dashboard, emergency, skills, teams, task_logs, notifications, telegram
+from app.routers import auth, onboarding, projects, tasks, engine, time_tracking as time, dashboard, emergency, skills, teams, task_logs, notifications, telegram, assistant
 from app.core.config import settings
 
 app = FastAPI(
@@ -35,6 +35,19 @@ def run_migrations():
             print("Columna 'completed_at' agregada a tasks.")
         except Exception:
             pass # Ya existe
+            
+        try:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN recurrence_type VARCHAR(50) DEFAULT 'puntual' AFTER completed_at"))
+            print("Columna 'recurrence_type' agregada a tasks.")
+        except Exception:
+            pass # Ya existe
+
+        try:
+            conn.execute(text("ALTER TABLE teams ADD COLUMN telegram_chat_id VARCHAR(100) NULL AFTER leader_user_id"))
+            conn.execute(text("ALTER TABLE teams ADD COLUMN link_code VARCHAR(20) NULL AFTER telegram_chat_id"))
+            print("Columnas de Telegram agregadas a teams.")
+        except Exception:
+            pass # Ya existe
 
 
 # Routers
@@ -51,6 +64,7 @@ app.include_router(teams.router, prefix="/teams", tags=["teams"])
 app.include_router(task_logs.router, prefix="/task_logs", tags=["task_logs"])
 app.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
 app.include_router(telegram.router, prefix="/telegram", tags=["telegram"])
+app.include_router(assistant.router, prefix="/assistant", tags=["assistant"])
 @app.get("/health")
 def health_check():
     return {"status": "ok", "version": settings.VERSION}

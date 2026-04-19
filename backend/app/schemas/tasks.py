@@ -13,6 +13,7 @@ class TaskBase(BaseModel):
     estimated_hours: Optional[float] = None
     actual_hours: Optional[float] = 0.0
     completed_at: Optional[datetime] = None
+    recurrence_type: str = "puntual" # 'puntual', 'diaria', 'semanal', 'mensual'
 
 class TaskCreate(TaskBase):
     assignee_id: Optional[int] = None
@@ -27,6 +28,7 @@ class TaskUpdate(BaseModel):
     estimated_hours: Optional[float] = None
     actual_hours: Optional[float] = None
     assignee_id: Optional[int] = None
+    recurrence_type: Optional[str] = None
 
 class Task(TaskBase):
     id: int

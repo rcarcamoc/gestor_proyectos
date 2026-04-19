@@ -13,6 +13,7 @@ class Team(TeamBase):
     id: int
     organization_id: int
     leader_user_id: Optional[int] = None
+    link_code: Optional[str] = None
     created_at: datetime
 
     class Config:

@@ -18,6 +18,7 @@ class Task(Base):
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     completed_at = Column(DateTime, nullable=True)
+    recurrence_type = Column(String(50), default="puntual") # 'puntual', 'diaria', 'semanal', 'mensual'
 
     project = relationship("Project", back_populates="tasks")
     assignments = relationship("TaskAssignment", back_populates="task")

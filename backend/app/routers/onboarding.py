@@ -35,10 +35,15 @@ def onboarding_step1(
     org.country = data.country
 
     # Crear el primer equipo
+    import string
+    import secrets
+    link_code = ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+    
     team = Team(
         organization_id=org.id,
         name=data.team_name,
-        leader_user_id=current_user.id
+        leader_user_id=current_user.id,
+        link_code=link_code
     )
     db.add(team)
     db.flush()

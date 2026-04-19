@@ -138,6 +138,56 @@ def update_task(
         # Actualizar completed_at
         if task_data["status"] == "Completed" and old_status != "Completed":
             task.completed_at = datetime.now()
+            
+            # Lógica de recurrencia
+            if task.recurrence_type and task.recurrence_type != 'puntual':
+                from datetime import timedelta
+                
+                next_start = task.start_date
+                next_deadline = task.deadline
+                
+                if task.recurrence_type == 'diaria':
+                    if next_start: next_start += timedelta(days=1)
+                    if next_deadline: next_deadline += timedelta(days=1)
+                elif task.recurrence_type == 'semanal':
+                    if next_start: next_start += timedelta(weeks=1)
+                    if next_deadline: next_deadline += timedelta(weeks=1)
+                elif task.recurrence_type == 'mensual':
+                    # Simplificación MVP: 30 días
+                    if next_start: next_start += timedelta(days=30)
+                    if next_deadline: next_deadline += timedelta(days=30)
+                    
+                new_task = Task(
+                    name=task.name,
+                    description=task.description,
+                    project_id=task.project_id,
+                    priority=task.priority,
+                    status="Pending",
+                    start_date=next_start,
+                    deadline=next_deadline,
+                    estimated_hours=task.estimated_hours,
+                    created_by=current_user.id,
+                    recurrence_type=task.recurrence_type
+                )
+                db.add(new_task)
+                db.flush()
+                
+                if assignment:
+                    new_assignment = TaskAssignment(task_id=new_task.id, user_id=assignment.user_id, assigned_by=current_user.id)
+                    db.add(new_assignment)
+                    
+                new_metric = TaskMetric(task_id=new_task.id, estimated_hours=new_task.estimated_hours or 0.0)
+                db.add(new_metric)
+                
+                from app.models.task_log import TaskLog
+                db.add(TaskLog(
+                    task_id=new_task.id, 
+                    user_id=current_user.id, 
+                    log_type="event", 
+                    content=f"Tarea generada automáticamente por recurrencia {task.recurrence_type}",
+                    new_status="Pending"
+                ))
+
         elif task_data["status"] != "Completed" and old_status == "Completed":
             task.completed_at = None
 

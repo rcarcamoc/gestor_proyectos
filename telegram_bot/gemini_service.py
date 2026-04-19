@@ -24,13 +24,15 @@ class GeminiService:
 
         Responde ÚNICAMENTE en formato JSON con la siguiente estructura:
         {{
-            "intent": "create_project" | "create_task" | "get_summary" | "get_tasks" | "write_assistant" | "anti_paralysis" | "unknown",
+            "intent": "create_project" | "create_task" | "get_summary" | "get_tasks" | "write_assistant" | "anti_paralysis" | "focus_mode" | "update_skills" | "update_availability" | "unknown",
             "entities": {{
                 "project_name": "nombre si aplica",
                 "task_name": "nombre si aplica",
                 "deadline": "fecha si aplica",
                 "assignee": "persona si aplica",
-                "urgency": "alta/media/baja"
+                "urgency": "alta/media/baja",
+                "skills": ["skill1", "skill2"],
+                "hours_per_day": 8
             }},
             "confidence": 0.0 a 1.0
         }}

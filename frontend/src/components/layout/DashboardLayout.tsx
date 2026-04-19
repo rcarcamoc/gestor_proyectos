@@ -16,6 +16,7 @@ import {
   Send
 } from "lucide-react";
 import { cn } from "../../lib/utils";
+import ChatAssistant from "../ChatAssistant";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -236,6 +237,7 @@ export const DashboardLayout: FC<DashboardLayoutProps> = ({
             {children}
           </div>
         </div>
+        <ChatAssistant />
       </main>
     </div>
   );

@@ -9,6 +9,8 @@ class Team(Base):
     name = Column(String(100), nullable=False)
     description = Column(String(255), nullable=True)
     leader_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    telegram_chat_id = Column(String(100), nullable=True)
+    link_code = Column(String(20), unique=True, index=True, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 class TeamMembership(Base):

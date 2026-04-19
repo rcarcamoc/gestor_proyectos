@@ -8,6 +8,10 @@ from summary_handler import get_resumen
 from writing_handler import redactar_handler
 from focus_handler import focus_handler, stop_focus_handler
 from scheduler_service import setup_scheduler
+from natural_language_handler import natural_language_handler, project_conv_handler
+from anti_paralysis_handler import anti_paralysis_handler
+from recovery_handler import recovery_handler
+from team_handler import team_link_handler
 
 load_dotenv()
 
@@ -40,6 +44,8 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/nuevo - Crear un nuevo proyecto o tarea\n"
         "/redactar - Asistente de redacción con IA\n"
         "/enfocar - Iniciar modo enfoque (Pomodoro)\n"
+        "/ayudame - Modo anti-parálisis (ejecución asistida)\n"
+        "/recuperar - Recuperar tu contraseña de SmartTrack\n"
         "/parar - Detener modo enfoque\n"
         "/ayuda - Mostrar este mensaje"
     )
@@ -58,9 +64,16 @@ if __name__ == '__main__':
         application.add_handler(help_handler)
         application.add_handler(vincular_handler)
         application.add_handler(redactar_handler)
+        application.add_handler(project_conv_handler)
+        application.add_handler(anti_paralysis_handler)
+        application.add_handler(recovery_handler)
+        application.add_handler(team_link_handler)
         application.add_handler(focus_handler)
         application.add_handler(stop_focus_handler)
         application.add_handler(CommandHandler('resumen', get_resumen))
+        
+        # El handler de lenguaje natural debe ir al final para no atrapar comandos
+        application.add_handler(natural_language_handler)
 
         setup_scheduler(application)
 

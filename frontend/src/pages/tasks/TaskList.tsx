@@ -35,7 +35,8 @@ export const TaskList: FC = () => {
     status: "Pending",
     description: "",
     start_date: "",
-    deadline: ""
+    deadline: "",
+    recurrence_type: "puntual"
   });
 
   const [suggestedAssignees, setSuggestedAssignees] = useState<any[]>([]);
@@ -89,7 +90,12 @@ export const TaskList: FC = () => {
         project_id: parseInt(formData.project_id),
         priority: formData.priority,
         estimated_hours: parseFloat(formData.estimated_hours.toString()),
-        assignee_id: formData.assignee_id ? parseInt(formData.assignee_id) : undefined
+        assignee_id: formData.assignee_id ? parseInt(formData.assignee_id) : undefined,
+        recurrence_type: formData.recurrence_type,
+        status: formData.status,
+        description: formData.description,
+        start_date: formData.start_date || undefined,
+        deadline: formData.deadline || undefined
     };
 
     // Predictive checking
@@ -128,7 +134,7 @@ export const TaskList: FC = () => {
   };
 
   const resetForm = () => {
-    setFormData({ id: null, name: "", project_id: "", priority: "Medium", estimated_hours: 4.0, assignee_id: "", status: "Pending", description: "", start_date: "", deadline: "" });
+    setFormData({ id: null, name: "", project_id: "", priority: "Medium", estimated_hours: 4.0, assignee_id: "", status: "Pending", description: "", start_date: "", deadline: "", recurrence_type: "puntual" });
     setIsModalOpen(false);
     setShowWarningModal(false);
   };
@@ -306,7 +312,8 @@ export const TaskList: FC = () => {
                          status: currentTask.status,
                          description: currentTask.description || "",
                          start_date: currentTask.start_date || "",
-                         deadline: currentTask.deadline || ""
+                         deadline: currentTask.deadline || "",
+                         recurrence_type: currentTask.recurrence_type || "puntual"
                        });
                        setIsDetailOpen(false);
                        setIsModalOpen(true);
@@ -408,7 +415,7 @@ export const TaskList: FC = () => {
                  </div>
               </div>
               <div>
-                 <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Status</label>
+                  <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Status</label>
                  <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base">
                     <option value="Pending">Pendiente</option>
                     <option value="Scheduled">Programada</option>
@@ -419,17 +426,28 @@ export const TaskList: FC = () => {
                     <option value="Completed">Completada</option>
                  </select>
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-text-muted uppercase mb-2 flex items-center justify-between">
-                  Assignee
-                  <button type="button" onClick={() => {/* Trigger suggestion panel here if desired */}} className="text-secondary hover:underline">Sugerir Asignación</button>
-                </label>
-                <select value={formData.assignee_id} onChange={e => setFormData({...formData, assignee_id: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base">
-                   <option value="">Unassigned</option>
-                   {teamMembers.map(m => (
-                      <option key={m.user_id} value={m.user_id}>{m.user?.full_name || `User ${m.user_id}`}</option>
-                   ))}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                 <div>
+                    <label className="block text-xs font-semibold text-text-muted uppercase mb-2">Recurrence</label>
+                    <select value={formData.recurrence_type} onChange={e => setFormData({...formData, recurrence_type: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base">
+                       <option value="puntual">Puntual (Una vez)</option>
+                       <option value="diaria">Diaria</option>
+                       <option value="semanal">Semanal</option>
+                       <option value="mensual">Mensual</option>
+                    </select>
+                 </div>
+                 <div>
+                    <label className="block text-xs font-semibold text-text-muted uppercase mb-2 flex items-center justify-between">
+                      Assignee
+                      <button type="button" onClick={() => {/* Trigger suggestion panel here if desired */}} className="text-secondary hover:underline">Sugerir</button>
+                    </label>
+                    <select value={formData.assignee_id} onChange={e => setFormData({...formData, assignee_id: e.target.value})} className="w-full px-4 py-2.5 rounded-xl bg-surface/50 border border-border/50 text-text-base">
+                       <option value="">Unassigned</option>
+                       {teamMembers.map(m => (
+                          <option key={m.user_id} value={m.user_id}>{m.user?.full_name || `User ${m.user_id}`}</option>
+                       ))}
+                    </select>
+                 </div>
               </div>
               <button type="submit" className="w-full py-2.5 mt-2 bg-secondary text-white font-medium rounded-xl hover:bg-secondary/90">
                 {formData.id ? "Actualizar Tarea" : "Add Task"}

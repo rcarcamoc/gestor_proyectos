@@ -46,7 +46,10 @@ def generate_vinculation_token(
     db.commit()
     db.refresh(db_token)
 
-    return db_token
+    return {
+        "token": db_token.token,
+        "expires_at": db_token.expira_en
+    }
 
 @router.post("/link")
 def link_telegram_account(

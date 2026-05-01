@@ -8,8 +8,9 @@ const prisma = new PrismaClient();
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+  const userId = (session.user as any).id;
   const { householdId } = await request.json();
 
   if (!householdId) {
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
 
   // Verify user is member of household
   const membership = await prisma.userHousehold.findFirst({
-    where: { householdId, userId: session.user.id, role: 'ADMIN' }
+    where: { householdId, userId, role: 'ADMIN' }
   });
 
   if (!membership) {

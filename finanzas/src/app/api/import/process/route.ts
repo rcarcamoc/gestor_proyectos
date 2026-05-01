@@ -37,7 +37,7 @@ export async function POST(req: Request) {
         }
     });
 
-    const transactionsToCreate = [];
+    const transactionsToCreate: any[] = [];
 
     for (const tx of transactions) {
         // Convert amount to number and ensure it's absolute for comparison if needed, 

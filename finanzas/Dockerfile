@@ -1,5 +1,6 @@
 # Build Stage
 FROM node:20-alpine AS builder
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -9,6 +10,7 @@ RUN npm run build
 
 # Production Stage
 FROM node:20-alpine AS runner
+RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/next.config.ts ./

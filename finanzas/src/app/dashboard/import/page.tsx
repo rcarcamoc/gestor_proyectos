@@ -1,5 +1,5 @@
 'use client';
-
+import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,8 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import * as XLSX from 'xlsx';
+import Link from 'next/link';
+import { buttonVariants } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 type Mapping = {
@@ -429,9 +431,9 @@ export default function ImportPage() {
               </p>
               <div className="flex gap-4 justify-center">
                   <Button variant="outline" className="rounded-xl border-stone-200" onClick={() => setStep(1)}>Importar más</Button>
-                  <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl px-10" asChild>
-                      <a href="/dashboard/transactions">Ver Transacciones</a>
-                  </Button>
+                  <Link href="/dashboard/transactions" className={cn(buttonVariants({ variant: "default" }), "bg-stone-800 hover:bg-stone-900 rounded-xl px-10")}>
+                      Ver Transacciones
+                  </Link>
               </div>
           </div>
       )}

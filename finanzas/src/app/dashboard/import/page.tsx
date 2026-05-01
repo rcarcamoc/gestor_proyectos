@@ -108,7 +108,19 @@ export default function ImportPage() {
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
         
         if (jsonData.length > 0) {
-          const fileHeaders = jsonData[0].map(h => String(h));
+          // Detect header row (first row that looks like a header)
+          let headerRowIndex = 0;
+          for (let i = 0; i < Math.min(jsonData.length, 20); i++) {
+            const row = jsonData[i];
+            if (row.some(c => String(c).toLowerCase().includes('fec')) && 
+                row.some(c => String(c).toLowerCase().includes('mont')) &&
+                (row.some(c => String(c).toLowerCase().includes('desc')) || row.some(c => String(c).toLowerCase().includes('glos')))) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+
+          const fileHeaders = jsonData[headerRowIndex].map(h => String(h));
           setHeaders(fileHeaders);
           
           // Try to auto-map based on common names if no profile selected
@@ -123,8 +135,8 @@ export default function ImportPage() {
             setMapping(newMapping);
           }
           
-          // Preview data (all rows)
-          const rows = XLSX.utils.sheet_to_json(worksheet);
+          // Preview data (from header row onwards)
+          const rows = XLSX.utils.sheet_to_json(worksheet, { range: headerRowIndex });
           setPreviewData(rows);
           
           setStep(2);

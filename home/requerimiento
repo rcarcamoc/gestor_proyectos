@@ -1,0 +1,664 @@
+RFP – Plataforma Web de Finanzas Personales (Migración desde Android a Web + OCI + IA)
+
+Contexto y objetivos La organización cuenta actualmente con un prototipo de aplicación Android nativa (“PersonalFinanceApp”) orientada a la gestión de finanzas personales (registro de ingresos/gastos, categorías, vistas de resumen, etc.). El objetivo es evolucionar a una plataforma web full‑stack desplegable en el free tier de Oracle Cloud (OCI), incorporando capacidades de importación desde Excel, procesamiento de comprobantes bancarios vía email y clasificación inteligente asistida por IA hay que condigurar todo desde cero
+RFP – Plataforma Web de Finanzas Personales (Migración desde Android a Web con OCI, IA y soporte para parejas)
+
+Contexto La organización dispone actualmente de un prototipo de aplicación Android de finanzas personales (https://github.com/rcarcamoc/PersonalFinanceApp ) orientado a registrar ingresos y gastos, organizarlos en categorías y mostrar algunos resúmenes básicos. El nuevo proyecto consiste en evolucionar este producto hacia una plataforma web full‑stack, desplegable en el free tier de Oracle Cloud (OCI), con foco en:
+Experiencia de usuario moderna y accesible desde cualquier navegador.
+
+Importación de datos desde archivos Excel/CSV y correos de comprobantes bancarios.
+
+Soporte explícito para gestión financiera de parejas (cuentas compartidas y distribución proporcional de gastos).
+
+Integración con IA (Groq) para extraer y clasificar información desde comprobantes.
+
+Uso de Telegram como canal adicional para notificaciones y clasificación interactiva de gastos.
+
+Este documento define los requerimientos funcionales y no funcionales, el alcance tecnológico esperado y los criterios de entrega.
+
+Objetivos del proyecto 2.1. Objetivo general Proponer y construir una plataforma web de finanzas personales que permita a personas y parejas:
+Registrar y consolidar sus ingresos y gastos.
+
+Visualizar su situación financiera de forma clara (personal y del hogar).
+
+Automatizar la captura de información desde estados de cuenta y correos bancarios.
+
+Recibir apoyo inteligente para clasificar y analizar sus transacciones.
+
+2.2. Objetivos específicos
+
+proponer el mejor stack tecnologico para montar desde cero en Oracle free Tier y usando herramientas gratuitas.
+
+mantener un desarrollo liviano siempre refactorizando y dividiendo para mantener un proyecto facil de mantener y escalar
+
+Migrar conceptos funcionales del prototipo Android a una arquitectura web moderna.
+
+Permitir la gestión de cuentas personales y compartidas para parejas/familias.
+
+Incorporar importación desde Excel/CSV y emails de comprobantes, con énfasis en evitar duplicados.
+
+Integrar IA (Groq) para extraer datos estructurados desde textos y adjuntos, utilizando salidas estructuradas en JSON.
+
+Diseñar una arquitectura clara, extensible y fácil de operar en OCI free tier.
+
+Integrar un canal Telegram para notificaciones y clasificación de gastos.
+
+Alcance funcional 3.1. Gestión de usuarios y autenticación La plataforma debe permitir:
+Registro de usuario mediante email y contraseña.
+
+Inicio y cierre de sesión con mecanismos de sesión seguros (JWT o cookies HttpOnly).
+
+Recuperación de contraseña (por correo electrónico o flujo alternativo según entorno).
+
+Gestión del perfil del usuario:
+
+Nombre
+
+País
+
+Moneda principal
+
+Zona horaria
+
+Se deben implementar validaciones de formato y políticas mínimas de complejidad de contraseñas.
+
+3.2. Cuentas personales, cuentas compartidas y categorías 3.2.1. Cuentas personales Cada usuario podrá crear múltiples cuentas:
+
+Ejemplos: efectivo, cuenta corriente, tarjeta de crédito, cuenta de ahorro.
+
+Operaciones permitidas: crear, editar, archivar/borrar lógicamente.
+
+3.2.2. Cuentas compartidas para parejas / hogares La plataforma debe soportar la gestión financiera conjunta de parejas/familias:
+
+Posibilidad de crear una “cuenta compartida” o “hogar” a la que se asocien dos (o más) usuarios.
+
+Dentro de un hogar, se podrán definir cuentas compartidas (por ejemplo, “Cuenta familiar”, “Tarjeta supermercado”).
+
+Todos los miembros del hogar autorizados podrán ver y gestionar las transacciones de esas cuentas compartidas.
+
+Deben mantenerse separadas las cuentas personales de cada usuario, de modo que exista:
+
+Vista individual (finanzas propias).
+
+Vista del hogar (finanzas compartidas).
+
+3.2.3. Categorías y etiquetas El sistema tendrá un conjunto de categorías predefinidas (comida, transporte, ocio, salud, vivienda, etc.).
+
+Cada usuario/hogar podrá crear categorías personalizadas.
+
+Se permitirá asociar etiquetas (tags) adicionales a las transacciones (por ejemplo: “viaje”, “proyecto X”), para facilitar análisis posteriores.
+
+3.3. Transacciones (ingresos, gastos y gastos manuales) La plataforma debe permitir registrar transacciones con al menos los siguientes campos:
+
+Monto
+
+Moneda
+
+Fecha de operación
+
+Tipo (ingreso / gasto)
+
+Cuenta asociada (personal o compartida)
+
+Categoría
+
+Descripción opcional
+
+Gastos manuales:
+
+Debe ser posible registrar gastos e ingresos totalmente manuales, sin depender de Excel ni correos.
+
+Estos gastos manuales deben estar claramente identificados como tales, pero con el mismo peso que las transacciones importadas para efectos de reportes.
+
+Todas las transacciones, independientemente de su origen (manual, Excel/CSV, correo, Telegram), deben ser editables y eliminables, aplicando validaciones coherentes con el modelo de datos.
+
+3.4. Presupuestos y objetivos de ahorro La plataforma incluye:
+
+Presupuestos por categoría:
+
+Definición de un límite mensual de gasto para determinadas categorías (ej: “comida” máximo 300).
+
+Visualización del gasto acumulado vs presupuesto y porcentaje de consumo.
+
+Objetivos de ahorro:
+
+Configuración de metas simples (ej: ahorrar 1000 en 6 meses).
+
+Indicación del progreso con base en el saldo y las transacciones de ahorro.
+
+Estos elementos deben poder configurarse tanto a nivel personal como a nivel de hogar, cuando corresponda.
+
+3.5. Distribución proporcional de gastos en parejas Se requiere un módulo específico para responder a la pregunta: “¿Cómo se reparten justo los gastos del hogar según lo que aporta cada uno?”.
+
+Características:
+
+El sistema debe permitir registrar los ingresos de cada miembro de la pareja (por ejemplo con categorías específicas “Ingreso Persona A”, “Ingreso Persona B” o campos equivalentes).
+
+A partir de estos ingresos, la plataforma calculará el porcentaje de aporte de cada persona al total (p. ej. A 60%, B 40%).
+
+El gasto total del hogar (gastos en cuentas compartidas y categorías marcadas como “familiares”) debe poder verse distribuido de forma proporcional a esos porcentajes, mostrando:
+
+Total de gastos del hogar en el período.
+
+Monto sugerido que correspondería a cada miembro según su ingreso.
+
+La UI debe ofrecer una vista comprensible para que la pareja pueda revisar esta distribución y utilizarla como base para acuerdos económicos.
+
+3.6. Dashboard y reportes El sistema debe incluir un panel principal que facilite:
+
+Visualizar saldos actuales por cuenta (personales y compartidas).
+
+Ver gráficos de gastos por categoría en un período dado.
+
+Ver gráficos de evolución mensual (gastos, ingresos, saldo).
+
+Filtrar transacciones por:
+
+Rango de fechas
+
+Cuenta
+
+Categoría
+
+Tipo (ingreso/gasto)
+
+Texto libre
+
+Además:
+
+Posibilidad de exportar transacciones a CSV (filtros aplicados incluidos).
+
+3.7. Importación desde estados de cuenta (Excel/CSV) y correos bancarios La plataforma debe soportar los dos canales comunes de información bancaria:
+
+3.7.1. Importación desde estados de cuenta (Excel/CSV) El sistema debe permitir importar transacciones desde archivos Excel o CSV generados a partir de los estados de cuenta bancarios del usuario.
+
+Debe existir un mecanismo de mapeo flexible de columnas:
+
+Fecha
+
+Monto
+
+Moneda
+
+Descripción
+
+Referencia / id de operación
+
+Saldo (si aplica)
+
+Antes de confirmar la carga, el usuario verá una vista previa con:
+
+Filas válidas
+
+Filas con errores o incompletas (mostrando el motivo)
+
+3.7.2. Importación desde correos de comprobantes bancarios Además de Excel/CSV, el sistema debe permitir ingresar transacciones a partir de correos electrónicos de comprobantes bancarios reenviados por el usuario.
+
+Requerimientos:
+
+La plataforma tendrá una dirección de correo destino (directa o a través de un proveedor de inbound email) a la que el usuario reenviará los correos de su banco.
+
+Cada correo recibido se almacenará con:
+
+Remitente, destinatario, asunto
+
+Cuerpo en texto/HTML
+
+Adjuntos (en particular PDFs)
+
+Metadatos (fecha de recepción, Message‑ID, etc.)
+
+Se ejecutará un pipeline de extracción de datos (ver sección de IA) para proponer una transacción preliminar.
+
+3.7.3. Enfoque en no duplicar transacciones Es posible que una misma operación aparezca:
+
+En el estado de cuenta (Excel/CSV).
+
+En un correo de comprobante.
+
+E incluso haya sido ingresada manualmente.
+
+Por tanto, el sistema debe:
+
+Definir reglas claras de deduplicación usando combinaciones de fecha, monto, comercio, referencia de operación y, en el caso de correos, Message‑ID y hash del contenido.
+
+Impedir la creación de copias idénticas de una transacción.
+
+En caso de duda, marcar transacciones “posiblemente duplicadas” para revisión manual.
+
+3.8. Integración con Telegram La plataforma dispondrá de un bot de Telegram conectado al backend:
+
+Funciones mínimas:
+
+Proceso de vinculación entre cuenta web y usuario de Telegram mediante un código o token único.
+
+Envío de resúmenes periódicos configurables (diarios, semanales, mensuales) con:
+
+Total gastado
+
+Desglose por categorías
+
+Alertas de presupuesto o gastos inusuales.
+
+Gestión de clasificación interactiva:
+
+Para transacciones con categoría desconocida o de baja confianza, el sistema envía un mensaje con los datos de la transacción.
+
+El usuario elige la categoría correcta mediante botones (inline keyboard) o responde por texto.
+
+La elección se guarda como categoría definitiva y como ejemplo etiquetado para el módulo de clasificación.
+
+Requerimientos no funcionales 4.1. Arquitectura Arquitectura basada en frontend web + API backend + base de datos relacional.
+Separación de capas:
+
+Presentación (frontend)
+
+Lógica de negocio (servicios)
+
+Acceso a datos (repositorios/ORM)
+
+Organización modular por dominios: usuarios, cuentas, transacciones, importación (Excel/email), presupuestos, hogar/pareja, IA/ML, notificaciones.
+
+4.2. Rendimiento y escalabilidad Diseño orientado a operar en recursos limitados (OCI free tier).
+
+Paginación en listados y endpoints de listas.
+
+Uso eficiente de conexiones a base de datos (pooling).
+
+4.3. Seguridad Hash de contraseñas con algoritmos estándar (bcrypt, scrypt o Argon2).
+
+Protección frente a XSS, CSRF y SQL Injection.
+
+Validación rigurosa de entradas en backend.
+
+Uso de HTTPS en entornos demo/productivo.
+
+4.4. Calidad de código Uso de linters y formateadores (ESLint/Prettier u otros según stack).
+
+Código modular, legible y documentado.
+
+Patrones como controller/service/repository/DTO donde tenga sentido.
+
+Stack tecnológico de referencia Se deja libertad de elección, pero se recomienda:
+5.1. Opción A – Full‑stack TypeScript (recomendada) Frontend:
+
+React + TypeScript, preferentemente con Next.js (SPA + SSR/SSG).
+
+Backend:
+
+Node.js + TypeScript con Next.js API routes, NestJS o Express.
+
+Capa de datos:
+
+ORM tipo Prisma sobre base de datos relacional (Oracle Autonomous Database, PostgreSQL o MySQL).
+
+Autenticación:
+
+JWT o sesiones con cookies HttpOnly.
+
+5.2. Opción B – Backend Kotlin/Java + frontend JS Backend: Spring Boot (Kotlin/Java) o Ktor con API REST.
+
+Frontend: React/Next.js o Vue/Nuxt.
+
+ORM: JPA/Hibernate, Exposed u otro.
+
+La propuesta debe justificar el stack elegido y su viabilidad en OCI free tier.
+
+Infraestructura y despliegue (OCI) 6.1. Entornos Al menos dos entornos:
+Desarrollo (dev).
+
+Demostración (demo / staging).
+
+6.2. Recursos en OCI Instancias de compute en free tier para backend (ARM/AMD).
+
+Base de datos en Oracle Autonomous Database o alternativa equivalente en OCI.
+
+Opcional: Object Storage para contenido estático.
+
+6.3. Ingestión de correos Dos alternativas (a elegir y justificar):
+
+Servidor SMTP propio en OCI:
+
+Recibe correos y los reenvía internamente a la API para procesarlos.
+
+Proveedor externo de inbound email:
+
+Recibe correos y expone un webhook HTTP que la API consumirá.
+
+En cualquier caso:
+
+El endpoint que recibe correos debe ser seguro e idempotente.
+
+Debe encadenar correctamente con el pipeline de IA y la deduplicación.
+
+Modelo de datos Entidades mínimas:
+Usuario
+
+Hogar / Cuenta compartida
+
+Relación Usuario–Hogar
+
+Cuenta
+
+Categoría
+
+Transacción
+
+Presupuesto
+
+Objetivo de ahorro
+
+Correo recibido / evento de ingestión
+
+Registro de importación Excel
+
+Configuración de notificaciones / Telegram
+
+Para cada entidad se deben definir:
+
+Campos, tipos y restricciones (NOT NULL, UNIQUE, claves foráneas).
+
+Relaciones (1:N, N:M) y reglas de integridad.
+
+Migraciones versionadas (Prisma Migrate, Flyway, Liquibase, etc.).
+
+IA, ML y clasificación 8.1. Extracción inteligente con Groq El backend utilizará la API de Groq para extraer información estructurada desde correos (texto + PDFs).
+Se utilizarán las capacidades de structured outputs/JSON schema para garantizar que la respuesta cumpla un esquema JSON definido (ej: transaction_date, amount, currency, merchant, type, description, etc.).
+
+Los prompts deben ser configurables y permitir ejemplos (few‑shot) por banco o formato de correo.
+
+La API key de Groq se gestionará siempre como secreto, nunca embebida en el código.
+
+8.2. Roadmap de clasificación automática Fase 0 – Clasificación zero‑shot con LLM (obligatoria)
+
+Groq no sólo extrae datos, también sugiere una categoría y etiquetas para la transacción.
+
+Fase 1 – Dataset etiquetado (obligatoria)
+
+Cada vez que un usuario corrige la categoría sugerida, se almacena esa corrección como ejemplo etiquetado.
+
+Se construye una tabla para entrenamiento con descripciones, montos, fechas, comercios y categoría final.
+
+Fase 2 – Modelo supervisado clásico (opcional, muy valorado)
+
+Entrenar un modelo de clasificación (por ejemplo, Random Forest, Logistic Regression o Naive Bayes) con las transacciones ya etiquetadas, siguiendo prácticas habituales de categorización de transacciones bancarias.
+
+Serializar el modelo y usarlo en el backend como primer clasificador, con Groq como respaldo cuando haya baja confianza.
+
+Medir accuracy/F1 e incluir un reporte sencillo.
+
+Notificaciones, Telegram y experiencia multicanal 9.1. Notificaciones y resúmenes Configuración de notificaciones por usuario/hogar:
+Medio: email y/o Telegram.
+
+Frecuencia: diaria, semanal, mensual.
+
+Tipo de contenido: resumen general, alertas de presupuesto, alertas de gasto inusual.
+
+9.2. Bot de Telegram Comandos básicos (/start, /help, /summary, etc.) y flujo de vinculación.
+
+Envío de resúmenes y alertas.
+
+Clasificación interactiva de transacciones con baja confianza:
+
+Presentación de opciones de categoría como botones.
+
+Registro de la decisión del usuario como categoría definitiva.
+
+Inclusión de la decisión en el dataset de entrenamiento para ML.
+
+Calidad, pruebas, observabilidad y DevEx 10.1. Pruebas Tests unitarios de lógica de negocio (servicios, validaciones, clasificación).
+Tests de integración para endpoints clave:
+
+Registro y login
+
+Creación de transacciones
+
+Importación Excel
+
+Webhook de email
+
+Flujo de Telegram
+
+Idealmente, pruebas E2E para los flujos críticos de negocio.
+
+10.2. Observabilidad Logging estructurado con IDs de correlación que permitan trazar:
+
+correo → IA → transacción → notificación,
+
+o Excel → transacción → dashboard.
+
+Métricas mínimas:
+
+Nº de correos procesados, errores de IA, latencia de endpoints, tasas de error.
+
+Dashboard básico (Grafana u otro) para monitorear estado del sistema.
+
+10.3. CI/CD Pipeline de integración continua:
+
+Ejecución automática de linters y tests en cada commit/PR.
+
+Pipeline de despliegue continuo hacia el entorno demo en OCI al integrar cambios en la rama principal.
+
+Entregables Repositorio con código fuente (frontend, backend, scripts).
+Migraciones de base de datos y scripts de carga inicial (datos de ejemplo).
+
+Plantillas de configuración de entorno (.env.example).
+
+Documentación técnica:
+
+Arquitectura
+
+Modelo de datos
+
+Definición OpenAPI/Swagger
+
+Flujos clave (diagramas opcionales)
+
+Guía de despliegue en OCI
+
+URL de la aplicación funcionando en OCI, con un usuario/demo preconfigurado.
+
+Criterios de evaluación Cumplimiento del alcance funcional (incluyendo cuentas compartidas y distribución proporcional de gastos).
+Claridad y robustez de la arquitectura técnica.
+
+Calidad del código, organización, patrones y buenas prácticas.
+
+Experiencia de usuario en web y Telegram (fluidez, claridad de la información).
+
+Correcta integración con Groq para extracción y clasificación.
+
+Diseño de los mecanismos de deduplicación entre Excel, correos y gastos manuales.
+
+Diseño del dataset de entrenamiento y, si existe, correcta integración del modelo supervisado.
+
+Observabilidad, CI/CD y calidad de la documentación entregada.
+
+
+preguntas y aclaraciones:
+
+I have reviewed the RFP for the Personal Finance Web Platform migration. To ensure I meet your expectations perfectly, I have a few questions:
+
+Tech Stack: You recommended Next.js with TypeScript and Prisma. Does this stack work for you, or do you have a specific preference for another framework like NestJS for the backend?
+Inbound Email: For processing bank receipts via email, do you prefer using an external provider (like SendGrid or Mailgun) that sends webhooks to the app, or would you like me to attempt setting up an SMTP server on the OCI instance? (Note: External providers are generally more reliable for Free Tier).
+Deployment on OCI: Since I am working in this environment, I can write the code, Dockerfiles, and CI/CD pipelines (e.g., GitHub Actions). Do you expect me to perform the actual deployment to a live OCI account, or should I provide all the tools and documentation so you can deploy it?
+AI & Telegram: I will need API keys for Groq and Telegram for testing/integration. Should I use placeholders in the .env.example and focus on the implementation, or do you have keys I should use?
+Language: The RFP is in Spanish. Would you like the application's UI and the code documentation/comments to be in Spanish, English, or both?
+Data Migration: Regarding the Android app (PersonalFinanceApp), should I strictly follow its current data model for the migration, or do I have freedom to improve it to support the new features like "Hogares" (Households) and "Cuentas Compartidas" (Shared Accounts)?
+Database: Would you prefer Oracle Autonomous Database (standard in OCI Free Tier) or a standard PostgreSQL/MySQL instance running in a container?
+Once I have these answers, I will be able to create a detailed plan for you.
+
+
+Te dejo respuestas directas para que las puedas copiar/pegar (o adaptar) como respuesta oficial al equipo:
+
+Tech Stack (Next.js, TypeScript, Prisma, NestJS, etc.) Sí, el stack propuesto Next.js + TypeScript + Prisma me funciona muy bien como base. La preferencia es:
+Frontend + Backend en el mismo repo usando Next.js (App Router) y API Routes para la capa de backend.
+
+Prisma como ORM sobre una base relacional (idealmente PostgreSQL en esta primera versión, por compatibilidad y tooling).
+
+Si en la propuesta consideran que NestJS u otro framework backend aporta valor (por ejemplo, para modularidad o porque el equipo lo domina muy bien), pueden sugerirlo, pero la prioridad es:
+
+Mantener el stack en TypeScript full‑stack.
+
+Mantenerlo simple de desplegar en OCI.
+
+Inbound Email (Mailgun vs SMTP propio en OCI) Para la demo y la primera versión quiero ir explícitamente con un proveedor externo de correo inbound, en particular Mailgun:
+Usar Mailgun para recepción de correos y enrutamiento inbound hacia un webhook de la aplicación.
+
+Mailgun tiene un plan gratuito permanente de ~100 correos/día (≈3.000/mes), con inbound route incluido, suficiente para este proyecto.
+
+No espero que monten un servidor SMTP propio en OCI en esta fase. Lo importante es:
+
+Configurar bien la ruta inbound en Mailgun.
+
+Proteger muy bien el endpoint de webhook (firma HMAC/token, HTTPS, rate limiting y validación de payload).
+
+Despliegue en OCI (¿ustedes lo hacen o dejo todo preparado?) Lo que espero como mínimo es:
+Código listo para producción.
+
+Dockerfiles (frontend/backend o monolito) listos.
+
+Pipelines de CI/CD (por ejemplo GitHub Actions) que:
+
+Ejecuten tests/linters.
+
+Construyan las imágenes.
+
+Y documentación paso a paso para desplegar en OCI (comandos, variables de entorno, notas de red).
+
+Idealmente, si es posible:
+
+Que también puedan realizar el despliegue efectivo en una cuenta OCI que yo habilite (o una suya para demo), pero si por temas de acceso no se puede, con los artefactos + documentación claros es suficiente para que yo pueda levantarlo.
+
+IA & Telegram (API keys de Groq y Telegram) Para el desarrollo prefiero que trabajen con:
+Placeholders en env.example (por ejemplo GROQ_API_KEY=xxx, TELEGRAM_BOT_TOKEN=xxx).
+
+El código debe estar preparado para leer estas claves desde variables de entorno.
+
+Las claves reales:
+
+Las proporcionaré yo y se configurarán sólo en los entornos de ejecución (dev/demo) que definamos, no en el repositorio.
+
+En los tests automatizados pueden usar mocks o una configuración de “modo demo” para no depender siempre de las claves reales.
+
+Idioma (UI, documentación, comentarios de código) Preferencias:
+UI de la aplicación en español por defecto (textos, etiquetas, mensajes de error).
+
+Código y comentarios técnicos en español y ingles aunque este ultimo que suele ser más estándar, pero los nombres de dominio (entidades, servicios) pueden usar una mezcla razonable siempre que sea consistente.
+
+La documentación (README, arquitectura, guía de despliegue) puede estar en español o bilingüe; si el equipo se siente cómodo, README principal en inglés con sección/resumen en español es perfecto.
+
+Data model y migración desde la app Android No es necesario copiar el modelo de datos actual de la app Android al pie de la letra.
+Tienen libertad para mejorar el modelo de datos siempre que se cubran claramente los nuevos requerimientos:
+
+Hogares / Households.
+
+Cuentas compartidas.
+
+Distribución proporcional de gastos según ingresos de la pareja.
+
+Trazabilidad del origen de la transacción (manual, Excel, correo, Telegram).
+
+Si hay algo en el modelo Android que consideren importante preservar, se puede incorporar, pero el objetivo es optimizar el modelo para la nueva versión web, no arrastrar limitaciones antiguas.
+
+Base de datos (Oracle Autonomous vs PostgreSQL/MySQL) Para esta primera fase:
+Prefiero PostgreSQL como base de datos principal, por la integración directa y muy madura con Prisma y el ecosistema de Next.js.
+
+En cuanto a OCI:
+
+Se puede ejecutar PostgreSQL en una VM o contenedor dentro de la capa gratuita.
+
+Oracle Autonomous Database Always Free también es una opción interesante a futuro (para alinearnos al 100% con Oracle), pero la integración con Prisma es menos directa y añade complejidad inicial.
+
+Resumiendo para el equipo:
+
+MVP: PostgreSQL + Prisma.
+
+Si quieren ganar puntos extra, pueden dejar documentado cómo migrar o extender el modelo hacia Oracle Autonomous Database en una iteración posterior, pero no es obligatorio para esta etapa.
+
+
+Thank you for the detailed answers. They provide a very clear path forward. I have just a few more specific questions to refine the implementation details:
+
+UI/UX Framework: Do you have a preference for the UI components? I recommend Tailwind CSS + shadcn/ui for a modern, professional, and fast-to-develop interface.
+Household Invitations: How should a user invite another to their "Hogar"? Would a "Join Code" (like a room code) or an "Email Invitation" be better?
+Deduplication Strategy: When a potential duplicate is found (e.g., same amount and date but different description), should the system block it automatically, or should it import it and flag it for manual review in a specific "To Review" list?
+Excel Formats: Since different banks use different formats, should I implement a "Generic Template" that users must follow, or a "Mapping Wizard" where the user selects which column is 'Date', 'Amount', etc.?
+Initial Categories: Do you have a specific list of "Predefined Categories" you'd like to see, or should I use a standard set (Food, Housing, Transport, etc.)?
+Telegram Bot: For the periodic summaries, should they be pushed automatically by a cron job, or requested by the user via command?
+Once these are answered, I will proceed to set the plan and begin execution.
+
+
+Aquí están las respuestas a las últimas preguntas, directas y listas para enviar al equipo:
+
+UI/UX Framework Sí, Tailwind CSS + shadcn/ui aprobado. Es la combinación ideal para un panel financiero: permite iterar rápido y entrega componentes accesibles de fábrica (formularios, tablas, modales, dropdowns, toasts, etc.) sin tener que construirlos desde cero.
+
+Invitaciones al Hogar Se usará un modelo mixto:
+
+Usuario A crea el Hogar e ingresa el email de la persona a invitar. El sistema envía un correo con link de invitación y al mismo tiempo genera un Join Code corto (6–8 caracteres alfanuméricos).
+
+Usuario B puede unirse de dos formas:
+
+Haciendo clic en el link de invitación recibido por email.
+
+O, si ya tiene cuenta, ingresando el Join Code en la pantalla "Unirse a un Hogar".
+
+Requisitos adicionales obligatorios:
+
+El Join Code debe tener fecha de expiración (7 días).
+
+Debe ser de un solo uso: una vez aceptado, se invalida automáticamente.
+
+Sin invitación válida (link o código activo), no se puede unir al hogar.
+
+Estrategia de deduplicación No bloquear silenciosamente. La regla es:
+Duplicado evidente (mismo Message‑ID de correo, hash de fila de Excel idéntico): se descarta automáticamente sin intervención del usuario.
+
+Duplicado probable (misma fecha ± 1 día, mismo monto, descripción ligeramente distinta, origen diferente): se importa en estado "Pendiente de revisión", visible en una lista "A revisar" en la UI, con las opciones:
+
+"Confirmar como nueva transacción"
+
+"Marcar como duplicado y descartar"
+
+Formatos Excel Se implementará un Mapping Wizard:
+El usuario elige qué columna del archivo corresponde a cada campo (Fecha, Monto, Descripción, Referencia, etc.).
+
+Se ofrecerá además un template genérico descargable para quien prefiera un formato estándar, pero no será el único camino.
+
+El wizard debe permitir guardar perfiles de mapeo por banco (ej. "Banco X – Cuenta corriente") para reutilizarlos en importaciones futuras.
+
+Categorías predefinidas Sí, aquí está la lista oficial que debe cargarse como seed data:
+Vivienda — arriendo, casa, gastos comunes
+
+Servicios del hogar — luz, agua, gas, internet, Celular
+
+Alimentación básica (hogar) — supermercado, Almacen, veguita
+
+Comida y antojos (placer) — salir a comer, delivery, Antojos
+
+Transporte — Bencina, PEAJES, uber
+
+Salud — Medico, farmacia
+
+Ocio y entretenimiento — streaming, Conciertos, vacaciones
+
+Deudas y productos financieros — Tarjeta titular, Credito
+
+Seguros — Seguro
+
+Familia y mascotas — Regalos, bubi, choquito, Gatos
+
+Ropa y cuidado personal — Ropa
+
+Imprevistos / misceláneos — Imprevistos
+
+Cada usuario/hogar puede crear categorías personalizadas adicionales. Los nombres entre comillas (ej. veguita, bubi) se pueden usar como subcategorías o etiquetas (tags) para enriquecer sin inflar la lista base.
+
+Resúmenes en Telegram Bot Se implementarán ambas modalidades, con prioridad definida:
+Push automático (prioritario):
+
+Configurable por usuario: frecuencia (diaria/semanal/mensual) y franja horaria preferida.
+
+Disparado por un scheduler/cron en el backend.
+
+On‑demand por comando (deseable como mejora incremental):
+
+Comandos como /resumen, /hoy, /semana, /mes para consultar bajo demanda.

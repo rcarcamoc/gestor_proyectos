@@ -48,7 +48,7 @@ export default function DistributionPage() {
           <h1 className="text-3xl font-serif text-stone-800">Distribución de Gastos</h1>
           <p className="text-stone-500 mt-1">Cálculo proporcional basado en los ingresos de la pareja.</p>
         </div>
-        <Select value={selectedHousehold} onValueChange={setSelectedHousehold}>
+        <Select value={selectedHousehold} onValueChange={(val) => setSelectedHousehold(val || '')}>
           <SelectTrigger className="w-[220px] bg-white border-stone-200 rounded-xl">
             <SelectValue placeholder="Seleccionar Hogar" />
           </SelectTrigger>

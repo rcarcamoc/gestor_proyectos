@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Wallet, CreditCard, Landmark } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = useState<any[]>([]);

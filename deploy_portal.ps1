@@ -5,6 +5,9 @@ $sshKey = "C:\Users\arant\.ssh\smarttrack_key.key"
 $userAtHost = "ubuntu@161.153.219.141"
 $remotePath = "portal_hub"
 
+# Cambiar a la carpeta del script para evitar errores de Git
+Set-Location $PSScriptRoot
+
 Write-Host "[*] Iniciando despliegue del Portal Unificado..." -ForegroundColor Cyan
 
 # 1. Sincronizar GitHub

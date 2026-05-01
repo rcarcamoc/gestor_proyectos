@@ -1,220 +1,199 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from 'sonner';
-import { ArrowUpCircle, ArrowDownCircle, Filter } from 'lucide-react';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
+import { 
+  Badge 
+} from '@/components/ui/badge';
+import { 
+  ArrowUpCircle, 
+  ArrowDownCircle, 
+  Search,
+  Filter,
+  Plus,
+  Home,
+  Zap,
+  ShoppingBasket,
+  Utensils,
+  Car,
+  HeartPulse,
+  Ticket,
+  CreditCard,
+  ShieldCheck,
+  PawPrint,
+  Shirt,
+  HelpCircle,
+  Clock
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
-interface Transaction {
-  id: string;
-  date: string;
-  amount: number;
-  currency: string;
-  type: 'INCOME' | 'EXPENSE';
-  description?: string;
-  category?: { name: string };
-  account?: { name: string };
-}
+const ICON_MAP: Record<string, any> = {
+  'home': Home,
+  'zap': Zap,
+  'shopping-basket': ShoppingBasket,
+  'utensils': Utensils,
+  'car': Car,
+  'heart-pulse': HeartPulse,
+  'ticket': Ticket,
+  'credit-card': CreditCard,
+  'shield-check': ShieldCheck,
+  'paw-print': PawPrint,
+  'shirt': Shirt,
+  'help-circle': HelpCircle,
+};
 
 export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [selectedHousehold, setSelectedHousehold] = useState<string>('personal');
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Form states
-  const [amount, setAmount] = useState('');
-  const [type, setType] = useState('EXPENSE');
-  const [accountId, setAccountId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [description, setDescription] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-
-  const fetchInitialData = useCallback(async () => {
-    const res = await fetch('/api/households');
-    if (res.ok) setHouseholds(await res.json());
-  }, []);
-
-  const fetchContextData = useCallback(async () => {
-    const query = selectedHousehold === 'personal' ? '' : `?householdId=${selectedHousehold}`;
-    const [accRes, catRes] = await Promise.all([
-      fetch(`/api/accounts${query}`),
-      fetch(`/api/categories${query}`)
-    ]);
-    if (accRes.ok) setAccounts(await accRes.json());
-    if (catRes.ok) setCategories(await catRes.json());
-  }, [selectedHousehold]);
-
-  const fetchTransactions = useCallback(async () => {
-    const url = selectedHousehold === 'personal'
-      ? '/api/transactions'
-      : `/api/transactions?householdId=${selectedHousehold}`;
-    const res = await fetch(url);
-    if (res.ok) setTransactions(await res.json());
-  }, [selectedHousehold]);
-
-  useEffect(() => {
-    fetchInitialData();
-  }, [fetchInitialData]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchTransactions();
-    fetchContextData();
-  }, [selectedHousehold, fetchTransactions, fetchContextData]);
+  }, []);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: parseFloat(amount),
-          currency: 'CLP',
-          date,
-          type,
-          description,
-          accountId,
-          categoryId,
-          householdId: selectedHousehold === 'personal' ? null : selectedHousehold
-        }),
-      });
-      if (res.ok) {
-        toast.success('Transacción registrada');
-        setAmount('');
-        setDescription('');
-        fetchTransactions();
-      }
-    } catch (error) {
-      toast.error('Error al registrar transacción');
-    } finally {
-      setIsLoading(false);
-    }
+  const fetchTransactions = async () => {
+    const res = await fetch('/api/transactions');
+    if (res.ok) setTransactions(await res.json());
+    setLoading(false);
   };
 
+  const filteredTransactions = transactions.filter(t => 
+    t.description?.toLowerCase().includes(search.toLowerCase()) ||
+    t.category?.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const formatCurrency = (val: number) => 
+    new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
+
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Transacciones</h1>
-        <Select value={selectedHousehold} onValueChange={(v: string | null) => setSelectedHousehold(v || "")}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Seleccionar Entidad" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="personal">Personal</SelectItem>
-            {households.map(h => (
-              <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-serif text-stone-800">Transacciones</h1>
+          <p className="text-stone-500 mt-1">Historial completo de tus movimientos financieros.</p>
+        </div>
+        <div className="flex gap-2">
+            <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl px-6">
+                <Plus className="h-4 w-4 mr-2" />
+                Nuevo Registro
+            </Button>
+        </div>
       </div>
 
-      <div className="grid lg:grid-cols-4 gap-6">
-        <Card className="lg:col-span-1 h-fit">
-          <CardHeader>
-            <CardTitle>Nuevo Registro</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Monto</Label>
-                <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select value={type} onValueChange={(v: any) => setType(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="EXPENSE">Gasto</SelectItem>
-                    <SelectItem value="INCOME">Ingreso</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Cuenta</Label>
-                <Select value={accountId} onValueChange={(v: any) => setAccountId(v)} required>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar cuenta" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {accounts.map(acc => (
-                      <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Categoría</Label>
-                <Select value={categoryId} onValueChange={(v: any) => setCategoryId(v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar categoría" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Fecha</Label>
-                <Input type="date" value={date} onChange={e => setDate(e.target.value)} required />
-              </div>
-              <div className="space-y-2">
-                <Label>Descripción</Label>
-                <Input value={description} onChange={e => setDescription(e.target.value)} />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>Registrar</Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-3">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Historial</CardTitle>
-            <Button variant="outline" size="sm"><Filter className="w-4 h-4 mr-2" /> Filtrar</Button>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
+      <Card className="border-stone-200 shadow-sm rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="border-b border-stone-50 bg-stone-50/30">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+              <Input 
+                placeholder="Buscar por descripción o categoría..." 
+                className="pl-10 bg-white border-stone-200 rounded-xl"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+                <Button variant="outline" className="rounded-xl border-stone-200 text-stone-600">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filtros
+                </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader className="bg-stone-50/50">
+              <TableRow className="border-stone-100 hover:bg-transparent">
+                <TableHead className="w-[120px] font-medium text-stone-500">Fecha</TableHead>
+                <TableHead className="font-medium text-stone-500">Categoría</TableHead>
+                <TableHead className="font-medium text-stone-500">Descripción</TableHead>
+                <TableHead className="font-medium text-stone-500">Cuenta</TableHead>
+                <TableHead className="text-right font-medium text-stone-500">Monto</TableHead>
+                <TableHead className="text-center font-medium text-stone-500">Estado</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell colSpan={6} className="h-16 bg-stone-50/50" />
+                  </TableRow>
+                ))
+              ) : filteredTransactions.length === 0 ? (
                 <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Descripción</TableHead>
-                  <TableHead>Categoría</TableHead>
-                  <TableHead>Cuenta</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
+                    <TableCell colSpan={6} className="h-64 text-center text-stone-400">
+                        No se encontraron transacciones.
+                    </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map(t => (
-                  <TableRow key={t.id}>
-                    <TableCell>{new Date(t.date).toLocaleDateString()}</TableCell>
-                    <TableCell className="font-medium">{t.description || '-'}</TableCell>
-                    <TableCell>{t.category?.name || 'S/C'}</TableCell>
-                    <TableCell>{t.account?.name}</TableCell>
-                    <TableCell className={`text-right font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
-                      {t.type === 'INCOME' ? '+' : '-'} {new Intl.NumberFormat('es-CL', { style: 'currency', currency: t.currency }).format(t.amount)}
+              ) : filteredTransactions.map((t) => {
+                const Icon = ICON_MAP[t.category?.icon] || HelpCircle;
+                const isExpense = t.type === 'EXPENSE';
+                return (
+                  <TableRow key={t.id} className="border-stone-50 hover:bg-stone-50/30 transition-colors group">
+                    <TableCell className="text-stone-500 text-sm">
+                      {new Date(t.date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <div 
+                          className="p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform" 
+                          style={{ backgroundColor: `\${t.category?.color}15`, color: t.category?.color }}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <span className="font-medium text-stone-700 text-sm">{t.category?.name || 'Sin categoría'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-stone-600 font-medium">
+                      {t.description || '-'}
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant="outline" className="font-normal text-stone-500 border-stone-100 bg-white">
+                            {t.account.name}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-col items-end">
+                        <span className={cn(
+                          "font-semibold text-base",
+                          isExpense ? "text-stone-900" : "text-green-600"
+                        )}>
+                          {isExpense ? '-' : '+'}{formatCurrency(Number(t.amount))}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                        {t.status === 'PENDING_REVIEW' ? (
+                            <Badge className="bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100 font-medium rounded-full px-3">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Revisar
+                            </Badge>
+                        ) : (
+                            <Badge className="bg-stone-100 text-stone-500 border-transparent font-medium rounded-full px-3">
+                                Confirmado
+                            </Badge>
+                        )}
                     </TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            {transactions.length === 0 && (
-              <p className="text-gray-500 text-center py-10">No hay transacciones registradas.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
+}
+
+function cn(...inputs: any[]) {
+    return inputs.filter(Boolean).join(' ');
 }

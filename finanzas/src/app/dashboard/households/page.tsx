@@ -1,18 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
+import { Users, UserPlus, Key, Mail, Shield, CheckCircle2, Copy, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Plus, UserPlus, Users } from 'lucide-react';
 
-export default function HouseholdPage() {
+export default function HouseholdsPage() {
   const [households, setHouseholds] = useState<any[]>([]);
-  const [newName, setNewName] = useState('');
-  const [joinCode, setJoinCode] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [inviteCode, setInviteCode] = useState('');
 
   useEffect(() => {
     fetchHouseholds();
@@ -20,143 +18,140 @@ export default function HouseholdPage() {
 
   const fetchHouseholds = async () => {
     const res = await fetch('/api/households');
+    if (res.ok) setHouseholds(await res.json());
+    setLoading(false);
+  };
+
+  const generateInviteCode = async (householdId: string) => {
+    const res = await fetch('/api/households/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ householdId })
+    });
     if (res.ok) {
-      const data = await res.json();
-      setHouseholds(data);
-    }
-  };
-
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/households', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName }),
-      });
-      if (res.ok) {
-        toast.success('Hogar creado');
-        setNewName('');
-        fetchHouseholds();
-      } else {
-        toast.error('Error al crear hogar');
-      }
-    } catch (error) {
-      toast.error('Error de red');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleJoin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/households/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: joinCode }),
-      });
-      if (res.ok) {
-        toast.success('Te has unido al hogar');
-        setJoinCode('');
-        fetchHouseholds();
-      } else {
         const data = await res.json();
-        toast.error(data.message || 'Error al unirse');
-      }
-    } catch (error) {
-      toast.error('Error de red');
-    } finally {
-      setIsLoading(false);
+        setInviteCode(data.code);
+        toast.success('Código de invitación generado');
     }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado al portapapeles');
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-8">
-      <h1 className="text-3xl font-bold">Gestión de Hogar</h1>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5" /> Crear Nuevo Hogar
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nombre del Hogar</Label>
-                <Input
-                  id="name"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ej. Casa Central"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                Crear
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5" /> Unirse a un Hogar
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleJoin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="code">Código de Invitación</Label>
-                <Input
-                  id="code"
-                  value={joinCode}
-                  onChange={(e) => setJoinCode(e.target.value)}
-                  placeholder="ABC123XY"
-                  required
-                />
-              </div>
-              <Button type="submit" variant="secondary" className="w-full" disabled={isLoading}>
-                Unirse
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+    <div className="max-w-5xl mx-auto space-y-10">
+      <div className="flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-serif text-stone-800">Mi Hogar</h1>
+          <p className="text-stone-500 mt-1">Gestiona tus finanzas compartidas y miembros de la familia.</p>
+        </div>
+        <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Crear Nuevo Hogar
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5" /> Mis Hogares
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {households.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No perteneces a ningún hogar todavía.</p>
-          ) : (
-            <div className="space-y-4">
-              {households.map((h) => (
-                <div key={h.id} className="p-4 border rounded-lg flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold">{h.name}</h3>
-                    <p className="text-sm text-gray-500">
-                      {h.users.length} miembros
-                    </p>
-                  </div>
-                  <Button variant="outline" onClick={() => {/* TODO: Manage household */}}>
-                    Administrar
-                  </Button>
+      <div className="grid md:grid-cols-2 gap-8">
+        {households.map(h => (
+          <div key={h.id} className="space-y-6">
+            <Card className="border-stone-200 shadow-sm rounded-2xl bg-white overflow-hidden">
+              <CardHeader className="bg-stone-50/50 border-b border-stone-100">
+                <div className="flex justify-between items-center">
+                    <CardTitle className="text-xl font-serif">{h.name}</CardTitle>
+                    <div className="flex -space-x-2">
+                        {h.users.map((u: any) => (
+                            <div key={u.id} className="h-8 w-8 rounded-full bg-stone-200 border-2 border-white flex items-center justify-center text-xs font-bold text-stone-600" title={u.user.name}>
+                                {u.user.name.charAt(0)}
+                            </div>
+                        ))}
+                    </div>
                 </div>
-              ))}
+              </CardHeader>
+              <CardContent className="pt-6">
+                <h4 className="text-sm font-medium text-stone-400 uppercase tracking-widest mb-4">Integrantes</h4>
+                <div className="space-y-4">
+                    {h.users.map((u: any) => (
+                        <div key={u.id} className="flex justify-between items-center">
+                            <div className="flex items-center">
+                                <div className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center mr-3">
+                                    <Users className="h-5 w-5 text-stone-400" />
+                                </div>
+                                <div>
+                                    <p className="font-medium text-stone-800">{u.user.name}</p>
+                                    <p className="text-xs text-stone-400">{u.user.email}</p>
+                                </div>
+                            </div>
+                            {u.role === 'ADMIN' ? (
+                                <div className="flex items-center text-xs font-medium text-stone-500 bg-stone-50 px-2 py-1 rounded-md">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    Admin
+                                </div>
+                            ) : (
+                                <button className="text-stone-300 hover:text-red-500 transition-colors">
+                                    <Trash2 className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+                </div>
+              </CardContent>
+              <CardFooter className="bg-stone-50/30 border-t border-stone-50 mt-4 flex flex-col items-stretch p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                      <div className="flex items-center text-sm text-stone-600">
+                          <Key className="h-4 w-4 mr-2 text-stone-400" />
+                          Invitaciones
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-stone-500 hover:text-stone-900"
+                        onClick={() => generateInviteCode(h.id)}
+                      >
+                          Generar Código
+                      </Button>
+                  </div>
+                  
+                  {inviteCode && (
+                      <div className="bg-white border border-stone-200 rounded-xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+                          <div>
+                              <p className="text-[10px] uppercase text-stone-400 font-bold tracking-tighter">Join Code (Expira en 7 días)</p>
+                              <p className="text-lg font-mono font-bold text-stone-800">{inviteCode}</p>
+                          </div>
+                          <Button variant="outline" size="icon" onClick={() => copyToClipboard(inviteCode)} className="rounded-lg h-8 w-8">
+                              <Copy className="h-4 w-4" />
+                          </Button>
+                      </div>
+                  )}
+              </CardFooter>
+            </Card>
+
+            <Card className="border-stone-200 shadow-sm rounded-2xl bg-stone-50/50 p-6">
+                <div className="flex items-center mb-4">
+                    <Mail className="h-5 w-5 text-stone-400 mr-2" />
+                    <h4 className="font-medium text-stone-800">Invitación por Email</h4>
+                </div>
+                <div className="flex gap-2">
+                    <Input placeholder="correo@familia.com" className="bg-white border-stone-200 rounded-xl" />
+                    <Button variant="outline" className="rounded-xl">Enviar</Button>
+                </div>
+            </Card>
+          </div>
+        ))}
+
+        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-stone-200 rounded-3xl bg-stone-50/20 text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-white shadow-sm flex items-center justify-center">
+                <CheckCircle2 className="h-8 w-8 text-stone-300" />
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div>
+                <h3 className="font-serif text-xl text-stone-700">Privacidad y Control</h3>
+                <p className="text-sm text-stone-400 max-w-xs mt-2">
+                    Las cuentas compartidas solo son visibles para los miembros autorizados de tu hogar. Tus cuentas personales permanecen privadas.
+                </p>
+            </div>
+        </div>
+      </div>
     </div>
   );
 }

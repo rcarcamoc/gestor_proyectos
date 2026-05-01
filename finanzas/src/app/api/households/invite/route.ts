@@ -1,58 +1,43 @@
-export const dynamic = "force-dynamic";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/options";
-import { NextResponse } from "next/server";
-import { nanoid } from "nanoid";
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { nanoid } from 'nanoid';
 
-export async function POST(req: Request) {
+const prisma = new PrismaClient();
+
+export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  if (!session || !session.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const { householdId } = await request.json();
+
+  if (!householdId) {
+    return NextResponse.json({ error: 'Household ID required' }, { status: 400 });
   }
 
-  try {
-    const { householdId, email } = await req.json();
+  // Verify user is member of household
+  const membership = await prisma.userHousehold.findFirst({
+    where: { householdId, userId: session.user.id, role: 'ADMIN' }
+  });
 
-    if (!householdId || !email) {
-      return NextResponse.json({ message: "Household ID and email are required" }, { status: 400 });
-    }
-
-    const userId = (session.user as any).id;
-
-    // Check if user is admin of the household
-    const userHousehold = await prisma.userHousehold.findFirst({
-      where: {
-        householdId,
-        userId,
-        role: "ADMIN",
-      },
-    });
-
-    if (!userHousehold) {
-      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
-
-    const code = nanoid(8).toUpperCase();
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7);
-
-    const invitation = await prisma.invitation.create({
-      data: {
-        householdId,
-        email,
-        code,
-        expiresAt,
-      },
-    });
-
-    // In a real app, send email here
-    console.log(`Invitation created for ${email} with code ${code}`);
-
-    return NextResponse.json({ message: "Invitation sent", code }, { status: 201 });
-  } catch (error) {
-    console.error("Invite error:", error);
-    return NextResponse.json({ message: "Something went wrong" }, { status: 500 });
+  if (!membership) {
+    return NextResponse.json({ error: 'Unauthorized. Only admins can invite.' }, { status: 403 });
   }
+
+  // Generate code
+  const code = nanoid(8).toUpperCase();
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+  const invitation = await prisma.invitation.create({
+    data: {
+      code,
+      householdId,
+      expiresAt,
+      email: '', // Not used for code-only invite
+    }
+  });
+
+  return NextResponse.json(invitation);
 }

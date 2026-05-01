@@ -1,78 +1,73 @@
-export const dynamic = "force-dynamic";
-import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/options";
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { PrismaClient } from '@prisma/client';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
-export async function GET(req: Request) {
+const prisma = new PrismaClient();
+
+export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
+  const { searchParams } = new URL(request.url);
   const householdId = searchParams.get('householdId');
 
   if (!householdId) {
-    return NextResponse.json({ message: "Household ID required" }, { status: 400 });
+    return NextResponse.json({ error: 'Household ID required' }, { status: 400 });
   }
 
-  try {
-    // 1. Get household members
-    const members = await prisma.userHousehold.findMany({
-      where: { householdId },
-      include: { user: { select: { id: true, name: true } } }
-    });
+  // 1. Get all members of the household
+  const members = await prisma.userHousehold.findMany({
+    where: { householdId },
+    include: { user: true }
+  });
 
-    // 2. Get incomes for each member in the last 30 days (or current month)
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  // 2. Get incomes for each member in the current month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-    const memberIncomes = await Promise.all(members.map(async (m) => {
-      const income = await prisma.transaction.aggregate({
-        where: {
-          userId_internal: m.userId,
-          type: 'INCOME',
-          date: { gte: startOfMonth }
-        },
-        _sum: { amount: true }
-      });
-      return {
-        userId: m.userId,
-        name: m.user.name,
-        income: Number(income._sum.amount || 0)
-      };
-    }));
-
-    const totalIncome = memberIncomes.reduce((acc, m) => acc + m.income, 0);
-
-    // 3. Calculate percentages
-    const distribution = memberIncomes.map(m => ({
-      ...m,
-      percentage: totalIncome > 0 ? (m.income / totalIncome) : (1 / members.length)
-    }));
-
-    // 4. Get total household expenses
-    const totalExpenses = await prisma.transaction.aggregate({
+  const results = await Promise.all(members.map(async (m) => {
+    const incomes = await prisma.transaction.aggregate({
       where: {
-        householdId,
-        type: 'EXPENSE',
+        userId: m.userId,
+        type: 'INCOME',
         date: { gte: startOfMonth }
       },
       _sum: { amount: true }
     });
 
-    const expenseAmount = Number(totalExpenses._sum.amount || 0);
-
-    const result = {
-      totalIncome,
-      totalExpenses: expenseAmount,
-      distribution: distribution.map(d => ({
-        ...d,
-        suggestedContribution: expenseAmount * d.percentage
-      }))
+    return {
+      userId: m.userId,
+      name: m.user.name,
+      income: Number(incomes._sum.amount || 0)
     };
+  }));
 
-    return NextResponse.json(result);
-  } catch (error) {
-    return NextResponse.json({ message: "Error calculating distribution" }, { status: 500 });
-  }
+  // 3. Get total household expenses (shared accounts)
+  const expenses = await prisma.transaction.aggregate({
+    where: {
+      householdId,
+      type: 'EXPENSE',
+      date: { gte: startOfMonth }
+    },
+    _sum: { amount: true }
+  });
+
+  const totalIncome = results.reduce((acc, r) => acc + r.income, 0);
+  const totalExpenses = Number(expenses._sum.amount || 0);
+
+  const distribution = results.map(r => {
+    const percentage = totalIncome > 0 ? (r.income / totalIncome) : 0;
+    return {
+      ...r,
+      percentage: percentage * 100,
+      suggestedContribution: totalExpenses * percentage
+    };
+  });
+
+  return NextResponse.json({
+    totalExpenses,
+    totalIncome,
+    distribution
+  });
 }

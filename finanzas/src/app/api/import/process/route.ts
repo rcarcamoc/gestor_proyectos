@@ -50,10 +50,10 @@ export async function POST(req: Request) {
             amount,
             currency: account.currency,
             date,
-            type: amount < 0 ? "EXPENSE" : "INCOME",
+            type: (amount < 0 ? "EXPENSE" : "INCOME") as any,
             description: tx.description || "",
-            source: "EXCEL",
-            status: status,
+            source: "EXCEL" as any,
+            status: status as any,
             accountId: accountId,
             userId: userId,
             userId_internal: userId, // Creator is the same as owner in this context

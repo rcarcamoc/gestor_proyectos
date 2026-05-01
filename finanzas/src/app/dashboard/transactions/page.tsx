@@ -31,7 +31,8 @@ import {
   PawPrint,
   Shirt,
   HelpCircle,
-  Clock
+  Clock,
+  Sparkles
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -220,6 +221,12 @@ export default function TransactionsPage() {
                           <Icon className="h-4 w-4" />
                         </div>
                         <span className="font-medium text-stone-700 text-sm">{t.category?.name || 'Sin categoría'}</span>
+                        {t.metadata && (t.metadata as any).ai_suggested && (
+                          <div className="ml-2 flex items-center bg-purple-50 text-purple-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-purple-100" title="Sugerido por IA">
+                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                            IA
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-stone-600 font-medium">

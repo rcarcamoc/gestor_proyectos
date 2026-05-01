@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { NextResponse } from "next/server";
 import { findDuplicate, generateRowHash } from "@/lib/deduplication";
+import { categorizeTransactionsBatch } from "@/lib/ai/groq";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -22,7 +23,19 @@ export async function POST(req: Request) {
     const results = {
         imported: 0,
         duplicates: 0,
+        aiCategorized: 0,
     };
+
+    // 1. Fetch available categories
+    const categories = await prisma.category.findMany({
+        where: {
+            OR: [
+                { userId },
+                { householdId: account.householdId },
+                { isDefault: true }
+            ]
+        }
+    });
 
     const transactionsToCreate = [];
 
@@ -60,6 +73,40 @@ export async function POST(req: Request) {
             householdId: account.householdId,
             externalId,
             metadata: tx.metadata || {}
+        });
+    }
+
+    // 2. AI Categorization for transactions without category
+    const transactionsToCategorize = transactionsToCreate
+        .map((t, i) => ({ index: i, description: t.description, amount: Number(t.amount) }))
+        .filter((_, i) => !transactions[i].categoryId); // Only those not manually mapped
+
+    if (transactionsToCategorize.length > 0 && process.env.GROQ_API_KEY) {
+        const aiSuggestions = await categorizeTransactionsBatch(
+            transactionsToCategorize.map(t => ({ description: t.description, amount: t.amount })),
+            categories.map(c => ({ id: c.id, name: c.name }))
+        );
+
+        Object.entries(aiSuggestions).forEach(([aiIndex, categoryName]) => {
+            const originalIndex = transactionsToCategorize[parseInt(aiIndex)].index;
+            const category = categories.find(c => c.name.toLowerCase() === (categoryName as string).toLowerCase());
+            
+            if (category) {
+                transactionsToCreate[originalIndex].categoryId = category.id;
+                transactionsToCreate[originalIndex].metadata = {
+                    ...(transactionsToCreate[originalIndex].metadata as any || {}),
+                    ai_suggested: true,
+                    ai_category_name: categoryName
+                };
+                results.aiCategorized++;
+            }
+        });
+    } else {
+        // Fallback or manual assignment from mapping if present
+        transactionsToCreate.forEach((t, i) => {
+            if (transactions[i].categoryId) {
+                t.categoryId = transactions[i].categoryId;
+            }
         });
     }
 

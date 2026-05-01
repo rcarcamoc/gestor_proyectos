@@ -43,3 +43,39 @@ export async function extractTransactionFromEmail(text: string, categories: stri
     return null;
   }
 }
+
+export async function categorizeTransactionsBatch(
+  transactions: { description: string; amount: number }[],
+  categories: { id: string; name: string }[]
+) {
+  const categoryList = categories.map(c => c.name).join(", ");
+  const transactionList = transactions.map((t, i) => `\${i}: \${t.description} (\${t.amount})`).join("\n");
+
+  const prompt = `
+    Categorize the following financial transactions.
+    Available Categories: [\${categoryList}]
+
+    Transactions:
+    \${transactionList}
+
+    Return a valid JSON object where keys are the indices (0, 1, 2...) and values are the EXACT category names from the available list.
+    Only return the JSON.
+  `;
+
+  try {
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.1-8b-instant", // Using a faster model for simple categorization
+      response_format: { type: "json_object" },
+    });
+
+    const content = chatCompletion.choices[0]?.message?.content;
+    if (!content) return {};
+
+    return JSON.parse(content);
+  } catch (error) {
+    console.error("Groq Batch Categorization Error:", error);
+    return {};
+  }
+}
+

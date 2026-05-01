@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const ICON_MAP: Record<string, any> = {
   'home': Home,

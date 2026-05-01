@@ -55,21 +55,56 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
 
   useEffect(() => {
     fetchTransactions();
   }, []);
 
   const fetchTransactions = async () => {
+    setLoading(true);
     const res = await fetch('/api/transactions');
     if (res.ok) setTransactions(await res.json());
     setLoading(false);
   };
 
-  const filteredTransactions = transactions.filter(t => 
-    t.description?.toLowerCase().includes(search.toLowerCase()) ||
-    t.category?.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleUpdateStatus = async (id: string, status: string) => {
+    try {
+        const res = await fetch(`/api/transactions/${id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) {
+            setTransactions(transactions.map(t => t.id === id ? { ...t, status } : t));
+            toast.success(status === 'CONFIRMED' ? "Transacción confirmada" : "Estado actualizado");
+        }
+    } catch (err) {
+        toast.error("Error al actualizar");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("¿Estás seguro de descartar esta transacción?")) return;
+    try {
+        const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+            setTransactions(transactions.filter(t => t.id !== id));
+            toast.success("Transacción eliminada");
+        }
+    } catch (err) {
+        toast.error("Error al eliminar");
+    }
+  };
+
+  const filteredTransactions = transactions.filter(t => {
+    const matchesSearch = t.description?.toLowerCase().includes(search.toLowerCase()) ||
+                         t.category?.name.toLowerCase().includes(search.toLowerCase());
+    const matchesTab = activeTab === 'all' || t.status === 'PENDING_REVIEW';
+    return matchesSearch && matchesTab;
+  });
+
+  const pendingCount = transactions.filter(t => t.status === 'PENDING_REVIEW').length;
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
@@ -87,6 +122,34 @@ export default function TransactionsPage() {
                 Nuevo Registro
             </Button>
         </div>
+      </div>
+
+      <div className="flex gap-4 border-b border-stone-100">
+          <button 
+            onClick={() => setActiveTab('all')}
+            className={cn(
+                "pb-4 px-2 text-sm font-medium transition-colors relative",
+                activeTab === 'all' ? "text-stone-800" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+              Todas
+              {activeTab === 'all' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-stone-800" />}
+          </button>
+          <button 
+            onClick={() => setActiveTab('pending')}
+            className={cn(
+                "pb-4 px-2 text-sm font-medium transition-colors relative flex items-center",
+                activeTab === 'pending' ? "text-amber-600" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+              Por Revisar
+              {pendingCount > 0 && (
+                  <span className="ml-2 bg-amber-100 text-amber-600 text-[10px] px-1.5 py-0.5 rounded-full">
+                      {pendingCount}
+                  </span>
+              )}
+              {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-amber-500" />}
+          </button>
       </div>
 
       <Card className="border-stone-200 shadow-sm rounded-2xl bg-white overflow-hidden">
@@ -118,7 +181,7 @@ export default function TransactionsPage() {
                 <TableHead className="font-medium text-stone-500">Descripción</TableHead>
                 <TableHead className="font-medium text-stone-500">Cuenta</TableHead>
                 <TableHead className="text-right font-medium text-stone-500">Monto</TableHead>
-                <TableHead className="text-center font-medium text-stone-500">Estado</TableHead>
+                <TableHead className="text-center font-medium text-stone-500">Estado / Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -131,14 +194,19 @@ export default function TransactionsPage() {
               ) : filteredTransactions.length === 0 ? (
                 <TableRow>
                     <TableCell colSpan={6} className="h-64 text-center text-stone-400">
-                        No se encontraron transacciones.
+                        {activeTab === 'pending' ? 'No hay transacciones pendientes de revisión.' : 'No se encontraron transacciones.'}
                     </TableCell>
                 </TableRow>
               ) : filteredTransactions.map((t) => {
                 const Icon = ICON_MAP[t.category?.icon] || HelpCircle;
                 const isExpense = t.type === 'EXPENSE';
+                const isPending = t.status === 'PENDING_REVIEW';
+                
                 return (
-                  <TableRow key={t.id} className="border-stone-50 hover:bg-stone-50/30 transition-colors group">
+                  <TableRow key={t.id} className={cn(
+                    "border-stone-50 hover:bg-stone-50/30 transition-colors group",
+                    isPending && "bg-amber-50/10"
+                  )}>
                     <TableCell className="text-stone-500 text-sm">
                       {new Date(t.date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
                     </TableCell>
@@ -146,7 +214,7 @@ export default function TransactionsPage() {
                       <div className="flex items-center">
                         <div 
                           className="p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform" 
-                          style={{ backgroundColor: `\${t.category?.color}15`, color: t.category?.color }}
+                          style={{ backgroundColor: `${t.category?.color || '#ccc'}15`, color: t.category?.color || '#999' }}
                         >
                           <Icon className="h-4 w-4" />
                         </div>
@@ -158,7 +226,7 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell>
                         <Badge variant="outline" className="font-normal text-stone-500 border-stone-100 bg-white">
-                            {t.account.name}
+                            {t.account?.name}
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -172,11 +240,24 @@ export default function TransactionsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                        {t.status === 'PENDING_REVIEW' ? (
-                            <Badge className="bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-100 font-medium rounded-full px-3">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Revisar
-                            </Badge>
+                        {isPending ? (
+                            <div className="flex items-center justify-center gap-2">
+                                <Button 
+                                    size="sm" 
+                                    className="h-8 bg-green-600 hover:bg-green-700 rounded-lg text-xs"
+                                    onClick={() => handleUpdateStatus(t.id, 'CONFIRMED')}
+                                >
+                                    Confirmar
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-8 text-stone-400 hover:text-red-500 rounded-lg text-xs"
+                                    onClick={() => handleDelete(t.id)}
+                                >
+                                    Descartar
+                                </Button>
+                            </div>
                         ) : (
                             <Badge className="bg-stone-100 text-stone-500 border-transparent font-medium rounded-full px-3">
                                 Confirmado

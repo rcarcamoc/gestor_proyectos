@@ -16,12 +16,60 @@ bot.command("vincula", async (ctx) => {
 });
 
 bot.command("hoy", async (ctx) => {
-  // Logic to fetch today's transactions for the user
-  ctx.reply("Hoy has gastado $25.000 en 3 transacciones.");
+  const telegramId = String(ctx.from.id);
+  const tgUser = await prisma.telegramUser.findUnique({
+    where: { telegramId },
+    include: { user: true }
+  });
+
+  if (!tgUser) return ctx.reply("Primero debes vincular tu cuenta con /vincula <token>");
+
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      userId: tgUser.userId,
+      date: { gte: startOfDay },
+      type: 'EXPENSE'
+    }
+  });
+
+  const total = transactions.reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const count = transactions.length;
+
+  const format = (val: number) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
+
+  ctx.reply(`Hoy has gastado ${format(total)} en ${count} transacciones.`);
 });
 
 bot.command("resumen", async (ctx) => {
-  ctx.reply("Tu balance del mes es de $450.000. \nGastos: $800.000\nIngresos: $1.250.000");
+  const telegramId = String(ctx.from.id);
+  const tgUser = await prisma.telegramUser.findUnique({
+    where: { telegramId },
+    include: { user: true }
+  });
+
+  if (!tgUser) return ctx.reply("Primero debes vincular tu cuenta con /vincula <token>");
+
+  const startOfMonth = new Date();
+  startOfMonth.setDate(1);
+  startOfMonth.setHours(0, 0, 0, 0);
+
+  const transactions = await prisma.transaction.findMany({
+    where: {
+      userId: tgUser.userId,
+      date: { gte: startOfMonth }
+    }
+  });
+
+  const expenses = transactions.filter(t => t.type === 'EXPENSE').reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const income = transactions.filter(t => t.type === 'INCOME').reduce((sum, tx) => sum + Number(tx.amount), 0);
+  const balance = income - expenses;
+
+  const format = (val: number) => new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
+
+  ctx.reply(`📊 Resumen del Mes:\n\n💰 Balance: ${format(balance)}\n💸 Gastos: ${format(expenses)}\n📈 Ingresos: ${format(income)}`);
 });
 
 // For interactive classification

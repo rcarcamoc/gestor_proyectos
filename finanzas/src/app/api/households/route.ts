@@ -69,6 +69,12 @@ export async function GET() {
             },
           },
         },
+        invitations: {
+          where: {
+            status: 'PENDING',
+            expiresAt: { gte: new Date() }
+          }
+        }
       },
     });
 

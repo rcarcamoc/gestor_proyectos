@@ -24,10 +24,17 @@ async function main() {
 
   const categories = []
   for (const cat of categoriesData) {
-    const created = await prisma.category.upsert({
-      where: { id: cat.name }, // Hack for seed
-      update: {},
-      create: {
+    const existing = await prisma.category.findFirst({
+      where: { name: cat.name, isDefault: true }
+    })
+    
+    if (existing) {
+      categories.push(existing)
+      continue
+    }
+
+    const created = await prisma.category.create({
+      data: {
         name: cat.name,
         icon: cat.icon,
         color: cat.color,

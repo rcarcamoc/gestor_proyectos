@@ -10,7 +10,8 @@ import { toast } from 'sonner';
 export default function HouseholdsPage() {
   const [households, setHouseholds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteCode, setInviteCode] = useState('');
+  const [joinCode, setJoinCode] = useState('');
+  const [showJoinForm, setShowJoinForm] = useState(false);
 
   useEffect(() => {
     fetchHouseholds();
@@ -22,6 +23,31 @@ export default function HouseholdsPage() {
     setLoading(false);
   };
 
+  const handleJoin = async () => {
+    if (!joinCode) return;
+    setLoading(true);
+    try {
+        const res = await fetch('/api/households/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: joinCode.toUpperCase() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            toast.success(`Te has unido a ${data.household.name}`);
+            setJoinCode('');
+            setShowJoinForm(false);
+            fetchHouseholds();
+        } else {
+            toast.error(data.message || 'Error al unirse');
+        }
+    } catch (err) {
+        toast.error('Error de red');
+    } finally {
+        setLoading(false);
+    }
+  };
+
   const generateInviteCode = async (householdId: string) => {
     const res = await fetch('/api/households/invite', {
         method: 'POST',
@@ -29,9 +55,8 @@ export default function HouseholdsPage() {
         body: JSON.stringify({ householdId })
     });
     if (res.ok) {
-        const data = await res.json();
-        setInviteCode(data.code);
         toast.success('Código de invitación generado');
+        fetchHouseholds(); // Refresh to show new invite
     }
   };
 
@@ -47,11 +72,45 @@ export default function HouseholdsPage() {
           <h1 className="text-3xl font-serif text-stone-800">Mi Hogar</h1>
           <p className="text-stone-500 mt-1">Gestiona tus finanzas compartidas y miembros de la familia.</p>
         </div>
-        <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl">
-            <UserPlus className="h-4 w-4 mr-2" />
-            Crear Nuevo Hogar
-        </Button>
+        <div className="flex gap-4">
+            <Button variant="outline" onClick={() => setShowJoinForm(!showJoinForm)} className="rounded-xl border-stone-200">
+                <Key className="h-4 w-4 mr-2" />
+                Unirse con Código
+            </Button>
+            <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl">
+                <UserPlus className="h-4 w-4 mr-2" />
+                Crear Nuevo Hogar
+            </Button>
+        </div>
       </div>
+
+      {showJoinForm && (
+          <Card className="border-amber-200 bg-amber-50/30 shadow-sm rounded-2xl animate-in fade-in zoom-in duration-300">
+              <CardContent className="p-6 flex items-center justify-between gap-6">
+                  <div className="flex items-center gap-4">
+                      <div className="h-12 w-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
+                          <Key className="h-6 w-6" />
+                      </div>
+                      <div>
+                          <h3 className="font-medium text-stone-800">Unirse a un hogar</h3>
+                          <p className="text-xs text-stone-500">Ingresa el código de 8 caracteres que te enviaron.</p>
+                      </div>
+                  </div>
+                  <div className="flex gap-2 flex-1 max-w-sm">
+                      <Input 
+                        placeholder="ABC-12345" 
+                        value={joinCode}
+                        onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                        className="bg-white border-amber-200 rounded-xl font-mono uppercase"
+                        maxLength={10}
+                      />
+                      <Button onClick={handleJoin} className="bg-amber-600 hover:bg-amber-700 rounded-xl px-8" disabled={loading}>
+                          {loading ? '...' : 'Unirme'}
+                      </Button>
+                  </div>
+              </CardContent>
+          </Card>
+      )}
 
       <div className="grid md:grid-cols-2 gap-8">
         {households.map(h => (
@@ -101,7 +160,7 @@ export default function HouseholdsPage() {
                   <div className="flex items-center justify-between">
                       <div className="flex items-center text-sm text-stone-600">
                           <Key className="h-4 w-4 mr-2 text-stone-400" />
-                          Invitaciones
+                          Invitaciones Activas
                       </div>
                       <Button 
                         variant="ghost" 
@@ -109,21 +168,28 @@ export default function HouseholdsPage() {
                         className="text-stone-500 hover:text-stone-900"
                         onClick={() => generateInviteCode(h.id)}
                       >
-                          Generar Código
+                          Generar Nuevo
                       </Button>
                   </div>
                   
-                  {inviteCode && (
-                      <div className="bg-white border border-stone-200 rounded-xl p-4 flex items-center justify-between animate-in slide-in-from-top-2">
-                          <div>
-                              <p className="text-[10px] uppercase text-stone-400 font-bold tracking-tighter">Join Code (Expira en 7 días)</p>
-                              <p className="text-lg font-mono font-bold text-stone-800">{inviteCode}</p>
+                  <div className="space-y-2">
+                      {h.invitations && h.invitations.map((inv: any) => (
+                          <div key={inv.id} className="bg-white border border-stone-100 rounded-xl p-3 flex items-center justify-between group">
+                              <div className="flex items-center gap-3">
+                                  <div className="text-lg font-mono font-bold text-stone-800">{inv.code}</div>
+                                  <div className="text-[10px] text-stone-400 uppercase font-medium">
+                                      Vence el {new Date(inv.expiresAt).toLocaleDateString()}
+                                  </div>
+                              </div>
+                              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(inv.code)} className="rounded-lg h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Copy className="h-4 w-4" />
+                              </Button>
                           </div>
-                          <Button variant="outline" size="icon" onClick={() => copyToClipboard(inviteCode)} className="rounded-lg h-8 w-8">
-                              <Copy className="h-4 w-4" />
-                          </Button>
-                      </div>
-                  )}
+                      ))}
+                      {(!h.invitations || h.invitations.length === 0) && (
+                          <p className="text-center text-xs text-stone-400 py-2">No hay códigos activos.</p>
+                      )}
+                  </div>
               </CardFooter>
             </Card>
 

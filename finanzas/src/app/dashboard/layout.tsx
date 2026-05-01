@@ -36,18 +36,18 @@ export default function DashboardLayout({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB]">
+    <div className="min-h-screen bg-[#FAFAFA] font-sans text-stone-800 selection:bg-stone-200">
       {/* Sidebar Desktop */}
-      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-64 md:flex-col">
-        <div className="flex min-h-0 flex-1 flex-col border-r border-stone-200 bg-white">
+      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col">
+        <div className="flex min-h-0 flex-1 flex-col border-r border-stone-200/50 bg-white/70 backdrop-blur-xl">
           <div className="flex flex-1 flex-col overflow-y-auto pt-8 pb-4">
-            <div className="flex items-center px-6 mb-10">
-              <div className="h-8 w-8 rounded-lg bg-stone-800 flex items-center justify-center">
-                <span className="text-white font-serif text-xl">Z</span>
+            <div className="flex items-center px-8 mb-10">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 shadow-inner flex items-center justify-center transform transition-transform hover:scale-105">
+                <span className="text-stone-50 font-serif text-xl tracking-widest">Z</span>
               </div>
-              <span className="ml-3 text-xl font-serif tracking-tight text-stone-800">Zen Finanzas</span>
+              <span className="ml-3.5 text-2xl font-serif tracking-tight text-stone-800">Zen Finanzas</span>
             </div>
-            <nav className="mt-5 flex-1 space-y-1 px-3">
+            <nav className="mt-5 flex-1 space-y-1.5 px-4">
               {navigation.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -56,15 +56,15 @@ export default function DashboardLayout({
                     href={item.href}
                     className={cn(
                       isActive
-                        ? 'bg-stone-50 text-stone-900'
-                        : 'text-stone-500 hover:bg-stone-50 hover:text-stone-900',
-                      'group flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200'
+                        ? 'bg-white shadow-sm ring-1 ring-stone-200/50 text-stone-900'
+                        : 'text-stone-500 hover:bg-stone-50/80 hover:text-stone-900',
+                      'group flex items-center px-4 py-3.5 text-sm font-medium rounded-2xl transition-all duration-300'
                     )}
                   >
                     <item.icon
                       className={cn(
-                        isActive ? 'text-stone-800' : 'text-stone-400 group-hover:text-stone-800',
-                        'mr-3 h-5 w-5 flex-shrink-0'
+                        isActive ? 'text-stone-700' : 'text-stone-400 group-hover:text-stone-600',
+                        'mr-3.5 h-5 w-5 flex-shrink-0 transition-colors'
                       )}
                       aria-hidden="true"
                     />
@@ -74,13 +74,13 @@ export default function DashboardLayout({
               })}
             </nav>
           </div>
-          <div className="flex flex-shrink-0 border-t border-stone-100 p-4">
+          <div className="flex flex-shrink-0 p-4">
             <button
               onClick={() => signOut()}
               className="group block w-full flex-shrink-0"
             >
-              <div className="flex items-center px-4 py-3 text-sm font-medium text-stone-500 rounded-xl hover:bg-stone-50 hover:text-red-600 transition-all">
-                <LogOut className="mr-3 h-5 w-5 text-stone-400 group-hover:text-red-500" />
+              <div className="flex items-center px-4 py-3.5 text-sm font-medium text-stone-500 rounded-2xl hover:bg-rose-50 hover:text-rose-600 transition-all duration-300">
+                <LogOut className="mr-3.5 h-5 w-5 text-stone-400 group-hover:text-rose-500 transition-colors" />
                 Cerrar Sesión
               </div>
             </button>
@@ -89,22 +89,22 @@ export default function DashboardLayout({
       </div>
 
       {/* Mobile Header */}
-      <div className="sticky top-0 z-10 flex h-16 flex-shrink-0 bg-white border-b border-stone-200 md:hidden">
+      <div className="sticky top-0 z-20 flex h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-stone-200/50 md:hidden">
         <button
           type="button"
-          className="px-4 text-stone-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-stone-500 md:hidden"
+          className="px-4 text-stone-500 focus:outline-none md:hidden"
           onClick={() => setIsMobileMenuOpen(true)}
         >
           <Menu className="h-6 w-6" />
         </button>
         <div className="flex flex-1 justify-center items-center">
-            <span className="text-xl font-serif text-stone-800">Zen Finanzas</span>
+            <span className="text-xl font-serif text-stone-800 tracking-tight">Zen Finanzas</span>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col md:pl-64">
-        <main className="flex-1 py-8 px-4 sm:px-6 md:px-8">
+      <div className="flex flex-col md:pl-72">
+        <main className="flex-1 py-10 px-4 sm:px-6 md:px-10">
           {children}
         </main>
       </div>

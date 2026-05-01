@@ -112,62 +112,62 @@ export default function TransactionsPage() {
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif text-stone-800">Transacciones</h1>
-          <p className="text-stone-500 mt-1">Historial completo de tus movimientos financieros.</p>
+          <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Transacciones</h1>
+          <p className="text-stone-500 mt-1.5 font-medium">Historial completo de tus movimientos financieros.</p>
         </div>
         <div className="flex gap-2">
-            <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl px-6">
+            <Button className="bg-stone-800 hover:bg-stone-900 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300">
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Registro
             </Button>
         </div>
       </div>
 
-      <div className="flex gap-4 border-b border-stone-100">
+      <div className="flex gap-6 border-b border-stone-200/60">
           <button 
             onClick={() => setActiveTab('all')}
             className={cn(
-                "pb-4 px-2 text-sm font-medium transition-colors relative",
+                "pb-4 px-1 text-sm font-semibold transition-colors relative",
                 activeTab === 'all' ? "text-stone-800" : "text-stone-400 hover:text-stone-600"
             )}
           >
               Todas
-              {activeTab === 'all' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-stone-800" />}
+              {activeTab === 'all' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-stone-800 rounded-t-full" />}
           </button>
           <button 
             onClick={() => setActiveTab('pending')}
             className={cn(
-                "pb-4 px-2 text-sm font-medium transition-colors relative flex items-center",
+                "pb-4 px-1 text-sm font-semibold transition-colors relative flex items-center",
                 activeTab === 'pending' ? "text-amber-600" : "text-stone-400 hover:text-stone-600"
             )}
           >
               Por Revisar
               {pendingCount > 0 && (
-                  <span className="ml-2 bg-amber-100 text-amber-600 text-[10px] px-1.5 py-0.5 rounded-full">
+                  <span className="ml-2 bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">
                       {pendingCount}
                   </span>
               )}
-              {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-amber-500" />}
+              {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-amber-500 rounded-t-full" />}
           </button>
       </div>
 
-      <Card className="border-stone-200 shadow-sm rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="border-b border-stone-50 bg-stone-50/30">
+      <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
+        <CardHeader className="border-b border-stone-100/60 bg-stone-50/50 py-4 px-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
               <Input 
                 placeholder="Buscar por descripción o categoría..." 
-                className="pl-10 bg-white border-stone-200 rounded-xl"
+                className="pl-10 bg-white border-stone-200/60 rounded-full h-10 shadow-sm focus-visible:ring-stone-200"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
-                <Button variant="outline" className="rounded-xl border-stone-200 text-stone-600">
+                <Button variant="outline" className="rounded-full border-stone-200/60 text-stone-600 hover:bg-stone-50">
                     <Filter className="h-4 w-4 mr-2" />
                     Filtros
                 </Button>
@@ -176,14 +176,14 @@ export default function TransactionsPage() {
         </CardHeader>
         <CardContent className="p-0">
           <Table>
-            <TableHeader className="bg-stone-50/50">
-              <TableRow className="border-stone-100 hover:bg-transparent">
-                <TableHead className="w-[120px] font-medium text-stone-500">Fecha</TableHead>
-                <TableHead className="font-medium text-stone-500">Categoría</TableHead>
-                <TableHead className="font-medium text-stone-500">Descripción</TableHead>
-                <TableHead className="font-medium text-stone-500">Cuenta</TableHead>
-                <TableHead className="text-right font-medium text-stone-500">Monto</TableHead>
-                <TableHead className="text-center font-medium text-stone-500">Estado / Acciones</TableHead>
+            <TableHeader className="bg-stone-50/30">
+              <TableRow className="border-stone-100/60 hover:bg-transparent">
+                <TableHead className="w-[120px] font-semibold text-xs uppercase tracking-wider text-stone-500 py-4 pl-6">Fecha</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Categoría</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Descripción</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Cuenta</TableHead>
+                <TableHead className="text-right font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Monto</TableHead>
+                <TableHead className="text-center font-semibold text-xs uppercase tracking-wider text-stone-500 py-4 pr-6">Estado / Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,53 +206,53 @@ export default function TransactionsPage() {
                 
                 return (
                   <TableRow key={t.id} className={cn(
-                    "border-stone-50 hover:bg-stone-50/30 transition-colors group",
-                    isPending && "bg-amber-50/10"
+                    "border-stone-100/60 hover:bg-stone-50/50 transition-colors group",
+                    isPending && "bg-amber-50/20 hover:bg-amber-50/40"
                   )}>
-                    <TableCell className="text-stone-500 text-sm">
+                    <TableCell className="text-stone-500 text-sm pl-6 py-4">
                       {new Date(t.date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-4">
                       <div className="flex items-center">
                         <div 
-                          className="p-2 rounded-lg mr-3 group-hover:scale-110 transition-transform" 
+                          className="p-2.5 rounded-xl mr-3 group-hover:scale-110 transition-transform shadow-sm" 
                           style={{ backgroundColor: `${t.category?.color || '#ccc'}15`, color: t.category?.color || '#999' }}
                         >
                           <Icon className="h-4 w-4" />
                         </div>
-                        <span className="font-medium text-stone-700 text-sm">{t.category?.name || 'Sin categoría'}</span>
+                        <span className="font-semibold text-stone-800 text-sm">{t.category?.name || 'Sin categoría'}</span>
                         {t.metadata && (t.metadata as any).ai_suggested && (
-                          <div className="ml-2 flex items-center bg-purple-50 text-purple-600 text-[10px] px-1.5 py-0.5 rounded-full font-bold border border-purple-100" title="Sugerido por IA">
-                            <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+                          <div className="ml-2 flex items-center bg-purple-50 text-purple-600 text-[10px] px-2 py-0.5 rounded-full font-bold border border-purple-100 shadow-sm" title="Sugerido por IA">
+                            <Sparkles className="h-3 w-3 mr-1" />
                             IA
                           </div>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-stone-600 font-medium">
+                    <TableCell className="text-stone-600 font-medium py-4 max-w-[200px] truncate">
                       {t.description || '-'}
                     </TableCell>
-                    <TableCell>
-                        <Badge variant="outline" className="font-normal text-stone-500 border-stone-100 bg-white">
+                    <TableCell className="py-4">
+                        <Badge variant="outline" className="font-medium text-stone-500 border-stone-200/60 bg-stone-50 rounded-lg">
                             {t.account?.name}
                         </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right py-4">
                       <div className="flex flex-col items-end">
                         <span className={cn(
-                          "font-semibold text-base",
-                          isExpense ? "text-stone-900" : "text-green-600"
+                          "font-bold text-base font-serif tracking-tight",
+                          isExpense ? "text-stone-900" : "text-emerald-600"
                         )}>
                           {isExpense ? '-' : '+'}{formatCurrency(Number(t.amount))}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center py-4 pr-6">
                         {isPending ? (
                             <div className="flex items-center justify-center gap-2">
                                 <Button 
                                     size="sm" 
-                                    className="h-8 bg-green-600 hover:bg-green-700 rounded-lg text-xs"
+                                    className="h-8 bg-emerald-600 hover:bg-emerald-700 rounded-full text-xs font-semibold shadow-sm transition-all hover:shadow"
                                     onClick={() => handleUpdateStatus(t.id, 'CONFIRMED')}
                                 >
                                     Confirmar
@@ -260,14 +260,14 @@ export default function TransactionsPage() {
                                 <Button 
                                     size="sm" 
                                     variant="ghost" 
-                                    className="h-8 text-stone-400 hover:text-red-500 rounded-lg text-xs"
+                                    className="h-8 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-full text-xs font-semibold transition-all"
                                     onClick={() => handleDelete(t.id)}
                                 >
                                     Descartar
                                 </Button>
                             </div>
                         ) : (
-                            <Badge className="bg-stone-100 text-stone-500 border-transparent font-medium rounded-full px-3">
+                            <Badge className="bg-stone-100 text-stone-500 border-transparent font-medium rounded-full px-3 shadow-sm hover:bg-stone-200 transition-colors cursor-default">
                                 Confirmado
                             </Badge>
                         )}

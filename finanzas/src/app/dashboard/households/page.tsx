@@ -66,18 +66,18 @@ export default function HouseholdsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10">
-      <div className="flex justify-between items-end">
+    <div className="max-w-5xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif text-stone-800">Mi Hogar</h1>
-          <p className="text-stone-500 mt-1">Gestiona tus finanzas compartidas y miembros de la familia.</p>
+          <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Mi Hogar</h1>
+          <p className="text-stone-500 mt-1.5 font-medium">Gestiona tus finanzas compartidas y miembros de la familia.</p>
         </div>
         <div className="flex gap-4">
-            <Button variant="outline" onClick={() => setShowJoinForm(!showJoinForm)} className="rounded-xl border-stone-200">
+            <Button variant="outline" onClick={() => setShowJoinForm(!showJoinForm)} className="rounded-full border-stone-200/60 shadow-sm hover:bg-stone-50 transition-all duration-300">
                 <Key className="h-4 w-4 mr-2" />
                 Unirse con Código
             </Button>
-            <Button className="bg-stone-800 hover:bg-stone-900 rounded-xl">
+            <Button className="bg-stone-800 hover:bg-stone-900 rounded-full shadow-sm hover:shadow-md transition-all duration-300">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Crear Nuevo Hogar
             </Button>
@@ -85,26 +85,26 @@ export default function HouseholdsPage() {
       </div>
 
       {showJoinForm && (
-          <Card className="border-amber-200 bg-amber-50/30 shadow-sm rounded-2xl animate-in fade-in zoom-in duration-300">
-              <CardContent className="p-6 flex items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                      <div className="h-12 w-12 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-600">
+          <Card className="border-amber-200/60 bg-amber-50/50 backdrop-blur-sm shadow-sm rounded-3xl animate-in fade-in zoom-in duration-300">
+              <CardContent className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-5 w-full sm:w-auto">
+                      <div className="h-14 w-14 rounded-2xl bg-white shadow-sm flex items-center justify-center text-amber-500 shrink-0">
                           <Key className="h-6 w-6" />
                       </div>
                       <div>
-                          <h3 className="font-medium text-stone-800">Unirse a un hogar</h3>
-                          <p className="text-xs text-stone-500">Ingresa el código de 8 caracteres que te enviaron.</p>
+                          <h3 className="font-semibold text-stone-800 text-lg">Unirse a un hogar</h3>
+                          <p className="text-sm text-stone-500 mt-0.5">Ingresa el código de 8 caracteres que te enviaron.</p>
                       </div>
                   </div>
-                  <div className="flex gap-2 flex-1 max-w-sm">
+                  <div className="flex gap-3 w-full sm:w-auto flex-1 max-w-sm">
                       <Input 
                         placeholder="ABC-12345" 
                         value={joinCode}
                         onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                        className="bg-white border-amber-200 rounded-xl font-mono uppercase"
+                        className="bg-white border-amber-200/60 rounded-full font-mono uppercase h-11 text-center tracking-widest shadow-inner focus-visible:ring-amber-200"
                         maxLength={10}
                       />
-                      <Button onClick={handleJoin} className="bg-amber-600 hover:bg-amber-700 rounded-xl px-8" disabled={loading}>
+                      <Button onClick={handleJoin} className="bg-amber-500 hover:bg-amber-600 rounded-full px-8 h-11 shadow-sm transition-all" disabled={loading}>
                           {loading ? '...' : 'Unirme'}
                       </Button>
                   </div>
@@ -115,40 +115,40 @@ export default function HouseholdsPage() {
       <div className="grid md:grid-cols-2 gap-8">
         {households.map(h => (
           <div key={h.id} className="space-y-6">
-            <Card className="border-stone-200 shadow-sm rounded-2xl bg-white overflow-hidden">
-              <CardHeader className="bg-stone-50/50 border-b border-stone-100">
+            <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="bg-stone-50/30 border-b border-stone-100/60 p-6">
                 <div className="flex justify-between items-center">
-                    <CardTitle className="text-xl font-serif">{h.name}</CardTitle>
-                    <div className="flex -space-x-2">
+                    <CardTitle className="text-2xl font-serif text-stone-800 tracking-tight">{h.name}</CardTitle>
+                    <div className="flex -space-x-3">
                         {h.users.map((u: any) => (
-                            <div key={u.id} className="h-8 w-8 rounded-full bg-stone-200 border-2 border-white flex items-center justify-center text-xs font-bold text-stone-600" title={u.user.name}>
-                                {u.user.name.charAt(0)}
+                            <div key={u.id} className="h-10 w-10 rounded-full bg-stone-200 border-2 border-white flex items-center justify-center text-sm font-bold text-stone-600 shadow-sm" title={u.user.name}>
+                                {u.user.name.charAt(0).toUpperCase()}
                             </div>
                         ))}
                     </div>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6">
-                <h4 className="text-sm font-medium text-stone-400 uppercase tracking-widest mb-4">Integrantes</h4>
+              <CardContent className="p-6">
+                <h4 className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-5">Integrantes</h4>
                 <div className="space-y-4">
                     {h.users.map((u: any) => (
-                        <div key={u.id} className="flex justify-between items-center">
+                        <div key={u.id} className="flex justify-between items-center group">
                             <div className="flex items-center">
-                                <div className="h-10 w-10 rounded-xl bg-stone-100 flex items-center justify-center mr-3">
+                                <div className="h-11 w-11 rounded-2xl bg-stone-50 border border-stone-100 flex items-center justify-center mr-4 group-hover:scale-105 transition-transform">
                                     <Users className="h-5 w-5 text-stone-400" />
                                 </div>
                                 <div>
-                                    <p className="font-medium text-stone-800">{u.user.name}</p>
-                                    <p className="text-xs text-stone-400">{u.user.email}</p>
+                                    <p className="font-semibold text-stone-800">{u.user.name}</p>
+                                    <p className="text-xs text-stone-500">{u.user.email}</p>
                                 </div>
                             </div>
                             {u.role === 'ADMIN' ? (
-                                <div className="flex items-center text-xs font-medium text-stone-500 bg-stone-50 px-2 py-1 rounded-md">
-                                    <Shield className="h-3 w-3 mr-1" />
+                                <div className="flex items-center text-xs font-semibold text-stone-600 bg-stone-100 px-3 py-1.5 rounded-full">
+                                    <Shield className="h-3.5 w-3.5 mr-1.5" />
                                     Admin
                                 </div>
                             ) : (
-                                <button className="text-stone-300 hover:text-red-500 transition-colors">
+                                <button className="text-stone-300 hover:text-rose-500 hover:bg-rose-50 p-2 rounded-full transition-all">
                                     <Trash2 className="h-4 w-4" />
                                 </button>
                             )}
@@ -156,63 +156,65 @@ export default function HouseholdsPage() {
                     ))}
                 </div>
               </CardContent>
-              <CardFooter className="bg-stone-50/30 border-t border-stone-50 mt-4 flex flex-col items-stretch p-6 space-y-4">
+              <CardFooter className="bg-stone-50/30 border-t border-stone-100/60 flex flex-col items-stretch p-6 space-y-5">
                   <div className="flex items-center justify-between">
-                      <div className="flex items-center text-sm text-stone-600">
+                      <div className="flex items-center text-sm font-medium text-stone-600">
                           <Key className="h-4 w-4 mr-2 text-stone-400" />
                           Invitaciones Activas
                       </div>
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        className="text-stone-500 hover:text-stone-900"
+                        className="text-stone-500 hover:text-stone-900 rounded-full font-medium"
                         onClick={() => generateInviteCode(h.id)}
                       >
                           Generar Nuevo
                       </Button>
                   </div>
                   
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                       {h.invitations && h.invitations.map((inv: any) => (
-                          <div key={inv.id} className="bg-white border border-stone-100 rounded-xl p-3 flex items-center justify-between group">
-                              <div className="flex items-center gap-3">
-                                  <div className="text-lg font-mono font-bold text-stone-800">{inv.code}</div>
-                                  <div className="text-[10px] text-stone-400 uppercase font-medium">
+                          <div key={inv.id} className="bg-white border border-stone-200/60 rounded-2xl p-4 flex items-center justify-between group shadow-sm">
+                              <div className="flex items-center gap-4">
+                                  <div className="text-xl font-mono font-bold text-stone-800 tracking-wider bg-stone-50 px-3 py-1 rounded-lg">{inv.code}</div>
+                                  <div className="text-xs text-stone-400 uppercase font-semibold">
                                       Vence el {new Date(inv.expiresAt).toLocaleDateString()}
                                   </div>
                               </div>
-                              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(inv.code)} className="rounded-lg h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(inv.code)} className="rounded-xl h-10 w-10 text-stone-400 hover:text-stone-700 bg-stone-50 opacity-0 group-hover:opacity-100 transition-all">
                                   <Copy className="h-4 w-4" />
                               </Button>
                           </div>
                       ))}
                       {(!h.invitations || h.invitations.length === 0) && (
-                          <p className="text-center text-xs text-stone-400 py-2">No hay códigos activos.</p>
+                          <p className="text-center text-sm text-stone-400 py-4 italic font-medium">No hay códigos activos.</p>
                       )}
                   </div>
               </CardFooter>
             </Card>
 
-            <Card className="border-stone-200 shadow-sm rounded-2xl bg-stone-50/50 p-6">
-                <div className="flex items-center mb-4">
-                    <Mail className="h-5 w-5 text-stone-400 mr-2" />
-                    <h4 className="font-medium text-stone-800">Invitación por Email</h4>
+            <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-stone-50/50 p-6 sm:p-8">
+                <div className="flex items-center mb-5">
+                    <div className="h-10 w-10 bg-white rounded-xl shadow-sm flex items-center justify-center mr-3">
+                        <Mail className="h-5 w-5 text-stone-400" />
+                    </div>
+                    <h4 className="font-semibold text-stone-800 text-lg tracking-tight">Invitación por Email</h4>
                 </div>
-                <div className="flex gap-2">
-                    <Input placeholder="correo@familia.com" className="bg-white border-stone-200 rounded-xl" />
-                    <Button variant="outline" className="rounded-xl">Enviar</Button>
+                <div className="flex gap-3">
+                    <Input placeholder="correo@familia.com" className="bg-white border-stone-200/60 rounded-full h-11 focus-visible:ring-stone-200 shadow-sm" />
+                    <Button variant="outline" className="rounded-full h-11 px-6 border-stone-200/60 shadow-sm hover:bg-stone-50">Enviar</Button>
                 </div>
             </Card>
           </div>
         ))}
 
-        <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed border-stone-200 rounded-3xl bg-stone-50/20 text-center space-y-4">
-            <div className="h-16 w-16 rounded-full bg-white shadow-sm flex items-center justify-center">
-                <CheckCircle2 className="h-8 w-8 text-stone-300" />
+        <div className="flex flex-col items-center justify-center p-12 lg:p-16 border-2 border-dashed border-stone-200/80 rounded-3xl bg-stone-50/30 text-center space-y-5 h-full min-h-[400px]">
+            <div className="h-20 w-20 rounded-full bg-white shadow-sm flex items-center justify-center animate-in zoom-in duration-700">
+                <CheckCircle2 className="h-10 w-10 text-stone-300" />
             </div>
             <div>
-                <h3 className="font-serif text-xl text-stone-700">Privacidad y Control</h3>
-                <p className="text-sm text-stone-400 max-w-xs mt-2">
+                <h3 className="font-serif text-2xl text-stone-800 tracking-tight">Privacidad y Control</h3>
+                <p className="text-sm text-stone-500 max-w-sm mt-3 leading-relaxed font-medium">
                     Las cuentas compartidas solo son visibles para los miembros autorizados de tu hogar. Tus cuentas personales permanecen privadas.
                 </p>
             </div>

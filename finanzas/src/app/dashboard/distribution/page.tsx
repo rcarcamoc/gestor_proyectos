@@ -42,29 +42,29 @@ export default function DistributionPage() {
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-serif text-stone-800">Distribución de Gastos</h1>
-          <p className="text-stone-500 mt-1">Cálculo proporcional basado en los ingresos de la pareja.</p>
+          <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Distribución de Gastos</h1>
+          <p className="text-stone-500 mt-1.5 font-medium">Cálculo proporcional basado en los ingresos de la pareja.</p>
         </div>
         <Select value={selectedHousehold} onValueChange={(val) => setSelectedHousehold(val || '')}>
-          <SelectTrigger className="w-[220px] bg-white border-stone-200 rounded-xl">
+          <SelectTrigger className="w-[220px] bg-white border-stone-200/60 rounded-xl h-11 shadow-sm">
             <SelectValue placeholder="Seleccionar Hogar" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="rounded-xl border-stone-200 shadow-lg">
             {households.map(h => (
-              <SelectItem key={h.id} value={h.id}>{h.name}</SelectItem>
+              <SelectItem key={h.id} value={h.id} className="rounded-lg">{h.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
       {!data && !loading && (
-        <Card className="border-stone-200 shadow-sm rounded-2xl bg-white/50 backdrop-blur-sm">
-          <CardContent className="py-20 text-center">
-            <Scale className="h-12 w-12 text-stone-300 mx-auto mb-4" />
-            <p className="text-stone-500">Selecciona un hogar para ver la distribución.</p>
+        <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white/70 backdrop-blur-md">
+          <CardContent className="py-24 text-center">
+            <Scale className="h-16 w-16 text-stone-300 mx-auto mb-6" />
+            <p className="text-stone-500 font-medium">Selecciona un hogar para ver la distribución.</p>
           </CardContent>
         </Card>
       )}
@@ -72,34 +72,34 @@ export default function DistributionPage() {
       {data && (
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
-            <Card className="border-stone-200 shadow-sm rounded-2xl overflow-hidden bg-white">
-              <CardHeader className="bg-stone-50/50 border-b border-stone-100">
-                <CardTitle className="text-lg font-medium flex items-center">
-                  <Users className="h-5 w-5 mr-2 text-stone-600" />
+            <Card className="border-stone-100/50 shadow-sm rounded-3xl overflow-hidden bg-white hover:shadow-md transition-shadow duration-300">
+              <CardHeader className="bg-stone-50/50 border-b border-stone-100/60 py-6 px-8">
+                <CardTitle className="text-lg font-serif tracking-tight flex items-center text-stone-800">
+                  <Users className="h-5 w-5 mr-3 text-stone-500" />
                   Reparto por Integrante
                 </CardTitle>
-                <CardDescription>Basado en los ingresos registrados este mes.</CardDescription>
+                <CardDescription className="text-stone-500 mt-1 font-medium">Basado en los ingresos registrados este mes.</CardDescription>
               </CardHeader>
-              <CardContent className="pt-8 space-y-10">
-                {data.distribution.map((m: any) => (
-                  <div key={m.userId} className="space-y-4">
+              <CardContent className="p-8 space-y-12">
+                {data.distribution.map((m: any, index: number) => (
+                  <div key={m.userId} className="space-y-5">
                     <div className="flex justify-between items-end">
                       <div>
-                        <span className="text-stone-900 font-medium text-lg">{m.name}</span>
-                        <div className="text-stone-400 text-sm flex items-center mt-1">
-                          <Wallet className="h-3 w-3 mr-1" />
-                          Ingreso: {formatCurrency(m.income)}
+                        <span className="text-stone-900 font-semibold text-lg">{m.name}</span>
+                        <div className="text-stone-500 text-sm flex items-center mt-1 font-medium">
+                          <Wallet className="h-4 w-4 mr-1.5" />
+                          Ingreso: <span className="text-stone-700 ml-1">{formatCurrency(m.income)}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <span className="text-2xl font-serif text-stone-800">{m.percentage.toFixed(1)}%</span>
-                        <div className="text-stone-400 text-xs uppercase tracking-wider">Aporte Sugerido</div>
+                        <span className="text-3xl font-serif text-stone-800 tracking-tight">{m.percentage.toFixed(1)}%</span>
+                        <div className="text-stone-400 text-xs uppercase tracking-widest font-semibold mt-1">Aporte Sugerido</div>
                       </div>
                     </div>
-                    <Progress value={m.percentage} className="h-3 bg-stone-100 rounded-full" />
-                    <div className="flex justify-between text-sm">
-                        <span className="text-stone-500">Contribución ideal</span>
-                        <span className="text-stone-800 font-semibold">{formatCurrency(m.suggestedContribution)}</span>
+                    <Progress value={m.percentage} className="h-4 bg-stone-100 rounded-full overflow-hidden" indicatorClassName={index % 2 === 0 ? "bg-emerald-500" : "bg-rose-500"} />
+                    <div className="flex justify-between items-center text-sm pt-2 border-t border-stone-100/60">
+                        <span className="text-stone-500 font-medium uppercase tracking-wider text-xs">Contribución ideal</span>
+                        <span className="text-stone-800 font-bold text-lg">{formatCurrency(m.suggestedContribution)}</span>
                     </div>
                   </div>
                 ))}
@@ -107,25 +107,25 @@ export default function DistributionPage() {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-                <Card className="border-stone-200 shadow-sm rounded-2xl bg-white">
-                    <CardHeader className="pb-2">
-                        <CardDescription className="text-xs uppercase tracking-widest text-stone-400">Total Gastos Hogar</CardDescription>
-                        <CardTitle className="text-2xl font-serif text-stone-800">{formatCurrency(data.totalExpenses)}</CardTitle>
+                <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white hover:shadow-md transition-shadow duration-300">
+                    <CardHeader className="pb-4 px-6 pt-6">
+                        <CardDescription className="text-xs font-semibold uppercase tracking-widest text-stone-400">Total Gastos Hogar</CardDescription>
+                        <CardTitle className="text-3xl font-serif text-stone-800 tracking-tight mt-1">{formatCurrency(data.totalExpenses)}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="h-1 w-full bg-stone-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-stone-400 w-full" />
+                    <CardContent className="px-6 pb-6">
+                        <div className="h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-rose-400 w-full" />
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="border-stone-200 shadow-sm rounded-2xl bg-white">
-                    <CardHeader className="pb-2">
-                        <CardDescription className="text-xs uppercase tracking-widest text-stone-400">Total Ingresos</CardDescription>
-                        <CardTitle className="text-2xl font-serif text-stone-800">{formatCurrency(data.totalIncome)}</CardTitle>
+                <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white hover:shadow-md transition-shadow duration-300">
+                    <CardHeader className="pb-4 px-6 pt-6">
+                        <CardDescription className="text-xs font-semibold uppercase tracking-widest text-stone-400">Total Ingresos</CardDescription>
+                        <CardTitle className="text-3xl font-serif text-stone-800 tracking-tight mt-1">{formatCurrency(data.totalIncome)}</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="h-1 w-full bg-stone-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-green-400 w-full" />
+                    <CardContent className="px-6 pb-6">
+                        <div className="h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-emerald-400 w-full" />
                         </div>
                     </CardContent>
                 </Card>
@@ -133,39 +133,39 @@ export default function DistributionPage() {
           </div>
 
           <div className="space-y-6">
-            <Card className="border-none bg-stone-800 text-white shadow-xl rounded-3xl p-4 overflow-hidden relative">
-                <TrendingUp className="absolute -right-4 -top-4 h-32 w-32 text-white/5" />
-                <CardHeader>
-                    <CardTitle className="text-xl font-serif">Análisis Zen</CardTitle>
+            <Card className="border-none bg-stone-800 text-white shadow-lg rounded-3xl p-6 overflow-hidden relative group hover:shadow-xl transition-shadow duration-500">
+                <TrendingUp className="absolute -right-6 -top-6 h-40 w-40 text-white/5 group-hover:text-white/10 transition-colors duration-500" />
+                <CardHeader className="relative z-10">
+                    <CardTitle className="text-2xl font-serif tracking-tight">Análisis Zen</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div className="p-4 bg-white/10 rounded-2xl backdrop-blur-md">
-                        <p className="text-sm text-stone-300 leading-relaxed italic">
+                <CardContent className="space-y-8 relative z-10 pt-2">
+                    <div className="p-5 bg-white/10 rounded-2xl backdrop-blur-md border border-white/5">
+                        <p className="text-sm text-stone-200 leading-relaxed italic font-serif">
                             "La justicia financiera no es dividir por dos, es equilibrar según la capacidad de cada uno para mantener la serenidad del hogar."
                         </p>
                     </div>
-                    <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-stone-400 uppercase tracking-wider">Ahorro Estimado</h4>
-                        <p className="text-3xl font-serif">{formatCurrency(data.totalIncome - data.totalExpenses)}</p>
-                        <p className="text-xs text-stone-500">Saldo remanente del mes</p>
+                    <div className="space-y-3">
+                        <h4 className="text-xs font-semibold text-stone-400 uppercase tracking-widest">Ahorro Estimado</h4>
+                        <p className="text-4xl font-serif tracking-tight">{formatCurrency(data.totalIncome - data.totalExpenses)}</p>
+                        <p className="text-xs text-stone-500 font-medium">Saldo remanente del mes</p>
                     </div>
                 </CardContent>
             </Card>
             
-            <Card className="border-stone-200 shadow-sm rounded-2xl bg-white p-6">
-                <h4 className="text-sm font-semibold text-stone-900 mb-4">¿Cómo funciona?</h4>
-                <ul className="space-y-4 text-sm text-stone-600">
+            <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white p-8 hover:shadow-md transition-shadow duration-300">
+                <h4 className="text-sm font-bold text-stone-900 mb-5 uppercase tracking-wider">¿Cómo funciona?</h4>
+                <ul className="space-y-5 text-sm text-stone-500 font-medium">
                     <li className="flex items-start">
-                        <div className="h-5 w-5 rounded-full bg-stone-100 flex items-center justify-center text-[10px] mr-2 mt-0.5">1</div>
-                        Sumamos los ingresos de todos los miembros del hogar este mes.
+                        <div className="h-6 w-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-bold text-stone-700 mr-3 mt-0.5 shadow-sm">1</div>
+                        <span className="leading-relaxed">Sumamos los ingresos de todos los miembros del hogar este mes.</span>
                     </li>
                     <li className="flex items-start">
-                        <div className="h-5 w-5 rounded-full bg-stone-100 flex items-center justify-center text-[10px] mr-2 mt-0.5">2</div>
-                        Calculamos qué porcentaje del total aporta cada persona.
+                        <div className="h-6 w-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-bold text-stone-700 mr-3 mt-0.5 shadow-sm">2</div>
+                        <span className="leading-relaxed">Calculamos qué porcentaje del total aporta cada persona.</span>
                     </li>
                     <li className="flex items-start">
-                        <div className="h-5 w-5 rounded-full bg-stone-100 flex items-center justify-center text-[10px] mr-2 mt-0.5">3</div>
-                        Aplicamos ese porcentaje al gasto total para sugerir el aporte justo.
+                        <div className="h-6 w-6 rounded-full bg-stone-100 flex items-center justify-center text-[10px] font-bold text-stone-700 mr-3 mt-0.5 shadow-sm">3</div>
+                        <span className="leading-relaxed">Aplicamos ese porcentaje al gasto total para sugerir el aporte justo.</span>
                     </li>
                 </ul>
             </Card>

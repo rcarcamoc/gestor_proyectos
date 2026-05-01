@@ -193,45 +193,45 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10">
+    <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="text-center">
-        <h1 className="text-3xl font-serif text-stone-800">Importar Datos</h1>
-        <p className="text-stone-500 mt-2">Carga tus estados de cuenta de forma inteligente.</p>
+        <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Importar Datos</h1>
+        <p className="text-stone-500 mt-2 font-medium">Carga tus estados de cuenta de forma inteligente.</p>
       </div>
 
       {/* Progress Steps */}
       <div className="flex justify-between max-w-md mx-auto relative mb-12">
-          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-stone-100 -translate-y-1/2 -z-10" />
+          <div className="absolute top-1/2 left-0 w-full h-0.5 bg-stone-200/60 -translate-y-1/2 -z-10" />
           {[1, 2, 3, 4].map((s) => (
               <div 
                 key={s} 
                 className={cn(
-                    "h-10 w-10 rounded-full flex items-center justify-center border-2 transition-all duration-300",
-                    step >= s ? "bg-stone-800 border-stone-800 text-white" : "bg-white border-stone-200 text-stone-300"
+                    "h-12 w-12 rounded-2xl flex items-center justify-center font-bold font-serif transition-all duration-500 shadow-sm",
+                    step > s ? "bg-stone-800 text-white scale-100" : step === s ? "bg-stone-800 text-white scale-110 shadow-md ring-4 ring-stone-800/20" : "bg-white border-2 border-stone-200/60 text-stone-300 scale-100"
                 )}
               >
-                  {step > s ? <CheckCircle className="h-5 w-5" /> : s}
+                  {step > s ? <CheckCircle className="h-6 w-6" /> : s}
               </div>
           ))}
       </div>
 
       {step === 1 && (
-        <Card className="border-stone-200 shadow-xl rounded-3xl overflow-hidden bg-white p-12">
-          <div className="flex flex-col items-center justify-center text-center space-y-6">
-            <div className="h-24 w-24 rounded-3xl bg-stone-50 flex items-center justify-center text-stone-300">
-                {loading ? <Loader2 className="h-12 w-12 animate-spin" /> : <FileUp className="h-12 w-12" />}
+        <Card className="border-stone-100/50 shadow-sm rounded-3xl overflow-hidden bg-white p-12 hover:shadow-md transition-shadow duration-300">
+          <div className="flex flex-col items-center justify-center text-center space-y-8">
+            <div className="h-28 w-28 rounded-[2rem] bg-stone-50 border border-stone-100 flex items-center justify-center text-stone-400 shadow-sm transition-transform hover:scale-105 duration-300">
+                {loading ? <Loader2 className="h-12 w-12 animate-spin text-stone-600" /> : <FileUp className="h-12 w-12" />}
             </div>
             <div>
-                <h3 className="text-xl font-medium text-stone-800">Selecciona tu archivo</h3>
-                <p className="text-stone-500 mt-2">Formatos soportados: Excel (.xlsx) y CSV (.csv)</p>
+                <h3 className="text-2xl font-serif text-stone-800 tracking-tight">Selecciona tu archivo</h3>
+                <p className="text-stone-500 mt-2 font-medium">Formatos soportados: Excel (.xlsx) y CSV (.csv)</p>
             </div>
-            <div className="w-full max-w-sm">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-stone-200 rounded-3xl cursor-pointer hover:bg-stone-50 transition-colors">
+            <div className="w-full max-w-md mt-4">
+                <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-stone-200/80 rounded-3xl cursor-pointer hover:bg-stone-50 hover:border-stone-300 transition-all group">
                     <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <FileSpreadsheet className="w-8 h-8 mb-3 text-stone-400" />
-                        <p className="text-sm text-stone-500">Haz clic o arrastra aquí</p>
+                        <FileSpreadsheet className="w-10 h-10 mb-3 text-stone-300 group-hover:text-stone-500 transition-colors" />
+                        <p className="text-sm text-stone-500 font-medium">Haz clic o arrastra aquí</p>
                     </div>
-                    <input type="file" className="hidden" accept=".xlsx,.csv" onChange={handleFileChange} disabled={loading} />
+                    <input type="file" className="hidden" accept=".xlsx,.csv,.xls" onChange={handleFileChange} disabled={loading} />
                 </label>
             </div>
           </div>
@@ -239,34 +239,36 @@ export default function ImportPage() {
       )}
 
       {step === 2 && (
-        <Card className="border-stone-200 shadow-xl rounded-3xl bg-white overflow-hidden">
-            <CardHeader className="bg-stone-50/50 border-b border-stone-100 p-8">
-                <div className="flex items-center justify-between">
+        <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
+            <CardHeader className="bg-stone-50/50 border-b border-stone-100/60 p-6 sm:p-8">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div className="flex items-center">
-                        <Settings2 className="h-6 w-6 text-stone-400 mr-3" />
+                        <div className="h-12 w-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mr-4 shrink-0">
+                            <Settings2 className="h-6 w-6 text-stone-400" />
+                        </div>
                         <div>
-                            <CardTitle className="text-xl font-serif">Mapeo de Columnas</CardTitle>
-                            <CardDescription>Indica qué columna corresponde a cada dato.</CardDescription>
+                            <CardTitle className="text-2xl font-serif tracking-tight text-stone-800">Mapeo de Columnas</CardTitle>
+                            <CardDescription className="text-stone-500 mt-1 font-medium">Indica qué columna corresponde a cada dato.</CardDescription>
                         </div>
                     </div>
                     <Badge variant="outline" className="bg-white border-stone-200 text-stone-600 px-4 py-1">{file?.name}</Badge>
                 </div>
             </CardHeader>
-            <CardContent className="p-8 space-y-6">
-                <div className="p-6 bg-stone-50 rounded-2xl border border-stone-100 flex items-center justify-between mb-8">
+            <CardContent className="p-6 sm:p-8 space-y-8">
+                <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-inner">
                     <div className="flex items-center">
-                        <div className="h-10 w-10 rounded-xl bg-white border border-stone-100 flex items-center justify-center text-stone-400 mr-4">
-                            <Wallet className="h-5 w-5" />
+                        <div className="h-12 w-12 rounded-2xl bg-white border border-stone-100/60 shadow-sm flex items-center justify-center text-stone-400 mr-4 shrink-0">
+                            <Wallet className="h-6 w-6" />
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider">Cuenta de destino</p>
+                            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Cuenta de destino</p>
                             <p className="text-sm font-medium text-stone-700">Selecciona dónde cargar los datos</p>
                         </div>
                     </div>
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                         {profiles.length > 0 && (
                             <select 
-                                className="h-10 border border-stone-200 rounded-xl px-4 text-sm bg-white min-w-[150px]"
+                                className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[160px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
                                 value={selectedProfile}
                                 onChange={(e) => handleProfileChange(e.target.value)}
                             >
@@ -275,7 +277,7 @@ export default function ImportPage() {
                             </select>
                         )}
                         <select 
-                            className="h-10 border border-stone-200 rounded-xl px-4 text-sm bg-white min-w-[200px]"
+                            className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
                             value={accountId}
                             onChange={(e) => setAccountId(e.target.value)}
                         >
@@ -286,7 +288,7 @@ export default function ImportPage() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     {[
                         { id: 'date', label: 'Fecha', required: true },
                         { id: 'amount', label: 'Monto', required: true },
@@ -295,12 +297,12 @@ export default function ImportPage() {
                         { id: 'category', label: 'Categoría', required: false },
                     ].map((field) => (
                         <div key={field.id} className="space-y-2">
-                            <label className="text-sm font-medium text-stone-700 flex items-center">
+                            <label className="text-sm font-semibold text-stone-700 flex items-center tracking-tight">
                                 {field.label}
-                                {field.required && <span className="text-red-400 ml-1">*</span>}
+                                {field.required && <span className="text-rose-400 ml-1.5">*</span>}
                             </label>
                             <select 
-                                className="w-full h-10 border border-stone-200 rounded-xl px-4 text-sm bg-white"
+                                className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
                                 value={(mapping as any)[field.id]}
                                 onChange={(e) => setMapping({ ...mapping, [field.id]: e.target.value })}
                             >
@@ -312,20 +314,20 @@ export default function ImportPage() {
                 </div>
 
                 {!selectedProfile && (
-                    <div className="mt-8 pt-8 border-t border-stone-100 flex items-center gap-4">
-                        <div className="flex-1">
-                            <p className="text-xs font-medium text-stone-400 uppercase tracking-wider mb-1">Guardar este mapeo</p>
+                    <div className="mt-10 pt-8 border-t border-stone-100/60 flex flex-col sm:flex-row items-start sm:items-end gap-4">
+                        <div className="flex-1 w-full">
+                            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Guardar este mapeo</p>
                             <input 
                                 type="text" 
                                 placeholder="Nombre del perfil (ej: Banco Chile Mensual)" 
-                                className="w-full h-10 border border-stone-200 rounded-xl px-4 text-sm bg-white"
+                                className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
                                 value={profileName}
                                 onChange={(e) => setProfileName(e.target.value)}
                             />
                         </div>
                         <Button 
                             variant="outline" 
-                            className="mt-5 rounded-xl"
+                            className="rounded-xl h-11 px-6 border-stone-200/60 shadow-sm w-full sm:w-auto mt-4 sm:mt-0"
                             onClick={saveProfile}
                             disabled={!profileName || loading}
                         >
@@ -334,25 +336,25 @@ export default function ImportPage() {
                     </div>
                 )}
                 
-                <div className="mt-8 border rounded-2xl overflow-hidden border-stone-100">
-                    <div className="bg-stone-50 p-3 border-b border-stone-100 flex items-center">
-                        <TableIcon className="h-4 w-4 text-stone-400 mr-2" />
-                        <span className="text-xs font-medium text-stone-500 uppercase tracking-wider">Vista Previa (5 filas)</span>
+                <div className="mt-10 border border-stone-100/60 rounded-3xl overflow-hidden shadow-sm">
+                    <div className="bg-stone-50/50 p-4 border-b border-stone-100/60 flex items-center">
+                        <TableIcon className="h-4 w-4 text-stone-400 mr-2.5" />
+                        <span className="text-xs font-bold text-stone-500 uppercase tracking-widest">Vista Previa (5 filas)</span>
                     </div>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs">
-                            <thead className="bg-white border-b border-stone-100">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-white border-b border-stone-100/60">
                                 <tr>
                                     {headers.slice(0, 5).map(h => (
-                                        <th key={h} className="p-3 font-medium text-stone-400">{h}</th>
+                                        <th key={h} className="p-4 font-semibold text-stone-500 tracking-tight">{h}</th>
                                     ))}
                                 </tr>
                             </thead>
                             <tbody>
                                 {previewData.slice(0, 5).map((row, i) => (
-                                    <tr key={i} className="border-b border-stone-50">
+                                    <tr key={i} className="border-b border-stone-50/50 hover:bg-stone-50/30 transition-colors">
                                         {headers.slice(0, 5).map(h => (
-                                            <td key={h} className="p-3 text-stone-600">{row[h]}</td>
+                                            <td key={h} className="p-4 text-stone-600 truncate max-w-[200px]">{row[h]}</td>
                                         ))}
                                     </tr>
                                 ))}
@@ -361,12 +363,12 @@ export default function ImportPage() {
                     </div>
                 </div>
             </CardContent>
-            <CardFooter className="bg-stone-50/30 border-t border-stone-100 p-8 flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(1)} className="rounded-xl">Atrás</Button>
+            <CardFooter className="bg-stone-50/30 border-t border-stone-100/60 p-6 sm:p-8 flex flex-col sm:flex-row justify-between gap-4">
+                <Button variant="ghost" onClick={() => setStep(1)} className="rounded-full h-11 px-6">Atrás</Button>
                 <Button 
                     onClick={handleProcess} 
                     disabled={!mapping.date || !mapping.amount || !mapping.description || loading}
-                    className="bg-stone-800 hover:bg-stone-900 rounded-xl px-10"
+                    className="bg-stone-800 hover:bg-stone-900 rounded-full h-11 px-10 shadow-sm transition-all"
                 >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Analizar Archivo
@@ -376,53 +378,53 @@ export default function ImportPage() {
       )}
 
       {step === 3 && (
-        <Card className="border-stone-200 shadow-xl rounded-3xl bg-white overflow-hidden">
-            <CardHeader className="bg-stone-50/50 border-b border-stone-100 p-8 text-center">
-                <CardTitle className="text-xl font-serif">Vista Previa de Importación</CardTitle>
-                <CardDescription>Archivo analizado correctamente.</CardDescription>
+        <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
+            <CardHeader className="bg-stone-50/50 border-b border-stone-100/60 p-8 text-center">
+                <CardTitle className="text-2xl font-serif text-stone-800 tracking-tight">Vista Previa de Importación</CardTitle>
+                <CardDescription className="text-stone-500 mt-1 font-medium">Archivo analizado correctamente.</CardDescription>
             </CardHeader>
-            <CardContent className="p-8 space-y-8">
-                <div className="flex justify-around">
+            <CardContent className="p-8 sm:p-12 space-y-10">
+                <div className="flex flex-col sm:flex-row justify-around gap-8">
                     <div className="text-center">
-                        <div className="text-2xl font-serif text-stone-800">{previewData.length}</div>
-                        <div className="text-xs text-stone-400 uppercase tracking-widest">Leídas</div>
+                        <div className="text-4xl font-serif text-stone-800 tracking-tight">{previewData.length}</div>
+                        <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">Leídas</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-serif text-amber-600">{duplicates}</div>
-                        <div className="text-xs text-stone-400 uppercase tracking-widest">Probables Duplicados</div>
+                        <div className="text-4xl font-serif text-amber-500 tracking-tight">{duplicates}</div>
+                        <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">Probables Duplicados</div>
                     </div>
                     <div className="text-center">
-                        <div className="text-2xl font-serif text-red-500">0</div>
-                        <div className="text-xs text-stone-400 uppercase tracking-widest">Con Error</div>
+                        <div className="text-4xl font-serif text-rose-500 tracking-tight">0</div>
+                        <div className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-2">Con Error</div>
                     </div>
                 </div>
                 
                 {duplicates > 0 && (
-                    <div className="p-6 bg-amber-50 border border-amber-100 rounded-3xl flex items-start">
-                        <AlertCircle className="h-5 w-5 text-amber-600 mr-3 mt-1" />
+                    <div className="p-6 sm:p-8 bg-amber-50/50 border border-amber-200/60 rounded-3xl flex items-start shadow-sm">
+                        <AlertCircle className="h-6 w-6 text-amber-500 mr-4 mt-0.5 shrink-0" />
                         <div>
-                            <h4 className="font-medium text-amber-900">Atención: Duplicados Probables</h4>
-                            <p className="text-sm text-amber-700 mt-1 leading-relaxed">
+                            <h4 className="font-semibold text-amber-800 text-lg tracking-tight">Atención: Duplicados Probables</h4>
+                            <p className="text-sm text-amber-700 mt-2 leading-relaxed font-medium">
                                 Hemos detectado {duplicates} transacciones que podrían estar duplicadas. Podrás revisarlas individualmente en la sección de transacciones después de importar.
                             </p>
                         </div>
                     </div>
                 )}
 
-                <div className="space-y-2">
-                    <div className="flex justify-between text-xs text-stone-400">
+                <div className="space-y-3 pt-4">
+                    <div className="flex justify-between text-xs font-bold text-stone-400 uppercase tracking-widest">
                         <span>Preparando datos para guardado...</span>
                         <span>100%</span>
                     </div>
-                    <Progress value={100} className="h-2 bg-stone-100 rounded-full" />
+                    <Progress value={100} className="h-2.5 bg-stone-100 rounded-full overflow-hidden" indicatorClassName="bg-emerald-500" />
                 </div>
             </CardContent>
-            <CardFooter className="bg-stone-50/30 border-t border-stone-100 p-8 flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(2)} className="rounded-xl">Atrás</Button>
+            <CardFooter className="bg-stone-50/30 border-t border-stone-100/60 p-6 sm:p-8 flex flex-col sm:flex-row justify-between gap-4">
+                <Button variant="ghost" onClick={() => setStep(2)} className="rounded-full h-11 px-6">Atrás</Button>
                 <Button 
                     onClick={handleConfirm} 
                     disabled={loading}
-                    className="bg-stone-800 hover:bg-stone-900 rounded-xl px-10"
+                    className="bg-stone-800 hover:bg-stone-900 rounded-full h-11 px-10 shadow-sm transition-all"
                 >
                     {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                     Confirmar Carga
@@ -432,27 +434,27 @@ export default function ImportPage() {
       )}
 
       {step === 4 && (
-          <div className="text-center py-20 animate-in zoom-in duration-500">
-              <div className="h-24 w-24 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-8 border-4 border-white shadow-lg shadow-green-100">
-                  <CheckCircle className="h-12 w-12 text-green-500" />
+          <div className="text-center py-24 animate-in zoom-in duration-700">
+              <div className="h-28 w-28 rounded-[2rem] bg-emerald-50 flex items-center justify-center mx-auto mb-8 shadow-inner">
+                  <CheckCircle className="h-14 w-14 text-emerald-500" />
               </div>
-              <h2 className="text-4xl font-serif text-stone-800 mb-4">¡Importación Exitosa!</h2>
-              <p className="text-stone-500 max-w-md mx-auto mb-10 leading-relaxed">
+              <h2 className="text-4xl sm:text-5xl font-serif text-stone-800 mb-4 tracking-tight">¡Importación Exitosa!</h2>
+              <p className="text-stone-500 max-w-lg mx-auto mb-10 leading-relaxed font-medium">
                   Se han procesado {previewData.length} transacciones correctamente. 
                   {duplicates > 0 ? ` ${duplicates} sospechas de duplicado han sido enviadas a tu lista de "Pendientes de revisión".` : ""}
               </p>
-              <div className="flex gap-4 justify-center">
-                  <Button variant="outline" className="rounded-xl border-stone-200" onClick={() => setStep(1)}>Importar más</Button>
-                  <Link href="/dashboard/transactions" className={cn(buttonVariants({ variant: "default" }), "bg-stone-800 hover:bg-stone-900 rounded-xl px-10")}>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button variant="outline" className="rounded-full h-12 px-8 border-stone-200/60 shadow-sm hover:bg-stone-50" onClick={() => setStep(1)}>Importar más</Button>
+                  <Link href="/dashboard/transactions" className={cn(buttonVariants({ variant: "default" }), "bg-stone-800 hover:bg-stone-900 rounded-full h-12 px-8 shadow-sm transition-all")}>
                       Ver Transacciones
                   </Link>
               </div>
           </div>
       )}
 
-      <div className="bg-stone-100/50 p-6 rounded-3xl flex items-start border border-stone-100">
-          <Info className="h-5 w-5 text-stone-400 mr-3 mt-0.5" />
-          <p className="text-xs text-stone-500 leading-relaxed italic">
+      <div className="bg-stone-50/50 p-6 sm:p-8 rounded-3xl flex items-start border border-stone-100/60 shadow-sm">
+          <Info className="h-6 w-6 text-stone-400 mr-4 mt-0.5 shrink-0" />
+          <p className="text-sm text-stone-500 leading-relaxed italic font-serif">
               "El Mapping Wizard recordará tus preferencias para archivos del mismo banco en el futuro, automatizando el proceso para tu próxima importación mensual."
           </p>
       </div>

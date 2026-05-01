@@ -16,6 +16,11 @@ services:
     volumes:
       - db_prod_data:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - portal_network
 
@@ -49,7 +54,8 @@ services:
     container_name: smarttrack_backend_prod
     restart: always
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     env_file: ./gestor/.env
     networks:
       - portal_network
@@ -86,7 +92,8 @@ services:
       NEXTAUTH_URL: http://localhost/finanzas
       NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - portal_network
 

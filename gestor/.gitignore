@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env
+.env.production
+deploy_prod.ps1
+update_oracle.ps1
+
+# Node
+node_modules/
+dist/
+.DS_Store
+
+# DB
+temp.db

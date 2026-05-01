@@ -1,0 +1,19 @@
+version: '3.8'
+services:
+  portal:
+    image: nginx:alpine
+    container_name: zen_portal
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html
+      - ./style.css:/usr/share/nginx/html/style.css
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - portal_network
+
+networks:
+  portal_network:
+    external: true
+    name: smarttrack_network_prod

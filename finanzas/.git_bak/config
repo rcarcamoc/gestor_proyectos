@@ -1,0 +1,14 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[remote "origin"]
+	url = https://github.com/rcarcamoc/web_finanzas.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "feature/finance-web-platform-mvp-8694604712599538713"]
+	remote = origin
+	merge = refs/heads/feature/finance-web-platform-mvp-8694604712599538713
+	vscode-merge-base = origin/feature/finance-web-platform-mvp-8694604712599538713

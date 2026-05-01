@@ -1,0 +1,104 @@
+
+> tmp-app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+- Environments: .env
+✓ Ready in 526ms
+
+ GET / 200 in 2.7s (next.js: 2.4s, application-code: 246ms)
+ GET /register 200 in 1033ms (next.js: 869ms, application-code: 165ms)
+ GET /api/auth/session 401 in 1847ms (next.js: 1793ms, application-code: 53ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ GET /login 200 in 950ms (next.js: 839ms, application-code: 111ms)
+ POST /api/auth/_log 200 in 2.1s (next.js: 2.1s, application-code: 28ms)
+ GET /api/auth/session 401 in 13ms (next.js: 3ms, application-code: 9ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 37ms (next.js: 26ms, application-code: 10ms)
+○ Compiling /dashboard ...
+ GET /dashboard 200 in 5.0s (next.js: 4.4s, application-code: 569ms)
+ GET /api/auth/session 401 in 19ms (next.js: 6ms, application-code: 13ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 70ms (next.js: 48ms, application-code: 22ms)
+ GET /api/households 401 in 939ms (next.js: 921ms, application-code: 18ms)
+ GET /api/stats$%7Bquery%7D 404 in 1023ms (next.js: 962ms, application-code: 61ms)
+ GET /dashboard/transactions 200 in 1021ms (next.js: 826ms, application-code: 195ms)
+ GET /api/households 401 in 13ms (next.js: 3ms, application-code: 9ms)
+ GET /api/auth/session 401 in 29ms (next.js: 2ms, application-code: 27ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 68ms (next.js: 51ms, application-code: 18ms)
+ GET /api/transactions 401 in 653ms (next.js: 641ms, application-code: 12ms)
+ GET /api/categories 401 in 753ms (next.js: 741ms, application-code: 12ms)
+ GET /api/accounts 401 in 865ms (next.js: 850ms, application-code: 15ms)
+ GET /register 200 in 647ms (next.js: 96ms, application-code: 551ms)
+ GET /api/auth/session 401 in 88ms (next.js: 16ms, application-code: 72ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 502ms (next.js: 443ms, application-code: 59ms)
+ GET /login 200 in 157ms (next.js: 21ms, application-code: 136ms)
+ GET /api/auth/session 401 in 18ms (next.js: 4ms, application-code: 14ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 53ms (next.js: 40ms, application-code: 12ms)
+ GET /dashboard 200 in 400ms (next.js: 29ms, application-code: 371ms)
+ GET /api/households 401 in 39ms (next.js: 12ms, application-code: 27ms)
+ GET /api/auth/session 401 in 81ms (next.js: 21ms, application-code: 60ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 62ms (next.js: 51ms, application-code: 11ms)
+ GET /api/stats$%7Bquery%7D 404 in 155ms (next.js: 20ms, application-code: 135ms)
+ GET /dashboard/transactions 200 in 94ms (next.js: 11ms, application-code: 83ms)
+ GET /api/households 401 in 13ms (next.js: 3ms, application-code: 10ms)
+ GET /api/transactions 401 in 38ms (next.js: 11ms, application-code: 27ms)
+ GET /api/accounts 401 in 40ms (next.js: 16ms, application-code: 23ms)
+ GET /api/categories 401 in 40ms (next.js: 20ms, application-code: 20ms)
+ GET /api/auth/session 401 in 40ms (next.js: 21ms, application-code: 18ms)
+[browser] [next-auth][error][CLIENT_FETCH_ERROR]
+https://next-auth.js.org/errors#client_fetch_error undefined {
+  error: { authenticated: [33mfalse[39m },
+  message: [90mundefined[39m,
+  url: [32m'/api/auth/session'[39m
+}
+    at new Promise (<anonymous>) (<anonymous>)
+ POST /api/auth/_log 200 in 47ms (next.js: 36ms, application-code: 11ms)

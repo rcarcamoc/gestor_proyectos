@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  app:
+    build: .
+    container_name: finanzas_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: mysql://user:pass@smarttrack_db_prod:3306/web_finanzas
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
+    networks:
+      - smarttrack_network_prod
+
+networks:
+  smarttrack_network_prod:
+    external: true

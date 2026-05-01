@@ -1,0 +1,117 @@
+:root {
+    --bg-color: #fdfbf7;
+    --text-primary: #2d2d2d;
+    --text-secondary: #7a7a7a;
+    --accent-color: #a3b18a;
+    --card-bg: rgba(255, 255, 255, 0.5);
+    --transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+}
+
+.zen-container {
+    width: 100%;
+    max-width: 800px;
+    padding: 2rem;
+    text-align: center;
+    animation: fadeIn 1.5s ease-out;
+}
+
+header {
+    margin-bottom: 4rem;
+}
+
+h1 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    font-size: 2.5rem;
+    letter-spacing: 0.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-weight: 300;
+    font-size: 1rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 4rem;
+}
+
+.card {
+    text-decoration: none;
+    color: inherit;
+    background: var(--card-bg);
+    border: 1px solid rgba(0,0,0,0.03);
+    padding: 3rem 2rem;
+    border-radius: 4px;
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent-color);
+    background: white;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.02);
+}
+
+.icon {
+    font-size: 2rem;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    display: block;
+}
+
+h2 {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 400;
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.card p {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 300;
+}
+
+footer {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    letter-spacing: 0.05rem;
+    opacity: 0.6;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 600px) {
+    .grid {
+        grid-template-columns: 1fr;
+    }
+}

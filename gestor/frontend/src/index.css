@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+@theme {
+  /* Dynamic Theme Variables from CSS Variables below */
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-secondary: var(--secondary);
+  --color-text-base: var(--text-base);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-accent: #38bdf8;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* Custom palette matching the original but adaptive */
+  --color-accent-green: #10b981;
+  --color-accent-red: #ef4444;
+  --color-accent-yellow: #f59e0b;
+}
+
+/* Base Theme Configurations */
+:root {
+  /* Default: Dark Mode Variables (Original Palette) */
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-hover: #334155;
+  --text-base: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --secondary: #64748b;
+  color-scheme: dark;
+}
+
+/* Light Mode Overrides */
+.light {
+  --background: #f1f5f9;
+  --surface: #ffffff;
+  --surface-hover: #f8fafc;
+  --text-base: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --secondary: #94a3b8;
+  color-scheme: light;
+}
+
+/* Force dark vars if explictly needed */
+.dark {
+  --background: #0f172a;
+  --surface: #1e293b;
+  --surface-hover: #334155;
+  --text-base: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: #334155;
+  --secondary: #64748b;
+  color-scheme: dark;
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10 transition-colors duration-300;
+  }
+  .light .glass {
+    @apply bg-black/[0.03] border-black/[0.05];
+  }
+  .glass-card {
+    @apply bg-surface/50 backdrop-blur-lg border border-border/50 shadow-xl rounded-xl transition-all duration-300;
+  }
+  .light .glass-card {
+    @apply bg-white shadow-sm border-border;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+body {
+  @apply bg-background text-text-base antialiased transition-colors duration-300;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Global input styling for legibility */
+input, textarea, select {
+  @apply text-text-base placeholder:text-text-muted bg-surface border border-border transition-all outline-none;
+  color: var(--text-base) !important; /* Force visibility */
+  background-color: var(--surface);
+}
+
+input:focus, textarea:focus, select:focus {
+  @apply border-primary ring-2 ring-primary/20 bg-surface;
+}
+
+.light input, .light textarea, .light select {
+  @apply bg-white border-border text-text-base;
+  color: #0f172a !important; /* Explicit dark color for light mode */
+  background-color: #ffffff;
+}
+
+/* Ensure options are legible in all browsers */
+option {
+  @apply bg-surface text-text-base;
+  background-color: var(--surface);
+  color: var(--text-base);
+}
+
+.light option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+/* Button variants */
+.btn-primary {
+  @apply bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-xl transition-all shadow-lg;
+}

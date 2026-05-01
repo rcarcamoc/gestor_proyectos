@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # --- INFRAESTRUCTURA COMPARTIDA ---
+  db:
+    image: mysql:8.4
+    container_name: smarttrack_db_prod
+    restart: always
+    environment:
+      MYSQL_DATABASE: smarttrack
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_prod_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - portal_network
+
+  redis:
+    image: redis:alpine
+    container_name: smarttrack_redis_prod
+    restart: always
+    networks:
+      - portal_network
+
+  # --- PORTAL DE ENTRADA (GATEWAY) ---
+  home:
+    image: nginx:alpine
+    container_name: zen_portal
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./home/index.html:/usr/share/nginx/html/index.html
+      - ./home/style.css:/usr/share/nginx/html/style.css
+      - ./home/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - portal_network
+    depends_on:
+      - gestor_frontend
+      - finanzas_app
+
+  # --- GESTOR DE PROYECTOS (SMARTTRACK) ---
+  gestor_backend:
+    build: ./gestor/backend
+    container_name: smarttrack_backend_prod
+    restart: always
+    depends_on:
+      - db
+    env_file: ./gestor/.env
+    networks:
+      - portal_network
+
+  gestor_frontend:
+    build:
+      context: ./gestor/frontend
+      dockerfile: Dockerfile.prod
+    container_name: smarttrack_frontend_prod
+    restart: always
+    depends_on:
+      - gestor_backend
+    networks:
+      - portal_network
+
+  gestor_bot:
+    build: ./gestor/telegram_bot
+    container_name: smarttrack_telegram_bot_prod
+    restart: always
+    depends_on:
+      - gestor_backend
+      - redis
+    env_file: ./gestor/.env
+    networks:
+      - portal_network
+
+  # --- CONTROL DE FINANZAS ---
+  finanzas_app:
+    build: ./finanzas
+    container_name: finanzas_app
+    restart: always
+    environment:
+      DATABASE_URL: mysql://user:pass@db:3306/web_finanzas
+      NEXTAUTH_URL: http://localhost/finanzas
+      NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
+    depends_on:
+      - db
+    networks:
+      - portal_network
+
+networks:
+  portal_network:
+    driver: bridge
+
+volumes:
+  db_prod_data:
+    name: db_prod_data

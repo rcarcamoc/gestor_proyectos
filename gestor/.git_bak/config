@@ -1,0 +1,24 @@
+[core]
+	repositoryformatversion = 0
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+[remote "origin"]
+	url = https://github.com/rcarcamoc/gestor_proyectos.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[user]
+	email = ricardo.carcamo.cofre@gmail.com
+	name = Ricardo Cárcamo
+[branch "main"]
+	remote = origin
+	merge = refs/heads/main
+[branch "feat/mvp-complete"]
+	remote = origin
+	merge = refs/heads/feat/smarttrack-mvp-complete-12410248665710514194
+	vscode-merge-base = origin/feat/smarttrack-mvp-complete-12410248665710514194
+[branch "feat/telegram-bot"]
+	remote = origin
+	merge = refs/heads/feature/telegram-bot-v1-9523644368371724928
+	vscode-merge-base = origin/feature/telegram-bot-v1-9523644368371724928

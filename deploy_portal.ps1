@@ -23,8 +23,8 @@ Write-Host "[+] Ejecutando comandos en Oracle Cloud..." -ForegroundColor Yellow
 # Comandos formateados para evitar problemas de line-endings (\r)
 $cmds = "mkdir -p $remotePath && cd $remotePath && " +
         "if [ -d .git ]; then git fetch origin main && git reset --hard origin/main; else git clone https://github.com/rcarcamoc/gestor_proyectos.git .; fi && " +
-        "sudo docker rm -f smarttrack_frontend_prod smarttrack_backend_prod smarttrack_db_prod smarttrack_redis_prod smarttrack_telegram_bot_prod finanzas_app zen_portal 2>/dev/null || true && " +
-        "sudo docker-compose up -d --build && " +
+        "sudo docker-compose down && " +
+        "sudo docker-compose up -d --build --force-recreate && " +
         "sudo docker image prune -f 2>/dev/null"
 
 ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost "$cmds"

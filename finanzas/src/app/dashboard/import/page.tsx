@@ -151,15 +151,45 @@ export default function ImportPage() {
   };
 
   const handleProcess = async () => {
+    if (!mapping.date || !mapping.amount || !mapping.description) {
+        return toast.error("Por favor completa el mapeo de columnas obligatorias");
+    }
+    if (!accountId) {
+        return toast.error("Debes seleccionar una cuenta de destino");
+    }
     setLoading(true);
-    // In a real scenario, we might want to check for duplicates via API here
-    // based on the mapping and first few rows.
-    // For now, we'll just proceed to Step 3.
-    setStep(3);
-    setLoading(false);
+    try {
+        // Map data according to user selection for dry run
+        const transactions = previewData.map(row => ({
+            date: row[mapping.date],
+            amount: row[mapping.amount],
+            description: row[mapping.description],
+            externalId: mapping.reference ? row[mapping.reference] : undefined,
+            metadata: row
+        }));
+
+        const res = await fetch('/api/import/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transactions, accountId, dryRun: true })
+        });
+
+        if (res.ok) {
+            const result = await res.json();
+            setDuplicates(result.duplicates);
+            setStep(3);
+        } else {
+            toast.error("Error al analizar el archivo");
+        }
+    } catch (err) {
+        toast.error("Error de conexión");
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleConfirm = async () => {
+    if (!accountId) return toast.error("Selecciona una cuenta de destino");
     setLoading(true);
     try {
         // Map data according to user selection
@@ -266,25 +296,36 @@ export default function ImportPage() {
                         </div>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                        {profiles.length > 0 && (
-                            <select 
-                                className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[160px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
-                                value={selectedProfile}
-                                onChange={(e) => handleProfileChange(e.target.value)}
-                            >
-                                <option value="">Perfil: Autodetectar</option>
-                                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                            </select>
+                        {accounts.length === 0 ? (
+                            <div className="flex items-center gap-2 text-rose-500 text-sm font-semibold bg-rose-50 px-4 py-2 rounded-xl border border-rose-100 animate-pulse">
+                                <AlertCircle className="h-4 w-4" />
+                                <span>No tienes cuentas creadas</span>
+                                <Link href="/dashboard/accounts" className="underline ml-1">Crear una</Link>
+                            </div>
+                        ) : (
+                            <>
+                                {profiles.length > 0 && (
+                                    <select 
+                                        className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[160px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
+                                        value={selectedProfile}
+                                        onChange={(e) => handleProfileChange(e.target.value)}
+                                    >
+                                        <option value="">Perfil: Autodetectar</option>
+                                        {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                )}
+                                <select 
+                                    className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
+                                    value={accountId}
+                                    onChange={(e) => setAccountId(e.target.value)}
+                                >
+                                    <option value="" disabled>Seleccionar cuenta...</option>
+                                    {accounts.map(acc => (
+                                        <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
+                                    ))}
+                                </select>
+                            </>
                         )}
-                        <select 
-                            className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
-                            value={accountId}
-                            onChange={(e) => setAccountId(e.target.value)}
-                        >
-                            {accounts.map(acc => (
-                                <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
-                            ))}
-                        </select>
                     </div>
                 </div>
 

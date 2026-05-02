@@ -12,7 +12,8 @@ import {
   LogOut,
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  Tags
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
@@ -20,9 +21,11 @@ import { signOut } from 'next-auth/react';
 const navigation = [
   { name: 'Resumen', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Transacciones', href: '/dashboard/transactions', icon: Receipt },
+  { name: 'Presupuestos', href: '/dashboard/budgets', icon: TrendingUp },
   { name: 'Cuentas', href: '/dashboard/accounts', icon: Wallet },
   { name: 'Mi Hogar', href: '/dashboard/households', icon: Users },
   { name: 'Distribución', href: '/dashboard/distribution', icon: Scale },
+  { name: 'Categorías', href: '/dashboard/categories', icon: Tags },
   { name: 'Importar', href: '/dashboard/import', icon: FileUp },
 ];
 

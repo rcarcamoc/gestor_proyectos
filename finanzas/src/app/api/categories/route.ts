@@ -29,3 +29,28 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "Error fetching categories" }, { status: 500 });
   }
 }
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { name, color, householdId } = await req.json();
+    const userId = (session.user as any).id;
+
+    const category = await prisma.category.create({
+      data: {
+        name,
+        color,
+        userId,
+        householdId: householdId || null,
+        isDefault: false
+      }
+    });
+
+    return NextResponse.json(category);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ message: "Error creating category" }, { status: 500 });
+  }
+}

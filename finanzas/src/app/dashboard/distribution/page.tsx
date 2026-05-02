@@ -12,8 +12,10 @@ export default function DistributionPage() {
   const [selectedHousehold, setSelectedHousehold] = useState<string>('');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     fetchHouseholds();
   }, []);
 
@@ -55,16 +57,20 @@ export default function DistributionPage() {
           <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Distribución de Gastos</h1>
           <p className="text-stone-500 mt-1.5 font-medium">Cálculo proporcional basado en los ingresos de la pareja.</p>
         </div>
-        <Select value={selectedHousehold} onValueChange={(val) => setSelectedHousehold(val || '')}>
-          <SelectTrigger className="w-[220px] bg-white border-stone-200/60 rounded-xl h-11 shadow-sm">
-            <SelectValue placeholder="Seleccionar Hogar" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl border-stone-200 shadow-lg">
-            {households.map(h => (
-              <SelectItem key={h.id} value={h.id} className="rounded-lg">{h.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {mounted ? (
+          <Select value={selectedHousehold} onValueChange={(val) => setSelectedHousehold(val || '')}>
+            <SelectTrigger className="w-[220px] bg-white border-stone-200/60 rounded-xl h-11 shadow-sm">
+              <SelectValue placeholder="Seleccionar Hogar" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl border-stone-200 shadow-lg">
+              {households.map(h => (
+                <SelectItem key={h.id} value={h.id} className="rounded-lg">{h.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <div className="w-[220px] h-11 bg-stone-50 rounded-xl border border-stone-100 animate-pulse" />
+        )}
       </div>
 
       {!data && !loading && (

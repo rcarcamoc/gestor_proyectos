@@ -161,6 +161,8 @@ model Budget {
   id            String    @id @default(cuid())
   limit         Decimal   @db.Decimal(15, 2)
   period        String    @default("MONTHLY")
+  month         Int?      // 1-12
+  year          Int?
   categoryId    String
   userId        String?
   householdId   String?
@@ -170,6 +172,9 @@ model Budget {
   category      Category  @relation(fields: [categoryId], references: [id])
   user          User?     @relation(fields: [userId], references: [id])
   household     Household? @relation(fields: [householdId], references: [id])
+
+  @@unique([categoryId, month, year, userId])
+  @@unique([categoryId, month, year, householdId])
 }
 
 model SavingsGoal {

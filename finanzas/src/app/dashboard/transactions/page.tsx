@@ -11,6 +11,21 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { 
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { 
   Badge 
 } from '@/components/ui/badge';
 import { 
@@ -32,7 +47,8 @@ import {
   Shirt,
   HelpCircle,
   Clock,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -59,9 +75,61 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newTx, setNewTx] = useState({
+    amount: '',
+    description: '',
+    categoryId: '',
+    accountId: '',
+    date: new Date().toISOString().split('T')[0],
+    type: 'EXPENSE'
+  });
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+
   useEffect(() => {
     fetchTransactions();
+    fetchMetadata();
   }, []);
+
+  const fetchMetadata = async () => {
+    try {
+        const [accRes, catRes] = await Promise.all([
+            fetch('/api/accounts'),
+            fetch('/api/categories')
+        ]);
+        if (accRes.ok) setAccounts(await accRes.json());
+        if (catRes.ok) setCategories(await catRes.json());
+    } catch (err) {
+        console.error(err);
+    }
+  };
+
+  const handleAddTransaction = async () => {
+    if (!newTx.amount || !newTx.accountId) return toast.error("Monto y cuenta son obligatorios");
+    setLoading(true);
+    try {
+        const res = await fetch('/api/transactions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...newTx,
+                amount: parseFloat(newTx.amount) * (newTx.type === 'EXPENSE' ? -1 : 1)
+            })
+        });
+        if (res.ok) {
+            toast.success("Transacción registrada");
+            setIsAddModalOpen(false);
+            fetchTransactions();
+        } else {
+            toast.error("Error al registrar");
+        }
+    } catch (err) {
+        toast.error("Error de conexión");
+    } finally {
+        setLoading(false);
+    }
+  };
 
   const fetchTransactions = async () => {
     const res = await fetch('/api/transactions');
@@ -124,7 +192,7 @@ export default function TransactionsPage() {
         <div className="flex gap-2">
             <Button 
                 className="bg-stone-800 hover:bg-stone-900 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
-                onClick={() => toast.info("Funcionalidad de nuevo registro próximamente")}
+                onClick={() => setIsAddModalOpen(true)}
             >
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Registro
@@ -285,6 +353,93 @@ export default function TransactionsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-stone-800">Nuevo Registro</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Tipo</Label>
+                    <Select value={newTx.type} onValueChange={(v) => setNewTx({...newTx, type: v})}>
+                        <SelectTrigger className="rounded-xl border-stone-200">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                            <SelectItem value="EXPENSE">Gasto</SelectItem>
+                            <SelectItem value="INCOME">Ingreso</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Monto</Label>
+                    <Input 
+                        type="number" 
+                        placeholder="0" 
+                        className="rounded-xl border-stone-200"
+                        value={newTx.amount}
+                        onChange={(e) => setNewTx({...newTx, amount: e.target.value})}
+                    />
+                </div>
+            </div>
+            <div className="space-y-2">
+                <Label>Descripción</Label>
+                <Input 
+                    placeholder="Ej: Supermercado" 
+                    className="rounded-xl border-stone-200"
+                    value={newTx.description}
+                    onChange={(e) => setNewTx({...newTx, description: e.target.value})}
+                />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Categoría</Label>
+                    <Select value={newTx.categoryId} onValueChange={(v) => setNewTx({...newTx, categoryId: v})}>
+                        <SelectTrigger className="rounded-xl border-stone-200">
+                            <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                            {categories.map(c => (
+                                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Cuenta</Label>
+                    <Select value={newTx.accountId} onValueChange={(v) => setNewTx({...newTx, accountId: v})}>
+                        <SelectTrigger className="rounded-xl border-stone-200">
+                            <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                            {accounts.map(a => (
+                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+            <div className="space-y-2">
+                <Label>Fecha</Label>
+                <Input 
+                    type="date" 
+                    className="rounded-xl border-stone-200"
+                    value={newTx.date}
+                    onChange={(e) => setNewTx({...newTx, date: e.target.value})}
+                />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" className="rounded-full" onClick={() => setIsAddModalOpen(false)}>Cancelar</Button>
+            <Button className="bg-stone-800 hover:bg-stone-900 rounded-full px-8" onClick={handleAddTransaction} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

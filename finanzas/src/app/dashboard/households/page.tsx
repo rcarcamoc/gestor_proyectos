@@ -4,7 +4,26 @@ import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, UserPlus, Key, Mail, Shield, CheckCircle2, Copy, Trash2 } from 'lucide-react';
+import { 
+  Users, 
+  UserPlus, 
+  Key, 
+  Mail, 
+  Shield, 
+  CheckCircle2, 
+  Copy, 
+  Trash2,
+  Loader2 
+} from 'lucide-react';
+import { 
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+  } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 
 export default function HouseholdsPage() {
@@ -12,10 +31,37 @@ export default function HouseholdsPage() {
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState('');
   const [showJoinForm, setShowJoinForm] = useState(false);
+  
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newHouseholdName, setNewHouseholdName] = useState('');
 
   useEffect(() => {
     fetchHouseholds();
   }, []);
+
+  const handleCreateHousehold = async () => {
+    if (!newHouseholdName) return;
+    setLoading(true);
+    try {
+        const res = await fetch('/api/households', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newHouseholdName })
+        });
+        if (res.ok) {
+            toast.success("Hogar creado con éxito");
+            setIsCreateModalOpen(false);
+            setNewHouseholdName('');
+            fetchHouseholds();
+        } else {
+            toast.error("Error al crear hogar");
+        }
+    } catch (err) {
+        toast.error("Error de conexión");
+    } finally {
+        setLoading(false);
+    }
+  };
 
   const fetchHouseholds = async () => {
     try {
@@ -88,7 +134,7 @@ export default function HouseholdsPage() {
             </Button>
             <Button 
                 className="bg-stone-800 hover:bg-stone-900 rounded-full shadow-sm hover:shadow-md transition-all duration-300"
-                onClick={() => toast.info("Funcionalidad de creación de hogar próximamente")}
+                onClick={() => setIsCreateModalOpen(true)}
             >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Crear Nuevo Hogar
@@ -220,18 +266,41 @@ export default function HouseholdsPage() {
           </div>
         ))}
 
-        <div className="flex flex-col items-center justify-center p-12 lg:p-16 border-2 border-dashed border-stone-200/80 rounded-3xl bg-stone-50/30 text-center space-y-5 h-full min-h-[400px]">
-            <div className="h-20 w-20 rounded-full bg-white shadow-sm flex items-center justify-center animate-in zoom-in duration-700">
-                <CheckCircle2 className="h-10 w-10 text-stone-300" />
-            </div>
-            <div>
-                <h3 className="font-serif text-2xl text-stone-800 tracking-tight">Privacidad y Control</h3>
-                <p className="text-sm text-stone-500 max-w-sm mt-3 leading-relaxed font-medium">
-                    Las cuentas compartidas solo son visibles para los miembros autorizados de tu hogar. Tus cuentas personales permanecen privadas.
-                </p>
-            </div>
         </div>
       </div>
+
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-stone-800">Crear Nuevo Hogar</DialogTitle>
+            <DialogDescription>
+                Crea un espacio compartido para gestionar gastos con tu pareja o familia.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+                <Label>Nombre del Hogar</Label>
+                <Input 
+                    placeholder="Ej: Hogar Pérez-García" 
+                    className="rounded-xl border-stone-200"
+                    value={newHouseholdName}
+                    onChange={(e) => setNewHouseholdName(e.target.value)}
+                />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" className="rounded-full" onClick={() => setIsCreateModalOpen(false)}>Cancelar</Button>
+            <Button 
+                className="bg-stone-800 hover:bg-stone-900 rounded-full px-8" 
+                onClick={handleCreateHousehold} 
+                disabled={loading || !newHouseholdName}
+            >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Crear Hogar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

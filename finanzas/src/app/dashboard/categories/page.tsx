@@ -132,7 +132,7 @@ export default function CategoriesPage() {
                     </div>
                     <div className="space-y-2">
                         <Label>Alcance</Label>
-                        <Select value={targetType} onValueChange={setTargetType}>
+                        <Select value={targetType} onValueChange={(v) => setTargetType(v || 'PERSONAL')}>
                             <SelectTrigger className="rounded-xl">
                                 <SelectValue />
                             </SelectTrigger>
@@ -145,7 +145,7 @@ export default function CategoriesPage() {
                     {targetType === 'HOUSEHOLD' && (
                         <div className="space-y-2 animate-in slide-in-from-top-2">
                             <Label>Hogar</Label>
-                            <Select value={selectedHousehold} onValueChange={setSelectedHousehold}>
+                            <Select value={selectedHousehold} onValueChange={(v) => setSelectedHousehold(v || '')}>
                                 <SelectTrigger className="rounded-xl">
                                     <SelectValue placeholder="Seleccionar hogar..." />
                                 </SelectTrigger>

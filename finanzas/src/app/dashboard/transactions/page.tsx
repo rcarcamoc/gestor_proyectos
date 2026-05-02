@@ -363,7 +363,7 @@ export default function TransactionsPage() {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Tipo</Label>
-                    <Select value={newTx.type} onValueChange={(v) => setNewTx({...newTx, type: v})}>
+                    <Select value={newTx.type} onValueChange={(v) => setNewTx({...newTx, type: v || 'EXPENSE'})}>
                         <SelectTrigger className="rounded-xl border-stone-200">
                             <SelectValue />
                         </SelectTrigger>
@@ -396,7 +396,7 @@ export default function TransactionsPage() {
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label>Categoría</Label>
-                    <Select value={newTx.categoryId} onValueChange={(v) => setNewTx({...newTx, categoryId: v})}>
+                    <Select value={newTx.categoryId} onValueChange={(v) => setNewTx({...newTx, categoryId: v || ''})}>
                         <SelectTrigger className="rounded-xl border-stone-200">
                             <SelectValue placeholder="Seleccionar..." />
                         </SelectTrigger>
@@ -409,7 +409,7 @@ export default function TransactionsPage() {
                 </div>
                 <div className="space-y-2">
                     <Label>Cuenta</Label>
-                    <Select value={newTx.accountId} onValueChange={(v) => setNewTx({...newTx, accountId: v})}>
+                    <Select value={newTx.accountId} onValueChange={(v) => setNewTx({...newTx, accountId: v || ''})}>
                         <SelectTrigger className="rounded-xl border-stone-200">
                             <SelectValue placeholder="Seleccionar..." />
                         </SelectTrigger>

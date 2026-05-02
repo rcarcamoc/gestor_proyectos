@@ -265,9 +265,7 @@ export default function HouseholdsPage() {
             </Card>
           </div>
         ))}
-
         </div>
-      </div>
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
         <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-md">

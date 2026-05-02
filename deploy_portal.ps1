@@ -33,6 +33,10 @@ $cmds = "mkdir -p $remotePath && cd $remotePath && " +
         "else " +
             "git clone https://github.com/rcarcamoc/gestor_proyectos.git .; " +
         "fi && " +
+        "if ! docker compose version >/dev/null 2>&1; then " +
+            "echo '[!] Docker Compose V2 no encontrado. Instalando...' && " +
+            "sudo apt-get update && sudo apt-get install -y docker-compose-plugin; " +
+        "fi && " +
         "sudo docker compose down && " +
         "sudo docker compose up -d --build --force-recreate && " +
         "echo '[+] Esperando estabilidad de contenedores...' && sleep 10 && " +

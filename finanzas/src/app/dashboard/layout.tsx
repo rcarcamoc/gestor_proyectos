@@ -14,10 +14,12 @@ import {
   X,
   TrendingUp,
   Tags,
-  Brain
+  Brain,
+  Loader2
 } from 'lucide-react';
-import { useState } from 'react';
-import { signOut } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 const navigation = [
   { name: 'Resumen', href: '/dashboard', icon: LayoutDashboard },
@@ -37,7 +39,25 @@ function cn(...classes: (string | boolean | undefined)[]) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
+
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center zen-bg">
+        <Loader2 className="h-8 w-8 animate-spin text-stone-300" />
+      </div>
+    );
+  }
+
+  if (!session) return null;
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/dashboard/';

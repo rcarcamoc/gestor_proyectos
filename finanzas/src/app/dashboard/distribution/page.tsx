@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Wallet, Scale, Users, TrendingUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 export default function DistributionPage() {
   const [households, setHouseholds] = useState<any[]>([]);
@@ -23,17 +24,23 @@ export default function DistributionPage() {
   }, [selectedHousehold]);
 
   const fetchHouseholds = async () => {
-    const res = await fetch('/api/households');
-    if (res.ok) {
-      const list = await res.json();
-      setHouseholds(list);
-      if (list.length > 0) setSelectedHousehold(list[0].id);
+    try {
+      const res = await fetch('/api/households');
+      if (res.ok) {
+        const list = await res.json();
+        setHouseholds(list);
+        if (list.length > 0) setSelectedHousehold(list[0].id);
+      } else if (res.status === 401) {
+        toast.error("Sesión expirada");
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const fetchDistribution = async () => {
     setLoading(true);
-    const res = await fetch(`/api/distribution?householdId=\${selectedHousehold}`);
+    const res = await fetch(`/api/distribution?householdId=${selectedHousehold}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
   };

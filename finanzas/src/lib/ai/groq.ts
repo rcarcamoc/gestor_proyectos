@@ -1,20 +1,21 @@
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-});
+// Groq is initialized inside functions to avoid build-time environment variable requirements
+
 
 export async function extractTransactionFromEmail(text: string, categories: string[]) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
   const prompt = `
     Extract financial transaction details from the following bank notification email text.
     Return a valid JSON object.
 
     Email Text:
     """
-    \${text}
+    ${text}
     """
 
-    Available Categories: [\${categories.join(", ")}]
+    Available Categories: [${categories.join(", ")}]
 
     JSON Schema:
     {
@@ -48,15 +49,17 @@ export async function categorizeTransactionsBatch(
   transactions: { description: string; amount: number }[],
   categories: { id: string; name: string }[]
 ) {
+  const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
   const categoryList = categories.map(c => c.name).join(", ");
-  const transactionList = transactions.map((t, i) => `\${i}: \${t.description} (\${t.amount})`).join("\n");
+  const transactionList = transactions.map((t, i) => `${i}: ${t.description} (${t.amount})`).join("\n");
 
   const prompt = `
     Categorize the following financial transactions.
-    Available Categories: [\${categoryList}]
+    Available Categories: [${categoryList}]
 
     Transactions:
-    \${transactionList}
+    ${transactionList}
 
     Return a valid JSON object where keys are the indices (0, 1, 2...) and values are the EXACT category names from the available list.
     Only return the JSON.

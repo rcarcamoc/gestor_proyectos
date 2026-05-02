@@ -75,10 +75,10 @@ bot.command("resumen", async (ctx) => {
 // For interactive classification
 export async function sendClassificationRequest(telegramId: string, transactionId: string, text: string, categories: {id: string, name: string}[]) {
   const keyboard = Markup.inlineKeyboard(
-    categories.map(c => [Markup.button.callback(c.name, `cat_\${transactionId}_\${c.id}`)])
+    categories.map(c => [Markup.button.callback(c.name, `cat_${transactionId}_${c.id}`)])
   );
 
-  await bot.telegram.sendMessage(telegramId, `No pude clasificar este gasto automáticamente:\n"\${text}"\n\n¿A qué categoría pertenece?`, keyboard);
+  await bot.telegram.sendMessage(telegramId, `No pude clasificar este gasto automáticamente:\n"${text}"\n\n¿A qué categoría pertenece?`, keyboard);
 }
 
 bot.action(/cat_(.+)_(.+)/, async (ctx) => {

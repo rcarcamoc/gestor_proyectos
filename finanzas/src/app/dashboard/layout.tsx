@@ -11,11 +11,10 @@ import {
   FileUp, 
   LogOut,
   Menu,
-  X
+  X,
+  TrendingUp
 } from 'lucide-react';
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { signOut } from 'next-auth/react';
 
 const navigation = [
@@ -27,122 +26,144 @@ const navigation = [
   { name: 'Importar', href: '/dashboard/import', icon: FileUp },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function cn(...classes: (string | boolean | undefined)[]) {
+  return classes.filter(Boolean).join(' ');
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  const isActive = (href: string) => {
+    if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/dashboard/';
+    return pathname.startsWith(href);
+  };
+
   return (
-    <div className="min-h-screen bg-[#FAFAFA] font-sans text-stone-800 selection:bg-stone-200">
-      {/* Sidebar Desktop */}
-      <div className="hidden md:fixed md:inset-y-0 md:flex md:w-72 md:flex-col">
-        <div className="flex min-h-0 flex-1 flex-col border-r border-stone-200/50 bg-white/70 backdrop-blur-xl">
-          <div className="flex flex-1 flex-col overflow-y-auto pt-8 pb-4">
-            <div className="flex items-center px-8 mb-10">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-stone-700 to-stone-900 shadow-inner flex items-center justify-center transform transition-transform hover:scale-105">
-                <span className="text-stone-50 font-serif text-xl tracking-widest">Z</span>
-              </div>
-              <span className="ml-3.5 text-2xl font-serif tracking-tight text-stone-800">Zen Finanzas</span>
+    <div className="zen-bg min-h-screen">
+      {/* ── Desktop Sidebar ── */}
+      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-64 md:flex-col z-30">
+        <div className="zen-sidebar flex flex-col h-full py-6 px-3">
+          {/* Logo */}
+          <div className="flex items-center gap-3 px-4 mb-8">
+            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 flex items-center justify-center shadow-lg flex-shrink-0">
+              <span className="font-serif text-white text-lg leading-none">Z</span>
             </div>
-            <nav className="mt-5 flex-1 space-y-1.5 px-4">
+            <div>
+              <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Zen</p>
+              <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Finanzas</p>
+            </div>
+          </div>
+
+          {/* Nav */}
+          <nav className="flex-1 space-y-1">
+            {navigation.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    'nav-link group',
+                    active && 'active'
+                  )}
+                >
+                  <div className={cn(
+                    'p-1.5 rounded-xl transition-colors flex-shrink-0',
+                    active ? 'bg-stone-100 text-stone-700' : 'text-stone-400 group-hover:text-stone-600'
+                  )}>
+                    <item.icon className="h-4 w-4" />
+                  </div>
+                  <span>{item.name}</span>
+                  {active && (
+                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-stone-400" />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {/* Bottom section */}
+          <div className="mt-4 pt-4 border-t border-stone-200/50">
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="nav-link w-full text-left text-rose-400 hover:text-rose-600 hover:bg-rose-50 group"
+            >
+              <div className="p-1.5 rounded-xl text-rose-300 group-hover:text-rose-500 transition-colors flex-shrink-0">
+                <LogOut className="h-4 w-4" />
+              </div>
+              Cerrar Sesión
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Mobile Header ── */}
+      <header className="sticky top-0 z-20 flex h-14 items-center bg-white/80 backdrop-blur-md border-b border-stone-200/50 px-4 md:hidden">
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="p-2 rounded-xl text-stone-500 hover:bg-stone-100 transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="flex-1 flex justify-center">
+          <span className="font-serif text-stone-800 font-semibold text-lg">Zen Finanzas</span>
+        </div>
+        <div className="w-9" />
+      </header>
+
+      {/* ── Main Content ── */}
+      <main className="md:pl-64">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          {children}
+        </div>
+      </main>
+
+      {/* ── Mobile Drawer ── */}
+      {isMobileMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-stone-900/40 backdrop-blur-sm"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div className="fixed inset-y-0 left-0 z-50 w-72 bg-white/95 backdrop-blur-xl shadow-2xl flex flex-col py-6 px-3">
+            <div className="flex items-center justify-between px-4 mb-8">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-2xl bg-stone-900 flex items-center justify-center">
+                  <span className="font-serif text-white text-lg">Z</span>
+                </div>
+                <span className="font-serif text-stone-900 text-lg font-semibold">Zen Finanzas</span>
+              </div>
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-xl text-stone-400 hover:bg-stone-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="flex-1 space-y-1">
               {navigation.map((item) => {
-                const isActive = pathname === item.href;
+                const active = isActive(item.href);
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={cn(
-                      isActive
-                        ? 'bg-white shadow-sm ring-1 ring-stone-200/50 text-stone-900'
-                        : 'text-stone-500 hover:bg-stone-50/80 hover:text-stone-900',
-                      'group flex items-center px-4 py-3.5 text-sm font-medium rounded-2xl transition-all duration-300'
-                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={cn('nav-link', active && 'active')}
                   >
-                    <item.icon
-                      className={cn(
-                        isActive ? 'text-stone-700' : 'text-stone-400 group-hover:text-stone-600',
-                        'mr-3.5 h-5 w-5 flex-shrink-0 transition-colors'
-                      )}
-                      aria-hidden="true"
-                    />
+                    <div className={cn(
+                      'p-1.5 rounded-xl flex-shrink-0',
+                      active ? 'bg-stone-100 text-stone-700' : 'text-stone-400'
+                    )}>
+                      <item.icon className="h-4 w-4" />
+                    </div>
                     {item.name}
                   </Link>
                 );
               })}
             </nav>
           </div>
-          <div className="flex flex-shrink-0 p-4">
-            <button
-              onClick={() => signOut()}
-              className="group block w-full flex-shrink-0"
-            >
-              <div className="flex items-center px-4 py-3.5 text-sm font-medium text-stone-500 rounded-2xl hover:bg-rose-50 hover:text-rose-600 transition-all duration-300">
-                <LogOut className="mr-3.5 h-5 w-5 text-stone-400 group-hover:text-rose-500 transition-colors" />
-                Cerrar Sesión
-              </div>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Header */}
-      <div className="sticky top-0 z-20 flex h-16 flex-shrink-0 bg-white/80 backdrop-blur-md border-b border-stone-200/50 md:hidden">
-        <button
-          type="button"
-          className="px-4 text-stone-500 focus:outline-none md:hidden"
-          onClick={() => setIsMobileMenuOpen(true)}
-        >
-          <Menu className="h-6 w-6" />
-        </button>
-        <div className="flex flex-1 justify-center items-center">
-            <span className="text-xl font-serif text-stone-800 tracking-tight">Zen Finanzas</span>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="flex flex-col md:pl-72">
-        <main className="flex-1 py-10 px-4 sm:px-6 md:px-10">
-          {children}
-        </main>
-      </div>
-
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <div className="fixed inset-0 bg-stone-600 bg-opacity-75 transition-opacity" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="fixed inset-y-0 left-0 flex w-full max-w-xs flex-col bg-white pt-5 pb-4">
-            <div className="flex items-center justify-between px-6 mb-8">
-              <div className="flex items-center">
-                <div className="h-8 w-8 rounded-lg bg-stone-800 flex items-center justify-center">
-                    <span className="text-white font-serif text-xl">Z</span>
-                </div>
-                <span className="ml-3 text-xl font-serif text-stone-800">Zen Finanzas</span>
-              </div>
-              <button onClick={() => setIsMobileMenuOpen(false)}>
-                <X className="h-6 w-6 text-stone-500" />
-              </button>
-            </div>
-            <nav className="mt-5 flex-1 space-y-1 px-4">
-                {navigation.map((item) => (
-                    <Link
-                        key={item.name}
-                        href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        className={cn(
-                            pathname === item.href ? 'bg-stone-50 text-stone-900' : 'text-stone-500',
-                            'group flex items-center px-4 py-4 text-base font-medium rounded-xl'
-                        )}
-                    >
-                        <item.icon className="mr-4 h-6 w-6 text-stone-400" />
-                        {item.name}
-                    </Link>
-                ))}
-            </nav>
-          </div>
-        </div>
+        </>
       )}
     </div>
   );

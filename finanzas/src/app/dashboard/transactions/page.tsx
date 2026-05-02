@@ -64,9 +64,12 @@ export default function TransactionsPage() {
   }, []);
 
   const fetchTransactions = async () => {
-    setLoading(true);
     const res = await fetch('/api/transactions');
-    if (res.ok) setTransactions(await res.json());
+    if (res.ok) {
+        setTransactions(await res.json());
+    } else {
+        toast.error("No se pudieron cargar las transacciones");
+    }
     setLoading(false);
   };
 
@@ -119,7 +122,10 @@ export default function TransactionsPage() {
           <p className="text-stone-500 mt-1.5 font-medium">Historial completo de tus movimientos financieros.</p>
         </div>
         <div className="flex gap-2">
-            <Button className="bg-stone-800 hover:bg-stone-900 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300">
+            <Button 
+                className="bg-stone-800 hover:bg-stone-900 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
+                onClick={() => toast.info("Funcionalidad de nuevo registro próximamente")}
+            >
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Registro
             </Button>

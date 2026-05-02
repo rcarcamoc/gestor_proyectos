@@ -18,9 +18,18 @@ export default function HouseholdsPage() {
   }, []);
 
   const fetchHouseholds = async () => {
-    const res = await fetch('/api/households');
-    if (res.ok) setHouseholds(await res.json());
-    setLoading(false);
+    try {
+      const res = await fetch('/api/households');
+      if (res.ok) {
+        setHouseholds(await res.json());
+      } else if (res.status === 401) {
+        toast.error("Sesión expirada");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleJoin = async () => {
@@ -77,7 +86,10 @@ export default function HouseholdsPage() {
                 <Key className="h-4 w-4 mr-2" />
                 Unirse con Código
             </Button>
-            <Button className="bg-stone-800 hover:bg-stone-900 rounded-full shadow-sm hover:shadow-md transition-all duration-300">
+            <Button 
+                className="bg-stone-800 hover:bg-stone-900 rounded-full shadow-sm hover:shadow-md transition-all duration-300"
+                onClick={() => toast.info("Funcionalidad de creación de hogar próximamente")}
+            >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Crear Nuevo Hogar
             </Button>

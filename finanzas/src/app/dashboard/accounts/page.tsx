@@ -30,14 +30,22 @@ export default function AccountsPage() {
   }, [selectedHousehold]);
 
   const fetchHouseholds = async () => {
-    const res = await fetch('/api/households');
-    if (res.ok) setHouseholds(await res.json());
+    try {
+      const res = await fetch('/api/households');
+      if (res.ok) {
+        setHouseholds(await res.json());
+      } else if (res.status === 401) {
+        toast.error("Sesión expirada. Por favor, inicia sesión nuevamente.");
+      }
+    } catch (err) {
+      console.error("Error fetching households:", err);
+    }
   };
 
   const fetchAccounts = async () => {
     const url = selectedHousehold === 'personal'
       ? '/api/accounts'
-      : `/api/accounts?householdId=\${selectedHousehold}`;
+      : `/api/accounts?householdId=${selectedHousehold}`;
     const res = await fetch(url);
     if (res.ok) setAccounts(await res.json());
   };

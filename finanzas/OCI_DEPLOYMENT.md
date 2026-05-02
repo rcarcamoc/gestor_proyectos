@@ -11,14 +11,14 @@ Esta guía detalla los pasos para desplegar la plataforma en el Free Tier de OCI
 
 ## 2. Instalación de Docker
 Conéctate por SSH a tu instancia y ejecuta:
-\`\`\`bash
+```bash
 # Para Ubuntu
 sudo apt update
-sudo apt install docker.io docker-compose -y
+sudo apt install docker.io docker-compose-v2 -y
 sudo systemctl enable --now docker
-sudo usermod -aG docker \$USER
-# Cierra sesión y vuelve a entrar
-\`\`\`
+sudo usermod -aG docker $USER
+# Cierra sesión y vuelve a entrar para aplicar cambios de grupo
+```
 
 ## 3. Configuración de Red (VCN)
 Para que la app sea accesible:
@@ -26,22 +26,21 @@ Para que la app sea accesible:
 2. En **Security Lists**, agrega una **Ingress Rule**:
    - **Source CIDR:** 0.0.0.0/0
    - **Protocol:** TCP
-   - **Destination Port Range:** 80, 443, 3000
+   - **Destination Port Range:** 80 (Portal), 3306 (MySQL opcional)
 
-## 4. Base de Datos
-Puedes usar un contenedor de PostgreSQL para mantenerlo simple:
-\`\`\`bash
-docker run --name finance-db -e POSTGRES_PASSWORD=tu_password -p 5432:5432 -d postgres
-\`\`\`
+## 4. Despliegue del Portal Unificado
+El portal utiliza Docker Compose para levantar todos los servicios (Base de Datos, Redis, Backend, Frontend).
 
-## 5. Despliegue de la Aplicación
-1. Clona el repo en la instancia.
-2. Crea el archivo \`.env\` con los valores reales.
-3. Ejecuta:
-\`\`\`bash
-docker build -t finance-app .
-docker run -d --name finance-app -p 3000:3000 --env-file .env finance-app
-\`\`\`
+1. Clona el repositorio:
+   ```bash
+   git clone https://github.com/rcarcamoc/gestor_proyectos.git portal
+   cd portal
+   ```
+2. Configura los archivos `.env` necesarios.
+3. Despliega con Docker Compose V2:
+   ```bash
+   docker compose up -d --build
+   ```
 
 ## 6. Configuración de Inbound Email (Mailgun)
 1. En Mailgun, ve a **Receiving > Routes**.

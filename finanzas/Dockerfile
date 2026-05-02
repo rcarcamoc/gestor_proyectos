@@ -6,6 +6,8 @@ COPY package*.json ./
 RUN npm install
 COPY . .
 RUN npx prisma generate
+ENV DATABASE_URL="mysql://user:pass@localhost:3306/db"
+ENV NEXTAUTH_SECRET="dummy"
 RUN npm run build
 
 # Production Stage

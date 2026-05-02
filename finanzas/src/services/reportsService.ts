@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { getBudgets } from "./budgetService";
 
-export async function generateMonthlyReport(params: { month: number; year: number; userId: string; householdId?: string }) {
-  const { month, year, userId, householdId } = params;
+export async function generateMonthlyReport(params: { month: number; year: number; userId: string; householdId?: string; billingPeriod?: string }) {
+  const { month, year, userId, householdId, billingPeriod } = params;
   
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59);
@@ -13,7 +13,7 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
       where: {
         userId: householdId ? undefined : userId,
         householdId,
-        date: { gte: startOfMonth, lte: endOfMonth }
+        ...(billingPeriod ? { billingPeriod } : { date: { gte: startOfMonth, lte: endOfMonth } })
       },
       include: { category: true },
       orderBy: { date: 'desc' }

@@ -53,6 +53,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { getMonthOptions, formatBillingPeriod } from "@/lib/utils";
 
 const ICON_MAP: Record<string, any> = {
   'home': Home,
@@ -82,6 +83,7 @@ export default function TransactionsPage() {
     categoryId: '',
     accountId: '',
     date: new Date().toISOString().split('T')[0],
+    billingPeriod: formatBillingPeriod(new Date()),
     type: 'EXPENSE'
   });
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -120,6 +122,15 @@ export default function TransactionsPage() {
         if (res.ok) {
             toast.success("Transacción registrada");
             setIsAddModalOpen(false);
+            setNewTx({
+              amount: '',
+              description: '',
+              categoryId: '',
+              accountId: '',
+              date: new Date().toISOString().split('T')[0],
+              billingPeriod: formatBillingPeriod(new Date()),
+              type: 'EXPENSE'
+            });
             fetchTransactions();
         } else {
             toast.error("Error al registrar");
@@ -256,20 +267,21 @@ export default function TransactionsPage() {
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Categoría</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Descripción</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Cuenta</TableHead>
-                <TableHead className="text-right font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Monto</TableHead>
-                <TableHead className="text-center font-semibold text-xs uppercase tracking-wider text-stone-500 py-4 pr-6">Estado / Acciones</TableHead>
+                <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4">Monto</TableHead>
+                <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4">Periodo</TableHead>
+                <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4">Estado / Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
-                    <TableCell colSpan={6} className="h-16 bg-stone-50/50" />
+                    <TableCell colSpan={7} className="h-16 bg-stone-50/50" />
                   </TableRow>
                 ))
               ) : filteredTransactions.length === 0 ? (
                 <TableRow>
-                    <TableCell colSpan={6} className="h-64 text-center text-stone-400">
+                    <TableCell colSpan={7} className="h-64 text-center text-stone-400">
                         {activeTab === 'pending' ? 'No hay transacciones pendientes de revisión.' : 'No se encontraron transacciones.'}
                     </TableCell>
                 </TableRow>
@@ -287,20 +299,38 @@ export default function TransactionsPage() {
                       {new Date(t.date).toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })}
                     </TableCell>
                     <TableCell className="py-4">
-                      <div className="flex items-center">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <div 
-                          className="p-2.5 rounded-xl mr-3 group-hover:scale-110 transition-transform shadow-sm" 
+                          className="p-2.5 rounded-xl group-hover:scale-110 transition-transform shadow-sm flex-shrink-0" 
                           style={{ backgroundColor: `${t.category?.color || '#ccc'}15`, color: t.category?.color || '#999' }}
                         >
                           <Icon className="h-4 w-4" />
                         </div>
-                        <span className="font-semibold text-stone-800 text-sm">{t.category?.name || 'Sin categoría'}</span>
-                        {t.metadata && (t.metadata as any).ai_suggested && (
-                          <div className="ml-2 flex items-center bg-purple-50 text-purple-600 text-[10px] px-2 py-0.5 rounded-full font-bold border border-purple-100 shadow-sm" title="Sugerido por IA">
-                            <Sparkles className="h-3 w-3 mr-1" />
-                            IA
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-stone-800 text-sm">{t.category?.name || 'Sin categoría'}</span>
+                            {t.categorySource === 'keyword' && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-blue-50 text-blue-600 border border-blue-200 px-1.5 py-0.5 rounded-full" title="Clasificado por reglas de palabras clave">
+                                <Zap className="h-2.5 w-2.5" />Regla
+                              </span>
+                            )}
+                            {t.categorySource === 'ml' && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-violet-50 text-violet-600 border border-violet-200 px-1.5 py-0.5 rounded-full" title={`ML Naive Bayes · Confianza: ${t.aiConfidence ? Math.round(t.aiConfidence * 100) : '?'}%`}>
+                                <Sparkles className="h-2.5 w-2.5" />ML {t.aiConfidence ? `${Math.round(t.aiConfidence * 100)}%` : ''}
+                              </span>
+                            )}
+                            {t.categorySource === 'groq' && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-amber-50 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded-full" title="Clasificado por Groq LLM">
+                                <Sparkles className="h-2.5 w-2.5" />IA
+                              </span>
+                            )}
+                            {t.categorySource === 'needs_review' && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest bg-rose-50 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded-full" title="Necesita tu revisión">
+                                <HelpCircle className="h-2.5 w-2.5" />Revisar
+                              </span>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-stone-600 font-medium py-4 max-w-[200px] truncate">
@@ -421,14 +451,29 @@ export default function TransactionsPage() {
                     </Select>
                 </div>
             </div>
-            <div className="space-y-2">
-                <Label>Fecha</Label>
-                <Input 
-                    type="date" 
-                    className="rounded-xl border-stone-200"
-                    value={newTx.date}
-                    onChange={(e) => setNewTx({...newTx, date: e.target.value})}
-                />
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label>Fecha</Label>
+                    <Input 
+                        type="date" 
+                        className="rounded-xl border-stone-200"
+                        value={newTx.date}
+                        onChange={(e) => setNewTx({...newTx, date: e.target.value})}
+                    />
+                </div>
+                <div className="space-y-2">
+                    <Label>Periodo de Facturación</Label>
+                    <Select value={newTx.billingPeriod} onValueChange={(v) => v && setNewTx({...newTx, billingPeriod: v})}>
+                        <SelectTrigger className="rounded-xl border-stone-200">
+                            <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                            {getMonthOptions().map(opt => (
+                                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
           </div>
           <DialogFooter>

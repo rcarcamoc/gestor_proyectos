@@ -14,7 +14,7 @@ import {
   PieChart as PieChartIcon 
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, getMonthOptions, formatBillingPeriod } from '@/lib/utils';
 
 const COLORS = ['#10B981', '#6366F1', '#F59E0B', '#F43F5E', '#8B5CF6', '#14B8A6'];
 
@@ -67,9 +67,10 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
   useEffect(() => { setMounted(true); fetchHouseholds(); }, []);
-  useEffect(() => { fetchStats(); }, [selectedHousehold]);
+  useEffect(() => { fetchStats(); }, [selectedHousehold, selectedBillingPeriod]);
 
   const fetchHouseholds = async () => {
     const res = await fetch('/finanzas/api/households');
@@ -79,9 +80,11 @@ export default function DashboardPage() {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const query = selectedHousehold === 'personal' ? '' : `&householdId=${selectedHousehold}`;
-      const now = new Date();
-      const res = await fetch(`/finanzas/api/reports/monthly?month=${now.getMonth() + 1}&year=${now.getFullYear()}${query}`);
+      const params = new URLSearchParams();
+      if (selectedHousehold !== 'personal') params.append('householdId', selectedHousehold);
+      if (selectedBillingPeriod) params.append('billingPeriod', selectedBillingPeriod);
+
+      const res = await fetch(`/finanzas/api/reports/monthly?${params.toString()}`);
       if (res.ok) {
         setStats(await res.json());
       } else {
@@ -109,19 +112,32 @@ export default function DashboardPage() {
           <p className="text-stone-400 mt-1.5 text-sm">Tu situación actual de un vistazo.</p>
         </div>
         {mounted ? (
-            <Select value={selectedHousehold} onValueChange={(v) => setSelectedHousehold(v || 'personal')}>
-            <SelectTrigger className="w-[180px] rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm">
-                <SelectValue placeholder="Vista" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
-                <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
-                {households.map(h => (
-                <SelectItem key={h.id} value={h.id} className="rounded-xl">{h.name}</SelectItem>
-                ))}
-            </SelectContent>
+          <div className="flex gap-3">
+            <Select value={selectedBillingPeriod} onValueChange={(val) => val && setSelectedBillingPeriod(val)}>
+              <SelectTrigger className="w-[180px] rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm">
+                  <SelectValue placeholder="Periodo" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
+                  {getMonthOptions().map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} className="rounded-xl">{opt.label}</SelectItem>
+                  ))}
+              </SelectContent>
             </Select>
+
+            <Select value={selectedHousehold} onValueChange={(v) => v && setSelectedHousehold(v)}>
+              <SelectTrigger className="w-[150px] rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm">
+                  <SelectValue placeholder="Vista" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
+                  <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
+                  {households.map(h => (
+                  <SelectItem key={h.id} value={h.id} className="rounded-xl">{h.name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
         ) : (
-            <div className="w-[180px] h-10 bg-stone-50 rounded-2xl animate-pulse" />
+            <div className="w-[330px] h-10 bg-stone-50 rounded-2xl animate-pulse" />
         )}
       </div>
 

@@ -138,6 +138,8 @@ model Transaction {
   description     String?
   source          TransactionSource @default(MANUAL)
   status          TransactionStatus @default(CONFIRMED)
+  categorySource  String?           // 'manual' | 'keyword' | 'ml' | 'groq'
+  aiConfidence    Float?            // 0.0–1.0, only set when source = 'ml' or 'groq'
   accountId       String
   categoryId      String?
   userId          String
@@ -145,6 +147,7 @@ model Transaction {
   householdId     String?
   externalId      String?           // For deduplication (Message-ID, Excel row hash)
   metadata        Json?             // To store raw data from email/excel
+  billingPeriod   String?           // Format: 'mmmm - yyyy' (e.g., 'Mayo - 2026')
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 

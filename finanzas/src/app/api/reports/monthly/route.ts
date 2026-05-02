@@ -11,6 +11,7 @@ export async function GET(req: Request) {
   const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
   const householdId = searchParams.get("householdId") || undefined;
+  const billingPeriod = searchParams.get("billingPeriod") || undefined;
   
   const userId = (session.user as any).id;
 
@@ -19,7 +20,8 @@ export async function GET(req: Request) {
         month, 
         year, 
         userId, 
-        householdId 
+        householdId,
+        billingPeriod
     });
     return NextResponse.json(report);
   } catch (error) {

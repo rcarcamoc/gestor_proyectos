@@ -21,6 +21,15 @@ import * as XLSX from 'xlsx';
 import Link from 'next/link';
 import { buttonVariants } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { getMonthOptions, formatBillingPeriod } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
 
 type Mapping = {
   date: string;
@@ -47,6 +56,7 @@ export default function ImportPage() {
   const [profileName, setProfileName] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [duplicates, setDuplicates] = useState<number>(0);
+  const [billingPeriod, setBillingPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
   // Fetch accounts and profiles on mount
   useEffect(() => {
@@ -193,7 +203,7 @@ export default function ImportPage() {
     setLoading(true);
     try {
         // Map data according to user selection
-        const transactions = previewData.map(row => ({
+        const mappedData = previewData.map(row => ({
             date: row[mapping.date],
             amount: row[mapping.amount],
             description: row[mapping.description],
@@ -204,7 +214,11 @@ export default function ImportPage() {
         const res = await fetch('/finanzas/api/import/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ transactions, accountId })
+            body: JSON.stringify({ 
+                transactions: mappedData, 
+                accountId,
+                billingPeriod 
+            })
         });
 
         if (res.ok) {
@@ -285,48 +299,33 @@ export default function ImportPage() {
                 </div>
             </CardHeader>
             <CardContent className="p-6 sm:p-8 space-y-8">
-                <div className="p-6 bg-stone-50 rounded-3xl border border-stone-100/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-inner">
-                    <div className="flex items-center">
-                        <div className="h-12 w-12 rounded-2xl bg-white border border-stone-100/60 shadow-sm flex items-center justify-center text-stone-400 mr-4 shrink-0">
-                            <Wallet className="h-6 w-6" />
-                        </div>
-                        <div>
-                            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Cuenta de destino</p>
-                            <p className="text-sm font-medium text-stone-700">Selecciona dónde cargar los datos</p>
-                        </div>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                        {accounts.length === 0 ? (
-                            <div className="flex items-center gap-2 text-rose-500 text-sm font-semibold bg-rose-50 px-4 py-2 rounded-xl border border-rose-100 animate-pulse">
-                                <AlertCircle className="h-4 w-4" />
-                                <span>No tienes cuentas creadas</span>
-                                <Link href="/dashboard/accounts" className="underline ml-1">Crear una</Link>
-                            </div>
-                        ) : (
-                            <>
-                                {profiles.length > 0 && (
-                                    <select 
-                                        className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[160px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
-                                        value={selectedProfile}
-                                        onChange={(e) => handleProfileChange(e.target.value)}
-                                    >
-                                        <option value="">Perfil: Autodetectar</option>
-                                        {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                    </select>
-                                )}
-                                <select 
-                                    className="h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white min-w-[200px] shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
-                                    value={accountId}
-                                    onChange={(e) => setAccountId(e.target.value)}
-                                >
-                                    <option value="" disabled>Seleccionar cuenta...</option>
-                                    {accounts.map(acc => (
-                                        <option key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</option>
-                                    ))}
-                                </select>
-                            </>
-                        )}
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Cuenta de Destino</Label>
+                    <Select value={accountId} onValueChange={(val) => val && setAccountId(val)}>
+                      <SelectTrigger className="w-full rounded-xl border-stone-200 h-11 text-sm bg-white shadow-sm">
+                        <SelectValue placeholder="Seleccionar cuenta" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-stone-200 shadow-xl">
+                        {accounts.map(acc => (
+                          <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Periodo de Facturación</Label>
+                    <Select value={billingPeriod} onValueChange={(val) => val && setBillingPeriod(val)}>
+                      <SelectTrigger className="w-full rounded-xl border-stone-200 h-11 text-sm bg-white shadow-sm">
+                        <SelectValue placeholder="Seleccionar periodo" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-stone-200 shadow-xl">
+                        {getMonthOptions().map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">

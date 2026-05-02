@@ -91,6 +91,7 @@ services:
       DATABASE_URL: mysql://user:pass@db:3306/web_finanzas
       NEXTAUTH_URL: http://localhost/finanzas
       NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

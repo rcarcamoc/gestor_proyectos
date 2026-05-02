@@ -6,13 +6,14 @@ import { findDuplicate, generateRowHash } from "@/lib/deduplication";
 import { categorizeTransactionsBatch } from "@/lib/ai/groq";
 import { categorizeByKeywords } from "@/services/categorizerService";
 import { trainNaiveBayes } from "@/services/mlCategorizerService";
+import { formatBillingPeriod } from "@/lib/utils";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
-    const { transactions, accountId, dryRun = false } = await req.json();
+    const { transactions, accountId, dryRun = false, billingPeriod } = await req.json();
     const userId = (session.user as any).id;
 
     // Get account to get householdId if applicable
@@ -100,46 +101,50 @@ export async function POST(req: Request) {
             userId_internal: userId,
             householdId: account.householdId,
             externalId,
+            billingPeriod: billingPeriod || formatBillingPeriod(date),
             metadata: {
                 ...(tx.metadata || {}),
                 duplicate_type: duplicate ? (duplicate as any).type : null
             }
         };
 
-        // --- CASCADE CATEGORIZATION ---
-        let categoryId = tx.categoryId; // Manual map from UI
-        let source = categoryId ? 'manual' : null;
+        // --- CASCADE DE CLASIFICACIÓN ---
+        // Capa 1: Keywords (instantáneo, sin IA)
+        let categoryId: string | null = tx.categoryId || null;
+        let catSource: string = categoryId ? 'manual' : 'none';
+        let confidence: number | null = null;
 
-        // 1. Keywords
         if (!categoryId) {
             categoryId = categorizeByKeywords(newTx.description, categories);
-            if (categoryId) {
-                source = 'keyword';
-                results.keywordCategorized++;
-            }
+            if (categoryId) { catSource = 'keyword'; confidence = 1.0; results.keywordCategorized++; }
         }
 
-        // 2. ML (Naive Bayes)
+        // Capa 2: Naive Bayes ML (aprende del historial del usuario, cero costo)
         if (!categoryId) {
-            categoryId = mlPredictor(newTx.description);
-            if (categoryId) {
-                source = 'ml';
+            const mlResult = mlPredictor(newTx.description);
+            if (mlResult.categoryId) {
+                categoryId = mlResult.categoryId;
+                catSource = 'ml';
+                confidence = mlResult.confidence;
                 results.mlCategorized++;
             }
         }
 
-        // 3. Groq (Batch later if still no category)
+        // Capa 3: Groq LLM (solo si las capas anteriores fallaron — mínimo de llamadas)
+        // Se acumula para procesar en batch al final (más eficiente)
         if (!categoryId) {
             groqBatch.push({ txIndex: transactionsToCreate.length, description: newTx.description, amount: newTx.amount });
         }
 
         newTx.categoryId = categoryId;
-        newTx.metadata.category_source = source;
+        newTx.categorySource = catSource;
+        newTx.aiConfidence = confidence;
         
         transactionsToCreate.push(newTx);
     }
 
-    // Process Groq Batch if needed and NOT a dry run (to save costs/latency)
+    // Capa 3: Procesar batch de Groq (solo transacciones que llegaron hasta aquí)
+    // NO se ejecuta en dry run para ahorrar costos de API
     if (!dryRun && groqBatch.length > 0 && process.env.GROQ_API_KEY) {
         const aiSuggestions = await categorizeTransactionsBatch(
             groqBatch.map(t => ({ description: t.description, amount: t.amount })),
@@ -149,13 +154,29 @@ export async function POST(req: Request) {
         Object.entries(aiSuggestions).forEach(([aiIndex, categoryName]) => {
             const batchIdx = parseInt(aiIndex);
             const originalIndex = groqBatch[batchIdx].txIndex;
-            const category = categories.find(c => c.name.toLowerCase() === (categoryName as string).toLowerCase());
-            
+            const category = categories.find(
+                c => c.name.toLowerCase() === (categoryName as string).toLowerCase()
+            );
+
             if (category) {
                 transactionsToCreate[originalIndex].categoryId = category.id;
-                transactionsToCreate[originalIndex].metadata.ai_suggested = true;
-                transactionsToCreate[originalIndex].metadata.category_source = 'groq';
+                transactionsToCreate[originalIndex].categorySource = 'groq';
+                transactionsToCreate[originalIndex].aiConfidence = 0.8; // Groq default confidence
                 results.aiCategorized++;
+            } else {
+                // Groq no pudo clasificar → pedir asistencia al usuario
+                transactionsToCreate[originalIndex].categorySource = 'needs_review';
+                transactionsToCreate[originalIndex].aiConfidence = null;
+            }
+        });
+    }
+
+    // Sin API key o en dry run → marcar como needs_review las que quedaron sin categoría
+    if (groqBatch.length > 0) {
+        groqBatch.forEach(({ txIndex }) => {
+            const tx = transactionsToCreate[txIndex];
+            if (!tx.categoryId) {
+                tx.categorySource = 'needs_review';
             }
         });
     }

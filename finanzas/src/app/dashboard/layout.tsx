@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   TrendingUp,
-  Tags
+  Tags,
+  Brain
 } from 'lucide-react';
 import { useState } from 'react';
 import { signOut } from 'next-auth/react';
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Mi Hogar', href: '/dashboard/households', icon: Users },
   { name: 'Distribución', href: '/dashboard/distribution', icon: Scale },
   { name: 'Categorías', href: '/dashboard/categories', icon: Tags },
+  { name: 'Clasificar IA', href: '/dashboard/classify', icon: Brain },
   { name: 'Importar', href: '/dashboard/import', icon: FileUp },
 ];
 

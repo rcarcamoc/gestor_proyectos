@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { NextResponse } from "next/server";
+import { formatBillingPeriod } from "@/lib/utils";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -17,10 +18,12 @@ export async function POST(req: Request) {
       description,
       accountId,
       categoryId,
-      householdId
+      householdId,
+      billingPeriod
     } = await req.json();
 
     const userId = (session.user as any).id;
+    const finalBillingPeriod = billingPeriod || formatBillingPeriod(date);
 
     // Start a transaction to update account balance and create the transaction record
     const result = await prisma.$transaction(async (tx) => {
@@ -34,7 +37,8 @@ export async function POST(req: Request) {
           accountId,
           categoryId,
           householdId,
-          userId: userId, // The owner (for shared transactions, we might need logic to decide who owns it)
+          billingPeriod: finalBillingPeriod,
+          userId: userId, // The owner
           userId_internal: userId, // The creator
         },
       });
@@ -66,19 +70,23 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const householdId = searchParams.get('householdId');
+  const uncategorized = searchParams.get('uncategorized') === 'true';
   const userId = (session.user as any).id;
 
   try {
+    const whereBase = householdId ? { householdId } : { userId, householdId: null };
+    const whereFilter = uncategorized
+      ? { ...whereBase, OR: [{ categoryId: null }, { categorySource: 'needs_review' }] }
+      : whereBase;
+
     const transactions = await prisma.transaction.findMany({
-      where: householdId
-        ? { householdId }
-        : { userId, householdId: null },
+      where: whereFilter,
       include: {
         account: true,
         category: true,
       },
       orderBy: { date: 'desc' },
-      take: 50,
+      take: 100,
     });
 
     return NextResponse.json(transactions);

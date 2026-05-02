@@ -19,7 +19,9 @@ export async function GET(req: Request) {
     const accounts = await prisma.account.findMany({ where });
     const totalBalance = accounts.reduce((acc, a) => acc + Number(a.balance), 0);
 
-    // 2. Expenses by category (current month)
+    const billingPeriod = searchParams.get('billingPeriod');
+
+    // 2. Expenses by category
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -28,7 +30,7 @@ export async function GET(req: Request) {
       where: {
         ...where,
         type: 'EXPENSE',
-        date: { gte: startOfMonth }
+        ...(billingPeriod ? { billingPeriod } : { date: { gte: startOfMonth } })
       },
       _sum: { amount: true }
     });

@@ -46,7 +46,7 @@ sudo docker compose down --remove-orphans && \
 sudo docker compose up -d --build && \
 echo '[+] Esperando a que la base de datos esté saludable...' && \
 timeout=60; counter=0; \
-until [ "$(sudo docker inspect --format='{{json .State.Health.Status}}' smarttrack_db_prod 2>/dev/null || echo '\"starting\"')" = "\"healthy\"" ]; do \
+until sudo docker inspect smarttrack_db_prod 2>/dev/null | grep -q '"Status": "healthy"'; do \
     sleep 2; \
     counter=$((counter + 2)); \
     if [ "$counter" -gt "$timeout" ]; then echo '[X] DB Timeout'; exit 1; fi; \

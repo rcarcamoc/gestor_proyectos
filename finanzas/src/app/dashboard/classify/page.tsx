@@ -26,6 +26,12 @@ type PendingTx = {
   categorySource: string | null;
 };
 
+type AIStatus = {
+  status: 'idle' | 'busy' | 'rate_limited';
+  queueSize: number;
+  isAvailable: boolean;
+};
+
 const SOURCE_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   keyword: { label: 'Reglas', icon: <Zap className="h-3 w-3" />, color: 'bg-blue-100 text-blue-700 border-blue-200' },
   ml:      { label: 'ML',     icon: <Cpu className="h-3 w-3" />, color: 'bg-violet-100 text-violet-700 border-violet-200' },
@@ -50,8 +56,20 @@ export default function ClassifyPage() {
   const [categories, setCategories] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [classifying, setClassifying] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [aiStatus, setAiStatus] = useState<AIStatus | null>(null);
 
-  useEffect(() => { fetchAll(); }, []);
+  useEffect(() => { 
+    fetchAll(); 
+    const interval = setInterval(fetchAIStatus, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchAIStatus = async () => {
+    try {
+      const res = await fetch('/finanzas/api/ai/status');
+      if (res.ok) setAiStatus(await res.json());
+    } catch {}
+  };
 
   const fetchAll = async () => {
     try {
@@ -127,15 +145,42 @@ export default function ClassifyPage() {
           </div>
           <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Clasificación Automática</h1>
           <p className="text-stone-500 mt-1.5 font-medium">El modelo aprende de tus correcciones para reducir consultas a la IA.</p>
+          
+          {aiStatus && aiStatus.status !== 'idle' && (
+            <div className={`mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-semibold animate-zen-in ${
+              aiStatus.status === 'rate_limited' 
+                ? 'bg-rose-50 text-rose-600 border-rose-100' 
+                : 'bg-amber-50 text-amber-600 border-amber-100'
+            }`}>
+              {aiStatus.status === 'rate_limited' ? (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>Límite de Groq alcanzado · Esperando cuota...</span>
+                </>
+              ) : (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>IA trabajando · {aiStatus.queueSize} en cola</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
-        <Button
-          className="bg-violet-600 hover:bg-violet-700 text-white rounded-full shadow-sm hover:shadow-md transition-all duration-300 px-6"
-          onClick={runClassifyAll}
-          disabled={classifying}
-        >
-          {classifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-          {classifying ? 'Clasificando...' : 'Clasificar Todo'}
-        </Button>
+        <div className="flex flex-col items-end gap-2">
+          <Button
+            className="bg-violet-600 hover:bg-violet-700 text-white rounded-full shadow-sm hover:shadow-md transition-all duration-300 px-6"
+            onClick={runClassifyAll}
+            disabled={classifying}
+          >
+            {classifying ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+            {classifying ? 'Clasificando...' : 'Clasificar Todo'}
+          </Button>
+          {aiStatus?.queueSize ? (
+            <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
+              {aiStatus.queueSize} solicitudes pendientes
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* Stats Cards */}

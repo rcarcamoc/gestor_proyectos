@@ -43,7 +43,7 @@ export default function HouseholdsPage() {
     if (!newHouseholdName) return;
     setLoading(true);
     try {
-        const res = await fetch('/api/households', {
+        const res = await fetch('/finanzas/api/households', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: newHouseholdName })
@@ -65,7 +65,7 @@ export default function HouseholdsPage() {
 
   const fetchHouseholds = async () => {
     try {
-      const res = await fetch('/api/households');
+      const res = await fetch('/finanzas/api/households');
       if (res.ok) {
         setHouseholds(await res.json());
       } else if (res.status === 401) {
@@ -82,7 +82,7 @@ export default function HouseholdsPage() {
     if (!joinCode) return;
     setLoading(true);
     try {
-        const res = await fetch('/api/households/join', {
+        const res = await fetch('/finanzas/api/households/join', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code: joinCode.toUpperCase() })
@@ -104,7 +104,7 @@ export default function HouseholdsPage() {
   };
 
   const generateInviteCode = async (householdId: string) => {
-    const res = await fetch('/api/households/invite', {
+    const res = await fetch('/finanzas/api/households/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ householdId })

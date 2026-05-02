@@ -39,8 +39,8 @@ export default function BudgetsPage() {
     setLoading(true);
     try {
       const [catsRes, budgetsRes] = await Promise.all([
-        fetch('/api/categories'),
-        fetch(`/api/budgets?month=${month}&year=${year}`)
+        fetch('/finanzas/api/categories'),
+        fetch(`/finanzas/api/budgets?month=${month}&year=${year}`)
       ]);
 
       if (catsRes.ok && budgetsRes.ok) {
@@ -69,7 +69,7 @@ export default function BudgetsPage() {
 
     setSaving(categoryId);
     try {
-      const res = await fetch('/api/budgets', {
+      const res = await fetch('/finanzas/api/budgets', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {/* Bottom section */}
           <div className="mt-4 pt-4 border-t border-stone-200/50">
             <button
-              onClick={() => signOut({ callbackUrl: '/login' })}
+              onClick={() => signOut({ callbackUrl: '/finanzas/login' })}
               className="nav-link w-full text-left text-rose-400 hover:text-rose-600 hover:bg-rose-50 group"
             >
               <div className="p-1.5 rounded-xl text-rose-300 group-hover:text-rose-500 transition-colors flex-shrink-0">

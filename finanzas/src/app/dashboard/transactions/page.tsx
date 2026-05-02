@@ -95,8 +95,8 @@ export default function TransactionsPage() {
   const fetchMetadata = async () => {
     try {
         const [accRes, catRes] = await Promise.all([
-            fetch('/api/accounts'),
-            fetch('/api/categories')
+            fetch('/finanzas/api/accounts'),
+            fetch('/finanzas/api/categories')
         ]);
         if (accRes.ok) setAccounts(await accRes.json());
         if (catRes.ok) setCategories(await catRes.json());
@@ -109,7 +109,7 @@ export default function TransactionsPage() {
     if (!newTx.amount || !newTx.accountId) return toast.error("Monto y cuenta son obligatorios");
     setLoading(true);
     try {
-        const res = await fetch('/api/transactions', {
+        const res = await fetch('/finanzas/api/transactions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -132,7 +132,7 @@ export default function TransactionsPage() {
   };
 
   const fetchTransactions = async () => {
-    const res = await fetch('/api/transactions');
+    const res = await fetch('/finanzas/api/transactions');
     if (res.ok) {
         setTransactions(await res.json());
     } else {

@@ -20,7 +20,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/register', {
+      const response = await fetch('/finanzas/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name }),
@@ -87,7 +87,7 @@ export default function RegisterPage() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-600">
             ¿Ya tienes cuenta?{' '}
-            <a href="/login" className="text-blue-600 hover:underline">
+            <a href="/finanzas/login" className="text-blue-600 hover:underline">
               Inicia Sesión
             </a>
           </p>

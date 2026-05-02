@@ -30,8 +30,8 @@ export default function CategoriesPage() {
     setLoading(true);
     try {
         const [catRes, houseRes] = await Promise.all([
-            fetch('/api/categories'),
-            fetch('/api/households')
+            fetch('/finanzas/api/categories'),
+            fetch('/finanzas/api/households')
         ]);
         if (catRes.ok) setCategories(await catRes.json());
         if (houseRes.ok) setHouseholds(await houseRes.json());
@@ -46,7 +46,7 @@ export default function CategoriesPage() {
     if (!newName) return;
     setLoading(true);
     try {
-        const res = await fetch('/api/categories', {
+        const res = await fetch('/finanzas/api/categories', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

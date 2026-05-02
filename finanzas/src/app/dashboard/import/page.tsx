@@ -51,8 +51,8 @@ export default function ImportPage() {
   // Fetch accounts and profiles on mount
   useEffect(() => {
     Promise.all([
-        fetch('/api/accounts').then(res => res.json()),
-        fetch('/api/import/profile').then(res => res.json())
+        fetch('/finanzas/api/accounts').then(res => res.json()),
+        fetch('/finanzas/api/import/profile').then(res => res.json())
     ]).then(([accountsData, profilesData]) => {
         if (Array.isArray(accountsData)) {
             setAccounts(accountsData);
@@ -77,7 +77,7 @@ export default function ImportPage() {
     if (!profileName) return toast.error("Ingresa un nombre para el perfil");
     setLoading(true);
     try {
-        const res = await fetch('/api/import/profile', {
+        const res = await fetch('/finanzas/api/import/profile', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: profileName, mapping })
@@ -168,7 +168,7 @@ export default function ImportPage() {
             metadata: row
         }));
 
-        const res = await fetch('/api/import/process', {
+        const res = await fetch('/finanzas/api/import/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ transactions, accountId, dryRun: true })
@@ -201,7 +201,7 @@ export default function ImportPage() {
             metadata: row
         }));
 
-        const res = await fetch('/api/import/process', {
+        const res = await fetch('/finanzas/api/import/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ transactions, accountId })

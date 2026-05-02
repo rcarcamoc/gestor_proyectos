@@ -27,7 +27,7 @@ export default function DistributionPage() {
 
   const fetchHouseholds = async () => {
     try {
-      const res = await fetch('/api/households');
+      const res = await fetch('/finanzas/api/households');
       if (res.ok) {
         const list = await res.json();
         setHouseholds(list);
@@ -42,7 +42,7 @@ export default function DistributionPage() {
 
   const fetchDistribution = async () => {
     setLoading(true);
-    const res = await fetch(`/api/distribution?householdId=${selectedHousehold}`);
+    const res = await fetch(`/finanzas/api/distribution?householdId=${selectedHousehold}`);
     if (res.ok) setData(await res.json());
     setLoading(false);
   };

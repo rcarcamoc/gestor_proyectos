@@ -31,7 +31,7 @@ export default function AccountsPage() {
 
   const fetchHouseholds = async () => {
     try {
-      const res = await fetch('/api/households');
+      const res = await fetch('/finanzas/api/households');
       if (res.ok) {
         setHouseholds(await res.json());
       } else if (res.status === 401) {
@@ -44,8 +44,8 @@ export default function AccountsPage() {
 
   const fetchAccounts = async () => {
     const url = selectedHousehold === 'personal'
-      ? '/api/accounts'
-      : `/api/accounts?householdId=${selectedHousehold}`;
+      ? '/finanzas/api/accounts'
+      : `/finanzas/api/accounts?householdId=${selectedHousehold}`;
     const res = await fetch(url);
     if (res.ok) setAccounts(await res.json());
   };
@@ -54,7 +54,7 @@ export default function AccountsPage() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const res = await fetch('/api/accounts', {
+      const res = await fetch('/finanzas/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

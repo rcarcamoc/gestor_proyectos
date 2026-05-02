@@ -72,7 +72,7 @@ export default function DashboardPage() {
   useEffect(() => { fetchStats(); }, [selectedHousehold]);
 
   const fetchHouseholds = async () => {
-    const res = await fetch('/api/households');
+    const res = await fetch('/finanzas/api/households');
     if (res.ok) setHouseholds(await res.json());
   };
 
@@ -81,7 +81,7 @@ export default function DashboardPage() {
     try {
       const query = selectedHousehold === 'personal' ? '' : `&householdId=${selectedHousehold}`;
       const now = new Date();
-      const res = await fetch(`/api/reports/monthly?month=${now.getMonth() + 1}&year=${now.getFullYear()}${query}`);
+      const res = await fetch(`/finanzas/api/reports/monthly?month=${now.getMonth() + 1}&year=${now.getFullYear()}${query}`);
       if (res.ok) {
         setStats(await res.json());
       } else {

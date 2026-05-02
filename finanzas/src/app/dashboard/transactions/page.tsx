@@ -48,7 +48,8 @@ import {
   HelpCircle,
   Clock,
   Sparkles,
-  Loader2
+  Loader2,
+  Trash2
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -86,6 +87,8 @@ export default function TransactionsPage() {
     billingPeriod: formatBillingPeriod(new Date()),
     type: 'EXPENSE'
   });
+  const [isDeletePeriodOpen, setIsDeletePeriodOpen] = useState(false);
+  const [deletePeriod, setDeletePeriod] = useState(formatBillingPeriod(new Date()));
   const [accounts, setAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
 
@@ -180,6 +183,28 @@ export default function TransactionsPage() {
         toast.error("Error al eliminar");
     }
   };
+  
+  const handleDeletePeriod = async () => {
+    if (!confirm(`¿Estás COMPLETAMENTE seguro de borrar TODAS las transacciones del periodo ${deletePeriod}? Esta acción no se puede deshacer.`)) return;
+    setLoading(true);
+    try {
+        const res = await fetch(`/finanzas/api/transactions?billingPeriod=${encodeURIComponent(deletePeriod)}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            const data = await res.json();
+            toast.success(`Se eliminaron ${data.count} transacciones`);
+            setIsDeletePeriodOpen(false);
+            fetchTransactions();
+        } else {
+            toast.error("Error al borrar el periodo");
+        }
+    } catch (err) {
+        toast.error("Error de conexión");
+    } finally {
+        setLoading(false);
+    }
+  };
 
   const filteredTransactions = transactions.filter(t => {
     const matchesSearch = t.description?.toLowerCase().includes(search.toLowerCase()) ||
@@ -207,6 +232,14 @@ export default function TransactionsPage() {
             >
                 <Plus className="h-4 w-4 mr-2" />
                 Nuevo Registro
+            </Button>
+            <Button 
+                variant="outline"
+                className="rounded-full px-6 border-rose-200 text-rose-600 hover:bg-rose-50 transition-all duration-300"
+                onClick={() => setIsDeletePeriodOpen(true)}
+            >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Borrar Periodo
             </Button>
         </div>
       </div>
@@ -481,6 +514,39 @@ export default function TransactionsPage() {
             <Button className="bg-stone-800 hover:bg-stone-900 rounded-full px-8" onClick={handleAddTransaction} disabled={loading}>
                 {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeletePeriodOpen} onOpenChange={setIsDeletePeriodOpen}>
+        <DialogContent className="rounded-[2rem] border-rose-100 shadow-2xl max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-stone-800">Borrar Periodo</DialogTitle>
+          </DialogHeader>
+          <div className="py-6 space-y-4">
+            <p className="text-sm text-stone-500 font-medium">
+                Selecciona el periodo que deseas eliminar. Se borrarán todas las transacciones asociadas a este mes.
+            </p>
+            <div className="space-y-2">
+                <Label>Periodo de Facturación</Label>
+                <Select value={deletePeriod} onValueChange={(v) => v && setDeletePeriod(v)}>
+                    <SelectTrigger className="rounded-xl border-stone-200 h-12">
+                        <SelectValue placeholder="Seleccionar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        {getMonthOptions().map(opt => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="ghost" className="rounded-full order-2 sm:order-1" onClick={() => setIsDeletePeriodOpen(false)}>Cancelar</Button>
+            <Button className="bg-rose-600 hover:bg-rose-700 rounded-full px-8 order-1 sm:order-2" onClick={handleDeletePeriod} disabled={loading}>
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Eliminar Todo
             </Button>
           </DialogFooter>
         </DialogContent>

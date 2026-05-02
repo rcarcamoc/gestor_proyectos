@@ -74,10 +74,37 @@ export async function GET(req: Request) {
   const userId = (session.user as any).id;
 
   try {
-    const whereBase = householdId ? { householdId } : { userId, householdId: null };
-    const whereFilter = uncategorized
-      ? { ...whereBase, OR: [{ categoryId: null }, { categorySource: 'needs_review' }] }
-      : whereBase;
+    // Get all households the user belongs to
+    const userHouseholds = await prisma.userHousehold.findMany({
+      where: { userId },
+      select: { householdId: true }
+    });
+    const householdIds = userHouseholds.map(uh => uh.householdId);
+
+    let whereFilter: any = {};
+    
+    if (householdId) {
+      whereFilter = { householdId };
+    } else {
+      // Return personal transactions OR household transactions for households the user is in
+      whereFilter = {
+        OR: [
+          { userId },
+          { householdId: { in: householdIds } }
+        ]
+      };
+    }
+
+    if (uncategorized) {
+      whereFilter = {
+        ...whereFilter,
+        OR: [
+          ...(whereFilter.OR || []),
+          { categoryId: null },
+          { categorySource: 'needs_review' }
+        ]
+      };
+    }
 
     const transactions = await prisma.transaction.findMany({
       where: whereFilter,
@@ -86,11 +113,79 @@ export async function GET(req: Request) {
         category: true,
       },
       orderBy: { date: 'desc' },
-      take: 100,
+      take: 200,
     });
 
     return NextResponse.json(transactions);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ message: "Error fetching transactions" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(req.url);
+  const billingPeriod = searchParams.get('billingPeriod');
+  const userId = (session.user as any).id;
+
+  if (!billingPeriod) return NextResponse.json({ message: "Billing period is required" }, { status: 400 });
+
+  try {
+    // Security check: Only delete transactions the user owns or in their households
+    const userHouseholds = await prisma.userHousehold.findMany({
+      where: { userId },
+      select: { householdId: true }
+    });
+    const householdIds = userHouseholds.map(uh => uh.householdId);
+
+    const whereFilter = {
+      billingPeriod,
+      OR: [
+        { userId },
+        { householdId: { in: householdIds } }
+      ]
+    };
+
+    // Find transactions to adjust balances
+    const transactionsToDelete = await prisma.transaction.findMany({
+      where: whereFilter,
+      select: { amount: true, type: true, accountId: true }
+    });
+
+    if (transactionsToDelete.length === 0) {
+      return NextResponse.json({ message: "No transactions found for this period", count: 0 });
+    }
+
+    // Execute deletion and balance adjustment in a transaction
+    await prisma.$transaction(async (tx) => {
+      // Group adjustments by account
+      const adjustments: Record<string, number> = {};
+      for (const t of transactionsToDelete) {
+        const multiplier = t.type === 'INCOME' ? -1 : 1; // Reverse the original operation
+        const adjustment = Number(t.amount) * multiplier;
+        adjustments[t.accountId] = (adjustments[t.accountId] || 0) + adjustment;
+      }
+
+      // Apply adjustments
+      for (const [accountId, amount] of Object.entries(adjustments)) {
+        await tx.account.update({
+          where: { id: accountId },
+          data: { balance: { increment: amount } }
+        });
+      }
+
+      // Delete the transactions
+      await tx.transaction.deleteMany({
+        where: whereFilter
+      });
+    });
+
+    return NextResponse.json({ message: "Period deleted successfully", count: transactionsToDelete.length });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ message: "Error deleting period" }, { status: 500 });
   }
 }

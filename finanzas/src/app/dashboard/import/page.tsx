@@ -37,6 +37,7 @@ type Mapping = {
   description: string;
   reference?: string;
   category?: string;
+  cardType?: string;
 };
 
 export default function ImportPage() {
@@ -48,6 +49,7 @@ export default function ImportPage() {
     date: '',
     amount: '',
     description: '',
+    cardType: '',
   });
   const [accountId, setAccountId] = useState<string>('');
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -141,6 +143,7 @@ export default function ImportPage() {
                 if (lowH.includes('fec') || lowH.includes('date')) newMapping.date = h;
                 if (lowH.includes('monto') || lowH.includes('amount') || lowH.includes('importe')) newMapping.amount = h;
                 if (lowH.includes('desc') || lowH.includes('detal') || lowH.includes('glosa')) newMapping.description = h;
+                if (lowH.includes('tarjeta') || lowH.includes('card') || lowH.includes('tipo')) newMapping.cardType = h;
             });
             setMapping(newMapping);
           }
@@ -175,6 +178,7 @@ export default function ImportPage() {
             amount: row[mapping.amount],
             description: row[mapping.description],
             externalId: mapping.reference ? row[mapping.reference] : undefined,
+            cardType: mapping.cardType ? row[mapping.cardType] : undefined,
             metadata: row
         }));
 
@@ -208,6 +212,7 @@ export default function ImportPage() {
             amount: row[mapping.amount],
             description: row[mapping.description],
             externalId: mapping.reference ? row[mapping.reference] : undefined,
+            cardType: mapping.cardType ? row[mapping.cardType] : undefined,
             metadata: row
         }));
 
@@ -333,6 +338,7 @@ export default function ImportPage() {
                         { id: 'date', label: 'Fecha', required: true },
                         { id: 'amount', label: 'Monto', required: true },
                         { id: 'description', label: 'Descripción', required: true },
+                        { id: 'cardType', label: 'Tipo de Tarjeta', required: false },
                         { id: 'reference', label: 'Referencia / ID', required: false },
                         { id: 'category', label: 'Categoría', required: false },
                     ].map((field) => (

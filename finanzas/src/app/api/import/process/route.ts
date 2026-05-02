@@ -102,6 +102,7 @@ export async function POST(req: Request) {
             householdId: account.householdId,
             externalId,
             billingPeriod: billingPeriod || formatBillingPeriod(date),
+            cardType: tx.cardType ? String(tx.cardType).split(' ')[0] : null,
             metadata: {
                 ...(tx.metadata || {}),
                 duplicate_type: duplicate ? (duplicate as any).type : null

@@ -32,8 +32,8 @@ if (!(Test-Path $sshKey)) {
 }
 
 # Comandos remotos optimizados
-$remoteCmds = @"
-mkdir -p $remotePath && cd $remotePath && \
+$remoteCmds = @'
+mkdir -p REMOTE_PATH && cd REMOTE_PATH && \
 if [ -d .git ]; then \
     git fetch origin main && git reset --hard origin/main; \
 else \
@@ -46,17 +46,17 @@ sudo docker compose down --remove-orphans && \
 sudo docker compose up -d --build && \
 echo '[+] Esperando a que la base de datos esté saludable...' && \
 timeout=60; counter=0; \
-until [ "\$(sudo docker inspect --format='{{json .State.Health.Status}}' smarttrack_db_prod 2>/dev/null)" == "\"healthy\"" ]; do \
+until [ "$(sudo docker inspect --format='{{json .State.Health.Status}}' smarttrack_db_prod 2>/dev/null)" == "\"healthy\"" ]; do \
     sleep 2; \
-    counter=\$((counter + 2)); \
-    if [ \$counter -gt \$timeout ]; then echo '[X] DB Timeout'; exit 1; fi; \
+    counter=$((counter + 2)); \
+    if [ $counter -gt $timeout ]; then echo '[X] DB Timeout'; exit 1; fi; \
 done && \
 echo '[+] Sincronizando base de datos...' && \
 sudo docker exec finanzas_app npx prisma db push --accept-data-loss && \
 sudo docker exec finanzas_app npx prisma db seed && \
 echo '[+] Limpiando imágenes antiguas...' && \
 sudo docker image prune -f
-"@
+'@.Replace("REMOTE_PATH", $remotePath)
 
 ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost "$remoteCmds"
 

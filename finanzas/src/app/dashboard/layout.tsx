@@ -17,9 +17,9 @@ import {
   Brain,
   Loader2
 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 const navigation = [
   { name: 'Resumen', href: '/dashboard', icon: LayoutDashboard },

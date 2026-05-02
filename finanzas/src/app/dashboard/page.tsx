@@ -125,7 +125,7 @@ export default function DashboardPage() {
                       innerRadius={60}
                       outerRadius={90}
                       paddingAngle={2}
-                      label={({ name, percent }) => percent > 0.05 ? `\${name} (\${(percent * 100).toFixed(0)}%)` : ''}
+                      label={({ name, percent }) => (percent ?? 0) > 0.05 ? `${name} (${((percent ?? 0) * 100).toFixed(0)}%)` : ''}
                       labelLine={false}
                     >
                       {stats.expensesByCategory.map((entry: any, index: number) => (

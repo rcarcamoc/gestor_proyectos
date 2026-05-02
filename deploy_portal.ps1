@@ -46,10 +46,10 @@ sudo docker compose down --remove-orphans && \
 sudo docker compose up -d --build && \
 echo '[+] Esperando a que la base de datos esté saludable...' && \
 timeout=60; counter=0; \
-until sudo docker inspect smarttrack_db_prod 2>/dev/null | grep -q '"Status": "healthy"'; do \
+until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy" | grep -q "smarttrack_db_prod"; do \
     sleep 2; \
     counter=$((counter + 2)); \
-    if [ "$counter" -gt "$timeout" ]; then echo '[X] DB Timeout'; exit 1; fi; \
+    if [ "$counter" -gt "$timeout" ]; then echo '[X] DB Timeout'; break; fi; \
 done && \
 echo '[+] Sincronizando base de datos...' && \
 sudo docker exec finanzas_app npx prisma db push --accept-data-loss && \

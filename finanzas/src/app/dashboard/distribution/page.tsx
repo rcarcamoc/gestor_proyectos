@@ -6,45 +6,92 @@ import { Progress } from '@/components/ui/progress';
 import { Wallet, Scale, Users, TrendingUp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useScope } from '@/components/ScopeProvider';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2, PlusCircle } from 'lucide-react';
+import { formatBillingPeriod } from '@/lib/utils';
 
 export default function DistributionPage() {
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [selectedHousehold, setSelectedHousehold] = useState<string>('');
+  const { selectedScope } = useScope();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
+  const [salaryForm, setSalaryForm] = useState({ userId: '', amount: '', date: new Date().toISOString().split('T')[0] });
+  const [addingSalary, setAddingSalary] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    fetchHouseholds();
   }, []);
 
   useEffect(() => {
-    if (selectedHousehold) {
+    if (selectedScope && selectedScope !== 'personal') {
       fetchDistribution();
+    } else {
+      setData(null);
     }
-  }, [selectedHousehold]);
-
-  const fetchHouseholds = async () => {
-    try {
-      const res = await fetch('/finanzas/api/households');
-      if (res.ok) {
-        const list = await res.json();
-        setHouseholds(list);
-        if (list.length > 0) setSelectedHousehold(list[0].id);
-      } else if (res.status === 401) {
-        toast.error("Sesión expirada");
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  }, [selectedScope]);
 
   const fetchDistribution = async () => {
     setLoading(true);
-    const res = await fetch(`/finanzas/api/distribution?householdId=${selectedHousehold}`);
-    if (res.ok) setData(await res.json());
+    try {
+      const res = await fetch(`/finanzas/api/distribution?householdId=${selectedScope}`);
+      if (res.ok) setData(await res.json());
+      else if (res.status === 401) toast.error("Sesión expirada");
+    } catch (err) {
+      console.error(err);
+    }
     setLoading(false);
+  };
+
+  const handleAddSalary = async () => {
+    if (!salaryForm.userId || !salaryForm.amount) return toast.error("Completa todos los campos");
+    setAddingSalary(true);
+    try {
+      // Find the 'sueldo' category first
+      const catsRes = await fetch('/finanzas/api/categories');
+      const cats = await catsRes.json();
+      const sueldoCat = cats.find((c: any) => c.name.toLowerCase() === 'sueldo');
+
+      // Fetch accounts to find a suitable one (Personal or Shared)
+      const accRes = await fetch('/finanzas/api/accounts?all=true');
+      const accounts = await accRes.json();
+      const account = accounts.find((a: any) => a.userId === salaryForm.userId) || accounts[0];
+
+      if (!account) throw new Error("No hay cuenta disponible");
+
+      const res = await fetch('/finanzas/api/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(salaryForm.amount),
+          description: 'Ingreso Sueldo',
+          categoryId: sueldoCat?.id,
+          accountId: account.id,
+          date: salaryForm.date,
+          type: 'INCOME',
+          billingPeriod: formatBillingPeriod(new Date(salaryForm.date)),
+          householdId: selectedScope,
+          userId_internal: salaryForm.userId,
+          scope: 'HOUSEHOLD'
+        })
+      });
+      if (res.ok) {
+        toast.success("Sueldo registrado exitosamente");
+        setIsSalaryModalOpen(false);
+        setSalaryForm({ userId: '', amount: '', date: new Date().toISOString().split('T')[0] });
+        fetchDistribution();
+      } else {
+        toast.error("Error al registrar sueldo");
+      }
+    } catch (err) {
+      toast.error("Error de conexión o datos insuficientes");
+    } finally {
+      setAddingSalary(false);
+    }
   };
 
   const formatCurrency = (val: number) => 
@@ -57,19 +104,14 @@ export default function DistributionPage() {
           <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Distribución de Gastos</h1>
           <p className="text-stone-500 mt-1.5 font-medium">Cálculo proporcional basado en los ingresos de la pareja.</p>
         </div>
-        {mounted ? (
-          <Select value={selectedHousehold} onValueChange={(val) => setSelectedHousehold(val || '')}>
-            <SelectTrigger className="w-[220px] bg-white border-stone-200/60 rounded-xl h-11 shadow-sm">
-              <SelectValue placeholder="Seleccionar Hogar" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl border-stone-200 shadow-lg">
-              {households.map(h => (
-                <SelectItem key={h.id} value={h.id} className="rounded-lg">{h.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="w-[220px] h-11 bg-stone-50 rounded-xl border border-stone-100 animate-pulse" />
+        {data && (
+          <Button 
+              className="bg-emerald-600 hover:bg-emerald-700 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
+              onClick={() => setIsSalaryModalOpen(true)}
+          >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Añadir Sueldo
+          </Button>
         )}
       </div>
 
@@ -185,6 +227,54 @@ export default function DistributionPage() {
           </div>
         </div>
       )}
+      <Dialog open={isSalaryModalOpen} onOpenChange={setIsSalaryModalOpen}>
+        <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-serif text-2xl text-stone-800">Registrar Sueldo</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-2">
+                <Label>Integrante</Label>
+                <Select value={salaryForm.userId} onValueChange={(v) => setSalaryForm({...salaryForm, userId: v})}>
+                    <SelectTrigger className="rounded-xl border-stone-200 h-12">
+                        <SelectValue placeholder="Seleccionar persona..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        {data?.distribution?.map((m: any) => (
+                            <SelectItem key={m.userId} value={m.userId}>{m.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
+                <Label>Monto (Sueldo)</Label>
+                <Input 
+                    type="number" 
+                    placeholder="Ej: 1500000" 
+                    className="rounded-xl border-stone-200 h-12"
+                    value={salaryForm.amount}
+                    onChange={(e) => setSalaryForm({...salaryForm, amount: e.target.value})}
+                />
+            </div>
+            <div className="space-y-2">
+                <Label>Fecha</Label>
+                <Input 
+                    type="date" 
+                    className="rounded-xl border-stone-200 h-12"
+                    value={salaryForm.date}
+                    onChange={(e) => setSalaryForm({...salaryForm, date: e.target.value})}
+                />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" className="rounded-full" onClick={() => setIsSalaryModalOpen(false)}>Cancelar</Button>
+            <Button className="bg-emerald-600 hover:bg-emerald-700 rounded-full px-8" onClick={handleAddSalary} disabled={addingSalary}>
+                {addingSalary ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Guardar Sueldo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

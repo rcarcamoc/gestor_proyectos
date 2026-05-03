@@ -20,6 +20,8 @@ import {
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { ScopeProvider, useScope } from '@/components/ScopeProvider';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const navigation = [
   { name: 'Resumen', href: '/dashboard', icon: LayoutDashboard },
@@ -38,10 +40,29 @@ function cn(...classes: (string | boolean | undefined)[]) {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ScopeProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </ScopeProvider>
+  );
+}
+
+function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session, status } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { selectedScope, setSelectedScope } = useScope();
+  const [households, setHouseholds] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/finanzas/api/households')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setHouseholds(data);
+      })
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -70,14 +91,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-64 md:flex-col z-30">
         <div className="zen-sidebar flex flex-col h-full py-6 px-3">
           {/* Logo */}
-          <div className="flex items-center gap-3 px-4 mb-8">
-            <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 flex items-center justify-center shadow-lg flex-shrink-0">
-              <span className="font-serif text-white text-lg leading-none">Z</span>
+          <div className="flex items-center justify-between px-4 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 flex items-center justify-center shadow-lg flex-shrink-0">
+                <span className="font-serif text-white text-lg leading-none">Z</span>
+              </div>
+              <div>
+                <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Zen</p>
+                <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Finanzas</p>
+              </div>
             </div>
-            <div>
-              <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Zen</p>
-              <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Finanzas</p>
-            </div>
+          </div>
+          
+          <div className="px-4 mb-6">
+            <Select value={selectedScope} onValueChange={(v) => v && setSelectedScope(v)}>
+              <SelectTrigger className="w-full rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm font-semibold text-stone-700">
+                  <SelectValue placeholder="Vista" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
+                  <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
+                  {households.map(h => (
+                  <SelectItem key={h.id} value={h.id} className="rounded-xl">{h.name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Nav */}
@@ -124,7 +161,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* ── Mobile Header ── */}
-      <header className="sticky top-0 z-20 flex h-14 items-center bg-white/80 backdrop-blur-md border-b border-stone-200/50 px-4 md:hidden">
+      <header className="sticky top-0 z-20 flex h-14 items-center justify-between bg-white/80 backdrop-blur-md border-b border-stone-200/50 px-4 md:hidden">
         <button
           onClick={() => setIsMobileMenuOpen(true)}
           className="p-2 rounded-xl text-stone-500 hover:bg-stone-100 transition-colors"
@@ -134,7 +171,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex-1 flex justify-center">
           <span className="font-serif text-stone-800 font-semibold text-lg">Zen Finanzas</span>
         </div>
-        <div className="w-9" />
+        <div className="w-auto flex items-center">
+            <Select value={selectedScope} onValueChange={(v) => v && setSelectedScope(v)}>
+              <SelectTrigger className="w-[120px] rounded-full border-stone-200 bg-stone-50 shadow-sm h-8 text-[11px] font-semibold text-stone-600 focus:ring-0">
+                  <SelectValue placeholder="Vista" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-stone-200 shadow-xl z-[100]">
+                  <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
+                  {households.map(h => (
+                  <SelectItem key={h.id} value={h.id} className="rounded-xl">{h.name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+        </div>
       </header>
 
       {/* ── Main Content ── */}

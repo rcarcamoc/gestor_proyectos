@@ -61,27 +61,23 @@ const PieTooltip = ({ active, payload }: any) => {
   );
 };
 
+import { useScope } from '@/components/ScopeProvider';
+
 export default function DashboardPage() {
-  const [households, setHouseholds] = useState<any[]>([]);
-  const [selectedHousehold, setSelectedHousehold] = useState<string>('personal');
+  const { selectedScope } = useScope();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
-  useEffect(() => { setMounted(true); fetchHouseholds(); }, []);
-  useEffect(() => { fetchStats(); }, [selectedHousehold, selectedBillingPeriod]);
-
-  const fetchHouseholds = async () => {
-    const res = await fetch('/finanzas/api/households');
-    if (res.ok) setHouseholds(await res.json());
-  };
+  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => { fetchStats(); }, [selectedScope, selectedBillingPeriod]);
 
   const fetchStats = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (selectedHousehold !== 'personal') params.append('householdId', selectedHousehold);
+      if (selectedScope !== 'personal') params.append('householdId', selectedScope);
       if (selectedBillingPeriod) params.append('billingPeriod', selectedBillingPeriod);
 
       const res = await fetch(`/finanzas/api/reports/monthly?${params.toString()}`);
@@ -123,21 +119,9 @@ export default function DashboardPage() {
                   ))}
               </SelectContent>
             </Select>
-
-            <Select value={selectedHousehold} onValueChange={(v) => v && setSelectedHousehold(v)}>
-              <SelectTrigger className="w-[150px] rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm">
-                  <SelectValue placeholder="Vista" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
-                  <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
-                  {households.map(h => (
-                  <SelectItem key={h.id} value={h.id} className="rounded-xl">{h.name}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
           </div>
         ) : (
-            <div className="w-[330px] h-10 bg-stone-50 rounded-2xl animate-pulse" />
+            <div className="w-[180px] h-10 bg-stone-50 rounded-2xl animate-pulse" />
         )}
       </div>
 

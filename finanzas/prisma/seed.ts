@@ -8,31 +8,43 @@ async function main() {
 
   // 1. Categories
   const categoriesData = [
-    { name: 'Vivienda', icon: 'home', color: '#EF4444' },
-    { name: 'Servicios del hogar', icon: 'zap', color: '#F59E0B' },
-    { name: 'Alimentación básica (hogar)', icon: 'shopping-basket', color: '#10B981' },
-    { name: 'Comida y antojos (placer)', icon: 'utensils', color: '#3B82F6' },
-    { name: 'Transporte', icon: 'car', color: '#6366F1' },
-    { name: 'Salud', icon: 'heart-pulse', color: '#EC4899' },
-    { name: 'Ocio y entretenimiento', icon: 'ticket', color: '#8B5CF6' },
-    { name: 'Deudas y productos financieros', icon: 'credit-card', color: '#6B7280' },
-    { name: 'Seguros', icon: 'shield-check', color: '#14B8A6' },
-    { name: 'Familia y mascotas', icon: 'paw-print', color: '#D946EF' },
-    { name: 'Ropa y cuidado personal', icon: 'shirt', color: '#F43F5E' },
-    { name: 'Imprevistos / misceláneos', icon: 'help-circle', color: '#94A3B8' },
+    { name: 'luz', icon: 'zap', color: '#F59E0B' },
+    { name: 'agua', icon: 'droplets', color: '#3B82F6' },
+    { name: 'gas', icon: 'flame', color: '#EF4444' },
+    { name: 'internet', icon: 'wifi', color: '#8B5CF6' },
+    { name: 'Celular', icon: 'smartphone', color: '#10B981' },
+    { name: 'supermercado', icon: 'shopping-basket', color: '#14B8A6' },
+    { name: 'Almacen', icon: 'store', color: '#F97316' },
+    { name: 'veguita', icon: 'carrot', color: '#84CC16' },
+    { name: 'salir a comer', icon: 'utensils', color: '#F43F5E' },
+    { name: 'delivery', icon: 'truck', color: '#EC4899' },
+    { name: 'Antojos', icon: 'ice-cream', color: '#D946EF' },
+    { name: 'Bencina', icon: 'fuel', color: '#64748B' },
+    { name: 'PEAJES', icon: 'road', color: '#6B7280' },
+    { name: 'uber', icon: 'car', color: '#000000' },
+    { name: 'Medico', icon: 'heart-pulse', color: '#E11D48' },
+    { name: 'farmacia', icon: 'pill', color: '#0EA5E9' },
+    { name: 'streaming', icon: 'tv', color: '#6366F1' },
+    { name: 'Conciertos', icon: 'ticket', color: '#A855F7' },
+    { name: 'vacaciones', icon: 'plane', color: '#FBBF24' },
+    { name: 'Tarjeta titular', icon: 'credit-card', color: '#475569' },
+    { name: 'Credito', icon: 'landmark', color: '#0F172A' },
+    { name: 'Seguros', icon: 'shield-check', color: '#334155' },
+    { name: 'Regalos', icon: 'gift', color: '#E879F9' },
+    { name: 'bubi', icon: 'heart', color: '#FDA4AF' },
+    { name: 'choquito', icon: 'paw-print', color: '#8B5CF6' },
+    { name: 'Gatos', icon: 'cat', color: '#F59E0B' },
+    { name: 'Ropa', icon: 'shirt', color: '#EC4899' },
+    { name: 'Imprevistos', icon: 'help-circle', color: '#94A3B8' },
+    { name: 'sueldo', icon: 'banknote', color: '#22C55E' }
   ]
+
+  await prisma.category.deleteMany({
+    where: { isDefault: true }
+  })
 
   const categories = []
   for (const cat of categoriesData) {
-    const existing = await prisma.category.findFirst({
-      where: { name: cat.name, isDefault: true }
-    })
-    
-    if (existing) {
-      categories.push(existing)
-      continue
-    }
-
     const created = await prisma.category.create({
       data: {
         name: cat.name,

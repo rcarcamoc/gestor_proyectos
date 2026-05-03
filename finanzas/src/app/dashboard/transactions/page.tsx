@@ -58,6 +58,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { getMonthOptions, formatBillingPeriod } from "@/lib/utils";
+import { useScope } from '@/components/ScopeProvider';
 
 const ICON_MAP: Record<string, any> = {
   'home': Home,
@@ -92,6 +93,7 @@ export default function TransactionsPage() {
     billingPeriod: formatBillingPeriod(new Date()),
     type: 'EXPENSE'
   });
+  const { selectedScope } = useScope();
   const [isDeletePeriodOpen, setIsDeletePeriodOpen] = useState(false);
   const [deletePeriod, setDeletePeriod] = useState(formatBillingPeriod(new Date()));
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -100,7 +102,7 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchTransactions();
     fetchMetadata();
-  }, [showIgnored]);
+  }, [showIgnored, selectedScope]);
 
   const fetchMetadata = async () => {
     try {
@@ -154,9 +156,13 @@ export default function TransactionsPage() {
 
   const fetchTransactions = async () => {
     setLoading(true);
-    const url = showIgnored
+    let url = showIgnored
       ? '/finanzas/api/transactions?includeIgnored=true'
       : '/finanzas/api/transactions';
+    
+    if (selectedScope !== 'personal') {
+      url += (url.includes('?') ? '&' : '?') + `householdId=${selectedScope}`;
+    }
     const res = await fetch(url);
     if (res.ok) {
         setTransactions(await res.json());
@@ -174,9 +180,24 @@ export default function TransactionsPage() {
     });
     if (res.ok) {
       setTransactions(prev => prev.map(t => t.id === id ? { ...t, ignored } : t));
-      toast.success(ignored ? 'Movimiento ignorado' : 'Movimiento restaurado');
+      toast.success(ignored ? 'Transacción omitida' : 'Transacción restaurada');
     } else {
       toast.error('Error al actualizar');
+    }
+  };
+
+  const handleChangeCategory = async (id: string, categoryId: string) => {
+    const res = await fetch(`/finanzas/api/transactions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ categoryId })
+    });
+    if (res.ok) {
+      const updatedCat = categories.find(c => c.id === categoryId);
+      setTransactions(prev => prev.map(t => t.id === id ? { ...t, categoryId, category: updatedCat } : t));
+      toast.success('Categoría actualizada');
+    } else {
+      toast.error('Error al actualizar categoría');
     }
   };
 
@@ -366,21 +387,21 @@ export default function TransactionsPage() {
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Categoría</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Descripción</TableHead>
                 <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">Cuenta</TableHead>
+                <TableHead className="font-semibold text-xs uppercase tracking-wider text-stone-500 py-4">T. Tarjeta</TableHead>
                 <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4">Monto</TableHead>
-                <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4">Periodo</TableHead>
-                <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4">Estado / Acciones</TableHead>
+                <TableHead className="text-stone-400 font-bold text-[10px] uppercase tracking-widest py-4 w-[280px]">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
-                    <TableCell colSpan={7} className="h-16 bg-stone-50/50" />
+                    <TableCell colSpan={8} className="h-16 bg-stone-50/50" />
                   </TableRow>
                 ))
               ) : filteredTransactions.length === 0 ? (
                 <TableRow>
-                    <TableCell colSpan={7} className="h-64 text-center text-stone-400">
+                    <TableCell colSpan={8} className="h-64 text-center text-stone-400">
                         {activeTab === 'pending' ? 'No hay transacciones pendientes de revisión.' : 'No se encontraron transacciones.'}
                     </TableCell>
                 </TableRow>
@@ -431,6 +452,18 @@ export default function TransactionsPage() {
                           </div>
                         </div>
                       </div>
+                      <div className="mt-2">
+                        <Select value={t.category?.id || ''} onValueChange={(val) => handleChangeCategory(t.id, val)}>
+                          <SelectTrigger className="h-7 w-[160px] text-xs bg-white border-stone-200 shadow-sm rounded-lg">
+                            <SelectValue placeholder="Editar categoría..." />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            {categories.map(c => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </TableCell>
                     <TableCell className="text-stone-600 font-medium py-4 max-w-[200px] truncate">
                       {t.description || '-'}
@@ -439,6 +472,13 @@ export default function TransactionsPage() {
                         <Badge variant="outline" className="font-medium text-stone-500 border-stone-200/60 bg-stone-50 rounded-lg">
                             {t.account?.name}
                         </Badge>
+                    </TableCell>
+                    <TableCell className="py-4">
+                        {t.cardType ? (
+                          <Badge variant="outline" className="font-semibold text-[10px] text-stone-500 uppercase tracking-widest bg-white">
+                            {t.cardType}
+                          </Badge>
+                        ) : '-'}
                     </TableCell>
                     <TableCell className="text-right py-4">
                       <div className="flex flex-col items-end">
@@ -480,17 +520,19 @@ export default function TransactionsPage() {
                           {/* Ignore/restore button */}
                           {t.ignored ? (
                             <Button size="sm" variant="ghost"
-                              className="h-7 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all px-2"
+                              className="h-7 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all px-3 text-xs"
                               title="Restaurar movimiento"
                               onClick={() => handleIgnore(t.id, false)}>
-                              <Eye className="h-3.5 w-3.5" />
+                              <Eye className="h-3.5 w-3.5 mr-1" />
+                              Restaurar
                             </Button>
                           ) : (
-                            <Button size="sm" variant="ghost"
-                              className="h-7 rounded-full text-stone-300 hover:text-stone-500 hover:bg-stone-100 transition-all px-2 opacity-0 group-hover:opacity-100"
-                              title="Ignorar movimiento"
+                            <Button size="sm" variant="outline"
+                              className="h-7 rounded-full text-stone-500 hover:text-stone-700 hover:bg-stone-100 transition-all px-3 text-xs border-stone-200"
+                              title="Omitir este movimiento"
                               onClick={() => handleIgnore(t.id, true)}>
-                              <EyeOff className="h-3.5 w-3.5" />
+                              <EyeOff className="h-3 w-3 mr-1" />
+                              Omitir
                             </Button>
                           )}
                           {/* Status badge/actions */}

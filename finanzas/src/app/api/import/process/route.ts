@@ -66,7 +66,22 @@ export async function POST(req: Request) {
         if (rawAmount === undefined || rawDate === undefined) continue;
 
         const amount = typeof rawAmount === 'number' ? rawAmount : parseFloat(String(rawAmount).replace(/[^0-9.-]+/g, ""));
-        const date = new Date(rawDate);
+        
+        let date = new Date(rawDate);
+        if (isNaN(date.getTime()) && typeof rawDate === 'string') {
+            // Attempt to parse dd-mm-yyyy or dd/mm/yyyy
+            const parts = rawDate.split(/[-/]/);
+            if (parts.length === 3) {
+                // If it looks like dd-mm-yyyy
+                if (parts[2].length === 4) {
+                    date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00Z`);
+                } 
+                // If it looks like yyyy-mm-dd
+                else if (parts[0].length === 4) {
+                    date = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T12:00:00Z`);
+                }
+            }
+        }
 
         if (isNaN(amount) || isNaN(date.getTime())) {
             console.log(`Skipping invalid row: Amount=${rawAmount}, Date=${rawDate}`);

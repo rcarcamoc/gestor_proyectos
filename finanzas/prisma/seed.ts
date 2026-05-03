@@ -39,21 +39,39 @@ async function main() {
     { name: 'sueldo', icon: 'banknote', color: '#22C55E' }
   ]
 
-  await prisma.category.deleteMany({
-    where: { isDefault: true }
+  // Mark all current default categories as non-default to avoid foreign key constraints
+  await prisma.category.updateMany({
+    where: { isDefault: true },
+    data: { isDefault: false }
   })
 
   const categories = []
   for (const cat of categoriesData) {
-    const created = await prisma.category.create({
-      data: {
-        name: cat.name,
-        icon: cat.icon,
-        color: cat.color,
-        isDefault: true,
-      },
+    const existing = await prisma.category.findFirst({
+      where: { name: cat.name }
     })
-    categories.push(created)
+    
+    if (existing) {
+      const updated = await prisma.category.update({
+        where: { id: existing.id },
+        data: {
+          icon: cat.icon,
+          color: cat.color,
+          isDefault: true
+        }
+      })
+      categories.push(updated)
+    } else {
+      const created = await prisma.category.create({
+        data: {
+          name: cat.name,
+          icon: cat.icon,
+          color: cat.color,
+          isDefault: true,
+        },
+      })
+      categories.push(created)
+    }
   }
 
   // 2. Users (upsert = safe to run multiple times)

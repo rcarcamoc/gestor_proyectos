@@ -672,7 +672,7 @@ export default function TransactionsPage() {
       </Dialog>
 
       <Dialog open={isDeletePeriodOpen} onOpenChange={setIsDeletePeriodOpen}>
-        <DialogContent className="rounded-[2rem] border-rose-100 shadow-2xl max-w-sm">
+        <DialogContent className="rounded-[2rem] border-rose-100 shadow-2xl max-w-sm bg-white">
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl text-stone-800">Borrar Periodo</DialogTitle>
           </DialogHeader>

@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import {
   Brain, Sparkles, Tag, RefreshCw, CheckCircle, Zap,
-  AlertTriangle, TrendingUp, Database, Cpu, Loader2, HelpCircle
+  AlertTriangle, TrendingUp, Database, Cpu, Loader2, HelpCircle, Trash2
 } from 'lucide-react';
 
 type Stats = {
@@ -126,6 +126,26 @@ export default function ClassifyPage() {
       }
     } catch {
       toast.error('Error al guardar');
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const deletePending = async (transactionId: string) => {
+    setLoadingId(transactionId);
+    try {
+      const res = await fetch(`/finanzas/api/transactions/${transactionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        toast.success('Transacción eliminada');
+        setPending(prev => prev.filter(t => t.id !== transactionId));
+        setStats(prev => prev ? { ...prev, total: Math.max(0, prev.total - 1), needsReview: Math.max(0, prev.needsReview - 1) } : prev);
+      } else {
+        toast.error('Error al eliminar');
+      }
+    } catch {
+      toast.error('Error de conexión');
     } finally {
       setLoadingId(null);
     }
@@ -312,7 +332,18 @@ export default function ClassifyPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                    {loadingId === tx.id && <Loader2 className="h-4 w-4 animate-spin text-stone-400 flex-shrink-0" />}
+                    {loadingId === tx.id
+                      ? <Loader2 className="h-4 w-4 animate-spin text-stone-400 flex-shrink-0" />
+                      : (
+                        <button
+                          onClick={() => deletePending(tx.id)}
+                          className="p-2 rounded-full text-stone-300 hover:text-rose-500 hover:bg-rose-50 transition-all duration-200 flex-shrink-0"
+                          title="Eliminar esta transacción"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )
+                    }
                   </div>
                 </CardContent>
               </Card>

@@ -235,7 +235,7 @@ export default function DistributionPage() {
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
                 <Label>Integrante</Label>
-                <Select value={salaryForm.userId} onValueChange={(v) => setSalaryForm({...salaryForm, userId: v})}>
+                <Select value={salaryForm.userId} onValueChange={(v) => setSalaryForm({...salaryForm, userId: v || ''})}>
                     <SelectTrigger className="rounded-xl border-stone-200 h-12">
                         <SelectValue placeholder="Seleccionar persona..." />
                     </SelectTrigger>

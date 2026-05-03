@@ -44,7 +44,7 @@ async function main() {
     categories.push(created)
   }
 
-  // 2. Users
+  // 2. Users (upsert = safe to run multiple times)
   const passwordHash = await bcrypt.hash('demo123', 10)
 
   const userA = await prisma.user.upsert({
@@ -69,68 +69,77 @@ async function main() {
     },
   })
 
-  // 3. Household
-  const household = await prisma.household.create({
-    data: {
-      name: 'Hogar Demo',
-      users: {
-        create: [
-          { userId: userA.id, role: 'ADMIN' },
-          { userId: userB.id, role: 'MEMBER' },
-        ]
+  // 3. Household (only create if it doesn't exist)
+  let household = await prisma.household.findFirst({
+    where: { name: 'Hogar Demo' }
+  })
+
+  if (!household) {
+    household = await prisma.household.create({
+      data: {
+        name: 'Hogar Demo',
+        users: {
+          create: [
+            { userId: userA.id, role: 'ADMIN' },
+            { userId: userB.id, role: 'MEMBER' },
+          ]
+        }
       }
-    }
-  })
-
-  // 4. Accounts
-  const accA = await prisma.account.create({
-    data: { name: 'Cuenta Personal A', type: 'CHECKING', currency: 'CLP', userId: userA.id, balance: 500000 }
-  })
-
-  const accB = await prisma.account.create({
-    data: { name: 'Cuenta Personal B', type: 'CHECKING', currency: 'CLP', userId: userB.id, balance: 300000 }
-  })
-
-  const accShared = await prisma.account.create({
-    data: { name: 'Cuenta Compartida', type: 'CHECKING', currency: 'CLP', householdId: household.id, balance: 150000 }
-  })
-
-  // 5. Incomes (for proportional calculation)
-  await prisma.transaction.createMany({
-    data: [
-      {
-        amount: 1200000, currency: 'CLP', date: new Date(), type: 'INCOME',
-        description: 'Sueldo A', accountId: accA.id, userId: userA.id, userId_internal: userA.id, status: 'CONFIRMED'
-      },
-      {
-        amount: 800000, currency: 'CLP', date: new Date(), type: 'INCOME',
-        description: 'Sueldo B', accountId: accB.id, userId: userB.id, userId_internal: userB.id, status: 'CONFIRMED'
-      }
-    ]
-  })
-
-  // 6. Household Transactions (last 3 months)
-  const txs = []
-  const now = new Date()
-  for (let i = 0; i < 40; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
-    const cat = categories[Math.floor(Math.random() * categories.length)]
-    txs.push({
-      amount: Math.floor(Math.random() * 50000) + 5000,
-      currency: 'CLP',
-      date,
-      type: 'EXPENSE' as TransactionType,
-      description: `Gasto demo ${i}`,
-      accountId: accShared.id,
-      categoryId: cat.id,
-      householdId: household.id,
-      userId: userA.id, // Primary owner for demo
-      userId_internal: i % 2 === 0 ? userA.id : userB.id,
-      status: i === 0 ? 'PENDING_REVIEW' : 'CONFIRMED' as TransactionStatus,
-      source: 'MANUAL' as TransactionSource
     })
+
+    // 4. Accounts (only create if household was just created)
+    const accA = await prisma.account.create({
+      data: { name: 'Cuenta Personal A', type: 'CHECKING', currency: 'CLP', userId: userA.id, balance: 500000 }
+    })
+
+    const accB = await prisma.account.create({
+      data: { name: 'Cuenta Personal B', type: 'CHECKING', currency: 'CLP', userId: userB.id, balance: 300000 }
+    })
+
+    const accShared = await prisma.account.create({
+      data: { name: 'Cuenta Compartida', type: 'CHECKING', currency: 'CLP', householdId: household.id, balance: 150000 }
+    })
+
+    // 5. Incomes
+    await prisma.transaction.createMany({
+      data: [
+        {
+          amount: 1200000, currency: 'CLP', date: new Date(), type: 'INCOME',
+          description: 'Sueldo A', accountId: accA.id, userId: userA.id, userId_internal: userA.id, status: 'CONFIRMED'
+        },
+        {
+          amount: 800000, currency: 'CLP', date: new Date(), type: 'INCOME',
+          description: 'Sueldo B', accountId: accB.id, userId: userB.id, userId_internal: userB.id, status: 'CONFIRMED'
+        }
+      ]
+    })
+
+    // 6. Household Transactions (demo data)
+    const txs = []
+    const now = new Date()
+    for (let i = 0; i < 40; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+      const cat = categories[Math.floor(Math.random() * categories.length)]
+      txs.push({
+        amount: Math.floor(Math.random() * 50000) + 5000,
+        currency: 'CLP',
+        date,
+        type: 'EXPENSE' as TransactionType,
+        description: `Gasto demo ${i}`,
+        accountId: accShared.id,
+        categoryId: cat.id,
+        householdId: household.id,
+        userId: userA.id,
+        userId_internal: i % 2 === 0 ? userA.id : userB.id,
+        status: i === 0 ? 'PENDING_REVIEW' : 'CONFIRMED' as TransactionStatus,
+        source: 'MANUAL' as TransactionSource
+      })
+    }
+    await prisma.transaction.createMany({ data: txs })
+    console.log('Demo data created.')
+  } else {
+    console.log('Demo data already exists, skipping creation.')
   }
-  await prisma.transaction.createMany({ data: txs })
 
   console.log('Seed completed successfully')
 }

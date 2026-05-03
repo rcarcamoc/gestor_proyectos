@@ -51,8 +51,9 @@ until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy
     counter=$((counter + 2)); \
     if [ "$counter" -gt "$timeout" ]; then echo '[X] DB Timeout'; break; fi; \
 done && \
-echo '[+] Sincronizando base de datos...' && \
-sudo docker exec finanzas_app npx prisma db push --accept-data-loss && \
+echo '[+] Sincronizando esquema de base de datos...' && \
+sudo docker exec finanzas_app npx prisma db push && \
+echo '[+] Inicializando categorias por defecto...' && \
 sudo docker exec finanzas_app npx prisma db seed && \
 echo '[+] Limpiando imágenes antiguas...' && \
 sudo docker image prune -f

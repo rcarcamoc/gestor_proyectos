@@ -8,12 +8,12 @@ export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const householdId = searchParams.get('householdId');
-  const userId = (session.user as any).id;
-
   try {
-    const categories = await prisma.category.findMany({
+    const userId = (session.user as any).id;
+    const { searchParams } = new URL(req.url);
+    const householdId = searchParams.get('householdId');
+
+    const categoriesWithCount = await prisma.category.findMany({
       where: {
         OR: [
           { isDefault: true },
@@ -21,13 +21,26 @@ export async function GET(req: Request) {
           { householdId: householdId || undefined }
         ]
       },
-      orderBy: { name: 'asc' }
+      include: {
+        _count: {
+          select: { transactions: { where: { userId } } }
+        }
+      }
     });
 
+    // Sort by usage count descending, then alphabetically for ties
+    const sorted = categoriesWithCount.sort((a, b) => {
+      const diff = (b._count?.transactions ?? 0) - (a._count?.transactions ?? 0);
+      return diff !== 0 ? diff : a.name.localeCompare(b.name);
+    });
+
+    const categories = sorted.map(({ _count, ...cat }) => cat);
     return NextResponse.json(categories);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ message: "Error fetching categories" }, { status: 500 });
   }
+
 }
 
 export async function POST(req: Request) {

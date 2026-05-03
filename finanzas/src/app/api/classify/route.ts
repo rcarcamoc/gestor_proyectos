@@ -69,11 +69,14 @@ export async function POST(req: Request) {
   const userId = (session.user as any).id;
   const { batchSize = 50 } = await req.json().catch(() => ({}));
 
-  // Obtener transacciones pendientes de clasificar
+  // Obtener transacciones pendientes de clasificar (sin categoria O en needs_review)
   const unclassified = await prisma.transaction.findMany({
     where: {
       userId,
-      categoryId: null,
+      OR: [
+        { categoryId: null },
+        { categorySource: 'needs_review' },
+      ]
     },
     select: { id: true, description: true, amount: true },
     take: batchSize,
@@ -208,6 +211,7 @@ export async function PATCH(req: Request) {
     where: { id: transactionId, userId },
   });
   if (!tx) return NextResponse.json({ message: "Not found" }, { status: 404 });
+
 
   const updated = await prisma.transaction.update({
     where: { id: transactionId },

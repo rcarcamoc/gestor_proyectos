@@ -88,10 +88,16 @@ export async function POST(req: Request) {
             continue;
         }
 
-        let txType = amount < 0 ? "EXPENSE" : "INCOME";
+        // Banking rules for transaction type:
+        // - Regular accounts (debit/current): positive = income, negative = expense
+        // - Credit cards: positive = cargo/gasto (EXPENSE), negative = abono/pago (INCOME)
+        let txType: string;
         if (account.type === 'CREDIT_CARD') {
-            txType = amount > 0 ? "EXPENSE" : "INCOME";
+            txType = amount < 0 ? "INCOME" : "EXPENSE"; // negative = abono, positive = cargo
+        } else {
+            txType = amount < 0 ? "EXPENSE" : "INCOME"; // standard rule
         }
+
         
         const absAmount = Math.abs(amount);
 

@@ -121,14 +121,21 @@ export async function categorizeTransactionsBatch(
     const transactionList = transactions.map((t, i) => `${i}: ${t.description} (${t.amount})`).join("\n");
 
     const prompt = `
-      Categorize the following financial transactions.
+      Categorize the following financial transactions. The category names are in Spanish.
+      You MUST use ONLY the exact category names from the Available Categories list.
+      
       Available Categories: [${categoryList}]
 
-      Transactions:
+      Transactions (index: description (amount in CLP)):
       ${transactionList}
 
-      Return a valid JSON object where keys are the indices (0, 1, 2...) and values are the EXACT category names from the available list.
-      Only return the JSON.
+      Rules:
+      - Match each transaction to the most appropriate Spanish category.
+      - Negative amounts are expenses, positive amounts are income.
+      - "sueldo" is the category for salary/income transactions.
+      - Return a valid JSON object where keys are the transaction indices as strings ("0", "1", "2"...) and values are the EXACT category names from the list.
+      - Do NOT invent categories. Only use names from the Available Categories list.
+      - Only return the JSON object, nothing else.
     `;
 
     const chatCompletion = await groq.chat.completions.create({

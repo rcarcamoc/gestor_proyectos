@@ -34,14 +34,34 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url);
   const householdId = searchParams.get('householdId');
+  const all = searchParams.get('all') === 'true';
   const userId = (session.user as any).id;
 
   try {
+    let whereFilter: any;
+
+    if (all) {
+      const userHouseholds = await prisma.userHousehold.findMany({
+        where: { userId },
+        select: { householdId: true }
+      });
+      const householdIds = userHouseholds.map(uh => uh.householdId);
+      whereFilter = {
+        OR: [
+          { userId, householdId: null },
+          { householdId: { in: householdIds } }
+        ]
+      };
+    } else if (householdId) {
+      whereFilter = { householdId };
+    } else {
+      whereFilter = { userId, householdId: null };
+    }
+
     const accounts = await prisma.account.findMany({
-      where: householdId
-        ? { householdId }
-        : { userId, householdId: null },
-      orderBy: { createdAt: 'desc' }
+      where: whereFilter,
+      orderBy: { createdAt: 'desc' },
+      include: { household: true }
     });
 
     return NextResponse.json(accounts);

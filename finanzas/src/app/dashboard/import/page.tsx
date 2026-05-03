@@ -63,7 +63,7 @@ export default function ImportPage() {
   // Fetch accounts and profiles on mount
   useEffect(() => {
     Promise.all([
-        fetch('/finanzas/api/accounts').then(res => res.json()),
+        fetch('/finanzas/api/accounts?all=true').then(res => res.json()),
         fetch('/finanzas/api/import/profile').then(res => res.json())
     ]).then(([accountsData, profilesData]) => {
         if (Array.isArray(accountsData)) {

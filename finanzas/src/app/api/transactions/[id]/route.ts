@@ -11,15 +11,43 @@ export async function PATCH(
   if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { status } = await req.json();
+  const userId = (session.user as any).id;
+  const body = await req.json();
+
+  // Only allow specific fields to be updated (not amount, date, description)
+  const { status, ignored, scope, userId_internal, categoryId } = body;
+  const updateData: Record<string, any> = {};
+  if (status !== undefined) updateData.status = status;
+  if (ignored !== undefined) updateData.ignored = ignored;
+  if (scope !== undefined) updateData.scope = scope;
+  if (userId_internal !== undefined) updateData.userId_internal = userId_internal;
+  if (categoryId !== undefined) updateData.categoryId = categoryId;
+
+  if (Object.keys(updateData).length === 0) {
+    return NextResponse.json({ message: "No valid fields to update" }, { status: 400 });
+  }
 
   try {
+    // Verify the user has access to this transaction
+    const existing = await prisma.transaction.findFirst({
+      where: {
+        id,
+        OR: [
+          { userId },
+          { userId_internal: userId },
+        ]
+      }
+    });
+    if (!existing) return NextResponse.json({ message: "Not found or unauthorized" }, { status: 404 });
+
     const transaction = await prisma.transaction.update({
       where: { id },
-      data: { status }
+      data: updateData,
+      include: { category: true, account: true }
     });
     return NextResponse.json(transaction);
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ message: "Error updating transaction" }, { status: 500 });
   }
 }

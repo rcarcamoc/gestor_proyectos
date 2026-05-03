@@ -73,11 +73,18 @@ export async function POST(req: Request) {
             continue;
         }
 
+        let txType = amount < 0 ? "EXPENSE" : "INCOME";
+        if (account.type === 'CREDIT_CARD') {
+            txType = amount > 0 ? "EXPENSE" : "INCOME";
+        }
+        
+        const absAmount = Math.abs(amount);
+
         const externalId = tx.externalId || generateRowHash(tx);
 
         // Find duplicate
         const duplicate = await findDuplicate({
-            amount,
+            amount: absAmount,
             date,
             description: tx.description,
             externalId,
@@ -89,10 +96,10 @@ export async function POST(req: Request) {
         else results.imported++;
 
         const newTx: any = {
-            amount,
+            amount: absAmount,
             currency: account.currency,
             date,
-            type: (amount < 0 ? "EXPENSE" : "INCOME") as any,
+            type: txType as any,
             description: tx.description || "",
             source: "EXCEL" as any,
             status: status as any,

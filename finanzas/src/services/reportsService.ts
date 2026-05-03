@@ -7,14 +7,31 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59);
 
+  // Build where filter robustly
+  const whereFilter: any = {
+    ignored: false,
+  };
+  
+  if (householdId) {
+    whereFilter.householdId = householdId;
+    whereFilter.scope = 'HOUSEHOLD';
+  } else {
+    whereFilter.OR = [
+      { userId, householdId: null },
+      { userId_internal: userId, scope: 'PERSONAL' }
+    ];
+  }
+
+  if (billingPeriod) {
+    whereFilter.billingPeriod = billingPeriod;
+  } else {
+    whereFilter.date = { gte: startOfMonth, lte: endOfMonth };
+  }
+
   // 1. Fetch data in parallel
   const [transactions, categories, budgets, accounts] = await Promise.all([
     prisma.transaction.findMany({
-      where: {
-        userId: householdId ? undefined : userId,
-        householdId,
-        ...(billingPeriod ? { billingPeriod } : { date: { gte: startOfMonth, lte: endOfMonth } })
-      },
+      where: whereFilter,
       include: { category: true },
       orderBy: { date: 'desc' }
     }),
@@ -56,13 +73,24 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const endD = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
 
+    const groupWhere: any = {
+      ignored: false,
+      date: { gte: d, lte: endD }
+    };
+
+    if (householdId) {
+      groupWhere.householdId = householdId;
+      groupWhere.scope = 'HOUSEHOLD';
+    } else {
+      groupWhere.OR = [
+        { userId, householdId: null },
+        { userId_internal: userId, scope: 'PERSONAL' }
+      ];
+    }
+
     const monthlyTxs = await prisma.transaction.groupBy({
       by: ['type'],
-      where: {
-        userId: householdId ? undefined : userId,
-        householdId,
-        date: { gte: d, lte: endD }
-      },
+      where: groupWhere,
       _sum: { amount: true }
     });
 

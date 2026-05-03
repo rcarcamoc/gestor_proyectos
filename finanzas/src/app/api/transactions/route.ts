@@ -71,6 +71,7 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const householdId = searchParams.get('householdId');
   const uncategorized = searchParams.get('uncategorized') === 'true';
+  const includeIgnored = searchParams.get('includeIgnored') === 'true';
   const userId = (session.user as any).id;
 
   try {
@@ -104,6 +105,11 @@ export async function GET(req: Request) {
           { categorySource: 'needs_review' }
         ]
       };
+    }
+
+    // By default hide ignored transactions; show them only when explicitly requested
+    if (!includeIgnored) {
+      whereFilter = { ...whereFilter, ignored: false };
     }
 
     const transactions = await prisma.transaction.findMany({

@@ -49,7 +49,10 @@ import {
   Clock,
   Sparkles,
   Loader2,
-  Trash2
+  Trash2,
+  EyeOff,
+  Eye,
+  UserCheck
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -75,7 +78,9 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'all' | 'pending'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'ignored'>('all');
+  const [showIgnored, setShowIgnored] = useState(false);
+  const [households, setHouseholds] = useState<any[]>([]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTx, setNewTx] = useState({
@@ -95,16 +100,18 @@ export default function TransactionsPage() {
   useEffect(() => {
     fetchTransactions();
     fetchMetadata();
-  }, []);
+  }, [showIgnored]);
 
   const fetchMetadata = async () => {
     try {
-        const [accRes, catRes] = await Promise.all([
-            fetch('/finanzas/api/accounts'),
-            fetch('/finanzas/api/categories')
+        const [accRes, catRes, hhRes] = await Promise.all([
+            fetch('/finanzas/api/accounts?all=true'),
+            fetch('/finanzas/api/categories'),
+            fetch('/finanzas/api/households')
         ]);
         if (accRes.ok) setAccounts(await accRes.json());
         if (catRes.ok) setCategories(await catRes.json());
+        if (hhRes.ok) setHouseholds(await hhRes.json());
     } catch (err) {
         console.error(err);
     }
@@ -119,7 +126,7 @@ export default function TransactionsPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...newTx,
-                amount: parseFloat(newTx.amount) * (newTx.type === 'EXPENSE' ? -1 : 1)
+                amount: Math.abs(parseFloat(newTx.amount))
             })
         });
         if (res.ok) {
@@ -146,7 +153,11 @@ export default function TransactionsPage() {
   };
 
   const fetchTransactions = async () => {
-    const res = await fetch('/finanzas/api/transactions');
+    setLoading(true);
+    const url = showIgnored
+      ? '/finanzas/api/transactions?includeIgnored=true'
+      : '/finanzas/api/transactions';
+    const res = await fetch(url);
     if (res.ok) {
         setTransactions(await res.json());
     } else {
@@ -154,6 +165,40 @@ export default function TransactionsPage() {
     }
     setLoading(false);
   };
+
+  const handleIgnore = async (id: string, ignored: boolean) => {
+    const res = await fetch(`/finanzas/api/transactions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ignored })
+    });
+    if (res.ok) {
+      setTransactions(prev => prev.map(t => t.id === id ? { ...t, ignored } : t));
+      toast.success(ignored ? 'Movimiento ignorado' : 'Movimiento restaurado');
+    } else {
+      toast.error('Error al actualizar');
+    }
+  };
+
+  const handleSetScope = async (id: string, scope: string, userId_internal?: string) => {
+    const res = await fetch(`/finanzas/api/transactions/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope, ...(userId_internal ? { userId_internal } : {}) })
+    });
+    if (res.ok) {
+      const updated = await res.json();
+      setTransactions(prev => prev.map(t => t.id === id ? { ...t, scope: updated.scope, userId_internal: updated.userId_internal } : t));
+      toast.success('Imputación actualizada');
+    } else {
+      toast.error('Error al actualizar');
+    }
+  };
+
+  // Get all household members (flattened)
+  const allHouseholdMembers = households.flatMap((hh: any) =>
+    (hh.users || []).map((u: any) => ({ ...u.user, householdId: hh.id, householdName: hh.name }))
+  );
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
@@ -209,11 +254,13 @@ export default function TransactionsPage() {
   const filteredTransactions = transactions.filter(t => {
     const matchesSearch = t.description?.toLowerCase().includes(search.toLowerCase()) ||
                          t.category?.name.toLowerCase().includes(search.toLowerCase());
-    const matchesTab = activeTab === 'all' || t.status === 'PENDING_REVIEW';
-    return matchesSearch && matchesTab;
+    if (activeTab === 'pending') return matchesSearch && t.status === 'PENDING_REVIEW' && !t.ignored;
+    if (activeTab === 'ignored') return matchesSearch && t.ignored;
+    return matchesSearch && !t.ignored;
   });
 
-  const pendingCount = transactions.filter(t => t.status === 'PENDING_REVIEW').length;
+  const pendingCount = transactions.filter(t => t.status === 'PENDING_REVIEW' && !t.ignored).length;
+  const ignoredCount = transactions.filter(t => t.ignored).length;
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
@@ -270,6 +317,25 @@ export default function TransactionsPage() {
               )}
               {activeTab === 'pending' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-amber-500 rounded-t-full" />}
           </button>
+          <button 
+            onClick={() => { setShowIgnored(true); setActiveTab('ignored'); }}
+            className={cn(
+                "pb-4 px-1 text-sm font-semibold transition-colors relative flex items-center",
+                activeTab === 'ignored' ? "text-stone-400" : "text-stone-300 hover:text-stone-500"
+            )}
+          >
+              <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+              Ignoradas
+              {ignoredCount > 0 && (
+                  <span className="ml-2 bg-stone-100 text-stone-500 text-[10px] px-2 py-0.5 rounded-full font-bold">
+                      {ignoredCount}
+                  </span>
+              )}
+              {activeTab === 'ignored' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-stone-400 rounded-t-full" />}
+          </button>
+          {activeTab !== 'ignored' && (
+            <button onClick={() => { setShowIgnored(false); setActiveTab('all'); }} className="ml-auto pb-4 px-1 text-[11px] text-stone-300 hover:text-stone-500 transition-colors" />
+          )}
       </div>
 
       <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
@@ -384,30 +450,74 @@ export default function TransactionsPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center py-4 pr-6">
-                        {isPending ? (
-                            <div className="flex items-center justify-center gap-2">
-                                <Button 
-                                    size="sm" 
-                                    className="h-8 bg-emerald-600 hover:bg-emerald-700 rounded-full text-xs font-semibold shadow-sm transition-all hover:shadow"
-                                    onClick={() => handleUpdateStatus(t.id, 'CONFIRMED')}
-                                >
-                                    Confirmar
-                                </Button>
-                                <Button 
-                                    size="sm" 
-                                    variant="ghost" 
-                                    className="h-8 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-full text-xs font-semibold transition-all"
-                                    onClick={() => handleDelete(t.id)}
-                                >
-                                    Descartar
-                                </Button>
+                    <TableCell className="py-4 pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          {/* Scope selector for household transactions */}
+                          {t.householdId && allHouseholdMembers.length > 0 && (
+                            <Select
+                              value={t.scope === 'PERSONAL' ? t.userId_internal : 'HOUSEHOLD'}
+                              onValueChange={(val) => {
+                                if (val === 'HOUSEHOLD') handleSetScope(t.id, 'HOUSEHOLD');
+                                else handleSetScope(t.id, 'PERSONAL', val);
+                              }}
+                            >
+                              <SelectTrigger className="h-7 w-auto min-w-[110px] rounded-full border-stone-200 text-[11px] font-semibold bg-stone-50 px-3 gap-1">
+                                <UserCheck className="h-3 w-3 text-stone-400" />
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-xl">
+                                <SelectItem value="HOUSEHOLD">
+                                  <span className="flex items-center gap-1.5">🏠 Compartido</span>
+                                </SelectItem>
+                                {allHouseholdMembers.map((m: any) => (
+                                  <SelectItem key={m.id} value={m.id}>
+                                    <span className="flex items-center gap-1.5">👤 {m.name || m.email}</span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                          {/* Ignore/restore button */}
+                          {t.ignored ? (
+                            <Button size="sm" variant="ghost"
+                              className="h-7 rounded-full text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all px-2"
+                              title="Restaurar movimiento"
+                              onClick={() => handleIgnore(t.id, false)}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="ghost"
+                              className="h-7 rounded-full text-stone-300 hover:text-stone-500 hover:bg-stone-100 transition-all px-2 opacity-0 group-hover:opacity-100"
+                              title="Ignorar movimiento"
+                              onClick={() => handleIgnore(t.id, true)}>
+                              <EyeOff className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                          {/* Status badge/actions */}
+                          {isPending ? (
+                            <div className="flex items-center gap-1">
+                              <Button size="sm"
+                                className="h-7 bg-emerald-600 hover:bg-emerald-700 rounded-full text-[11px] font-semibold px-3"
+                                onClick={() => handleUpdateStatus(t.id, 'CONFIRMED')}>
+                                Confirmar
+                              </Button>
+                              <Button size="sm" variant="ghost"
+                                className="h-7 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-full text-[11px] font-semibold px-2"
+                                onClick={() => handleDelete(t.id)}>
+                                Descartar
+                              </Button>
                             </div>
-                        ) : (
-                            <Badge className="bg-stone-100 text-stone-500 border-transparent font-medium rounded-full px-3 shadow-sm hover:bg-stone-200 transition-colors cursor-default">
-                                Confirmado
+                          ) : !t.ignored && (
+                            <Badge className="bg-stone-100 text-stone-500 border-transparent font-medium rounded-full px-3 text-[11px]">
+                              Confirmado
                             </Badge>
-                        )}
+                          )}
+                          {t.ignored && (
+                            <Badge className="bg-stone-100 text-stone-400 border-transparent font-medium rounded-full px-3 text-[11px] line-through">
+                              Ignorado
+                            </Badge>
+                          )}
+                        </div>
                     </TableCell>
                   </TableRow>
                 );

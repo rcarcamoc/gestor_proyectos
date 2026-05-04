@@ -11,6 +11,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const householdId = searchParams.get('householdId');
+  const billingPeriodParam = searchParams.get('billingPeriod');
 
   if (!householdId) {
     return NextResponse.json({ error: 'Household ID required' }, { status: 400 });
@@ -22,16 +23,19 @@ export async function GET(request: Request) {
     include: { user: true }
   });
 
-  // 2. Get incomes for each member in the current month
+  // 2. Format billing period
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const currentPeriod = `${monthNames[now.getMonth()]} - ${now.getFullYear()}`;
+  const billingPeriod = billingPeriodParam || currentPeriod;
 
+  // 3. Get incomes for each member in the selected billing period
   const results = await Promise.all(members.map(async (m) => {
     const incomes = await prisma.transaction.aggregate({
       where: {
         userId: m.userId,
         type: 'INCOME',
-        date: { gte: startOfMonth }
+        billingPeriod
       },
       _sum: { amount: true }
     });
@@ -43,12 +47,12 @@ export async function GET(request: Request) {
     };
   }));
 
-  // 3. Get total household expenses (shared accounts)
+  // 4. Get total household expenses (shared accounts)
   const expenses = await prisma.transaction.aggregate({
     where: {
       householdId,
       type: 'EXPENSE',
-      date: { gte: startOfMonth }
+      billingPeriod
     },
     _sum: { amount: true }
   });

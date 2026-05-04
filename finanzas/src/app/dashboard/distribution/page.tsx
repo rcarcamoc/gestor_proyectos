@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
-import { formatBillingPeriod } from '@/lib/utils';
+import { formatBillingPeriod, getMonthOptions } from '@/lib/utils';
 
 export default function DistributionPage() {
   const { selectedScope } = useScope();
@@ -22,6 +22,8 @@ export default function DistributionPage() {
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
   const [salaryForm, setSalaryForm] = useState({ userId: '', amount: '', date: new Date().toISOString().split('T')[0] });
   const [addingSalary, setAddingSalary] = useState(false);
+
+  const [selectedPeriod, setSelectedPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
   useEffect(() => {
     setMounted(true);
@@ -33,12 +35,12 @@ export default function DistributionPage() {
     } else {
       setData(null);
     }
-  }, [selectedScope]);
+  }, [selectedScope, selectedPeriod]);
 
   const fetchDistribution = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/finanzas/api/distribution?householdId=${selectedScope}`);
+      const res = await fetch(`/finanzas/api/distribution?householdId=${selectedScope}&billingPeriod=${encodeURIComponent(selectedPeriod)}`);
       if (res.ok) setData(await res.json());
       else if (res.status === 401) toast.error("Sesión expirada");
     } catch (err) {
@@ -104,15 +106,29 @@ export default function DistributionPage() {
           <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Distribución de Gastos</h1>
           <p className="text-stone-500 mt-1.5 font-medium">Cálculo proporcional basado en los ingresos de la pareja.</p>
         </div>
-        {data && (
-          <Button 
-              className="bg-emerald-600 hover:bg-emerald-700 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
-              onClick={() => setIsSalaryModalOpen(true)}
-          >
-              <PlusCircle className="h-4 w-4 mr-2" />
-              Añadir Sueldo
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {mounted && (
+            <Select value={selectedPeriod} onValueChange={(val: string | null) => val && setSelectedPeriod(val)}>
+              <SelectTrigger className="w-[180px] rounded-2xl bg-white border-stone-200 shadow-sm h-10 font-medium">
+                <SelectValue placeholder="Seleccionar mes" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {getMonthOptions().map(opt => (
+                  <SelectItem key={opt.value} value={opt.value} className="rounded-xl">{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {data && (
+            <Button 
+                className="bg-emerald-600 hover:bg-emerald-700 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
+                onClick={() => setIsSalaryModalOpen(true)}
+            >
+                <PlusCircle className="h-4 w-4 mr-2" />
+                Añadir Sueldo
+            </Button>
+          )}
+        </div>
       </div>
 
       {!data && !loading && (
@@ -133,7 +149,7 @@ export default function DistributionPage() {
                   <Users className="h-5 w-5 mr-3 text-stone-500" />
                   Reparto por Integrante
                 </CardTitle>
-                <CardDescription className="text-stone-500 mt-1 font-medium">Basado en los ingresos registrados este mes.</CardDescription>
+                <CardDescription className="text-stone-500 mt-1 font-medium">Basado en los ingresos registrados en {selectedPeriod}.</CardDescription>
               </CardHeader>
               <CardContent className="p-8 space-y-12">
                 {data.distribution.map((m: any, index: number) => (

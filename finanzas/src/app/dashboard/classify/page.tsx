@@ -17,9 +17,9 @@ type Category = { id: string; name: string; color: string | null };
 
 const SOURCE_META: Record<string, { label: string; color: string }> = {
   keyword: { label: 'Reglas', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  ml:      { label: 'ML',     color: 'bg-violet-100 text-violet-700 border-violet-200' },
-  groq:    { label: 'IA',     color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  manual:  { label: 'Manual', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  ml: { label: 'ML', color: 'bg-violet-100 text-violet-700 border-violet-200' },
+  groq: { label: 'IA', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  manual: { label: 'Manual', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   needs_review: { label: 'Revisar', color: 'bg-rose-100 text-rose-700 border-rose-200' },
 };
 
@@ -35,19 +35,30 @@ function SwipeCard({
   const cardRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState({ x: 0, y: 0, dragging: false, startX: 0, startY: 0 });
   const [showEdit, setShowEdit] = useState(!tx.categoryId);
-  const [exiting, setExiting] = useState<'right'|'left'|null>(null);
+  const [exiting, setExiting] = useState<'right' | 'left' | null>(null);
 
-  const triggerExit = useCallback((dir: 'right'|'left') => {
+  const triggerExit = useCallback((dir: 'right' | 'left') => {
     setExiting(dir);
     setTimeout(() => { dir === 'right' ? onConfirm() : onSkip(); }, 350);
   }, [onConfirm, onSkip]);
+
+  const getSuggestions = () => {
+    const desc = (tx.description || '').toLowerCase();
+    const exactMatches = categories.filter(c => desc.includes(c.name.toLowerCase()));
+    const suggs = [...exactMatches];
+    for (const cat of categories) {
+      if (suggs.length >= 3) break;
+      if (!suggs.find(s => s.id === cat.id)) suggs.push(cat);
+    }
+    return suggs.slice(0, 3);
+  };
 
   // Keyboard shortcuts (only for top card)
   useEffect(() => {
     if (!isTop) return;
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight') triggerExit('right');
-      if (e.key === 'ArrowLeft')  triggerExit('left');
+      if (e.key === 'ArrowLeft') triggerExit('left');
       if (e.key === 'e' || e.key === 'E') setShowEdit(v => !v);
     };
     window.addEventListener('keydown', handler);
@@ -72,13 +83,13 @@ function SwipeCard({
   };
 
   const rotation = drag.x / 20;
-  const opacity  = Math.max(0, 1 - Math.abs(drag.x) / 300);
+  const opacity = Math.max(0, 1 - Math.abs(drag.x) / 300);
   const showRight = drag.x > 30;
-  const showLeft  = drag.x < -30;
+  const showLeft = drag.x < -30;
 
   let exitStyle = {};
   if (exiting === 'right') exitStyle = { transform: 'translateX(120%) rotate(20deg)', opacity: 0, transition: 'all 0.35s ease' };
-  if (exiting === 'left')  exitStyle = { transform: 'translateX(-120%) rotate(-20deg)', opacity: 0, transition: 'all 0.35s ease' };
+  if (exiting === 'left') exitStyle = { transform: 'translateX(-120%) rotate(-20deg)', opacity: 0, transition: 'all 0.35s ease' };
 
   const amt = Number(tx.amount);
   const isIncome = amt >= 0;
@@ -160,16 +171,35 @@ function SwipeCard({
 
           {/* Category selector (edit mode) */}
           {showEdit ? (
-            <div className="mt-auto space-y-2" onMouseDown={e => e.stopPropagation()}>
-              <p className="text-xs text-stone-400 font-semibold uppercase tracking-widest">Cambiar categoría</p>
+            <div className="mt-auto space-y-3" onMouseDown={e => e.stopPropagation()}>
+              <p className="text-xs text-stone-400 font-semibold uppercase tracking-widest text-center">Seleccionar categoría</p>
+              
+              <div className="grid grid-cols-3 gap-2">
+                {getSuggestions().map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => { onChangeCategory(s.id); setShowEdit(false); }}
+                    className="flex flex-col items-center justify-center p-2 rounded-xl bg-stone-50 border border-stone-200 hover:bg-stone-100 hover:border-stone-300 transition-colors shadow-sm"
+                  >
+                    {s.color && <span className="h-2 w-2 rounded-full mb-1.5" style={{ backgroundColor: s.color }} />}
+                    <span className="text-[10px] font-bold text-stone-700 text-center leading-tight">{s.name}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative pt-1 pb-1">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-stone-100" /></div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold"><span className="bg-white px-2 text-stone-300">O buscar todas</span></div>
+              </div>
+
               <Select onValueChange={(v: string | null) => { if (v) { onChangeCategory(v); setShowEdit(false); } }}>
-                <SelectTrigger className="w-full rounded-2xl border-stone-200 h-12 text-sm bg-stone-50">
-                  <SelectValue placeholder="Seleccionar categoría..." />
+                <SelectTrigger className="w-full rounded-xl border-stone-200 h-10 text-sm bg-stone-50 shadow-sm">
+                  <SelectValue placeholder="Ver todas las categorías..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl">
+                <SelectContent className="rounded-xl">
                   {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 font-medium">
                         {c.color && <span className="h-2.5 w-2.5 rounded-full inline-block" style={{ backgroundColor: c.color }} />}
                         {c.name}
                       </span>
@@ -177,9 +207,12 @@ function SwipeCard({
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="ghost" size="sm" className="w-full rounded-xl" onClick={() => setShowEdit(false)}>
-                Cancelar
-              </Button>
+
+              {tx.categoryId && (
+                <Button variant="ghost" size="sm" className="w-full rounded-xl" onClick={() => setShowEdit(false)}>
+                  Cancelar
+                </Button>
+              )}
             </div>
           ) : (
             <div className="mt-auto flex items-center justify-between pt-4 border-t border-stone-100">
@@ -203,17 +236,17 @@ function SwipeCard({
 // ─── Swipe Mode ──────────────────────────────────────────────────────────────
 function SwipeMode({ pending, categories, onExit, onUpdate }: {
   pending: PendingTx[]; categories: Category[];
-  onExit: () => void; onUpdate: (id: string, action: 'confirm'|'skip'|'delete'|'change', catId?: string) => void;
+  onExit: () => void; onUpdate: (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string) => void;
 }) {
   const [queue, setQueue] = useState([...pending]);
   const [confirmed, setConfirmed] = useState(0);
   const [skipped, setSkipped] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [loadingId, setLoadingId] = useState<string|null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const total = pending.length;
 
   const current = queue[0];
-  const next    = queue[1];
+  const next = queue[1];
 
   const handleConfirm = async () => {
     if (!current) return;
@@ -362,7 +395,7 @@ export default function ClassifyPage() {
   useEffect(() => {
     fetchAll();
     const interval = setInterval(() => {
-      fetch('/finanzas/api/ai/status').then(r => r.json()).then(setAiStatus).catch(() => {});
+      fetch('/finanzas/api/ai/status').then(r => r.json()).then(setAiStatus).catch(() => { });
     }, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -399,7 +432,7 @@ export default function ClassifyPage() {
     finally { setClassifying(false); }
   };
 
-  const handleSwipeUpdate = async (id: string, action: 'confirm'|'skip'|'delete'|'change', catId?: string) => {
+  const handleSwipeUpdate = async (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string) => {
     if (action === 'confirm') {
       const tx = pending.find(t => t.id === id);
       if (!tx || !tx.categoryId) return;
@@ -407,7 +440,7 @@ export default function ClassifyPage() {
       await fetch(`/finanzas/api/classify`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transactionId: id, categoryId: tx.categoryId }),
-      }).catch(() => {});
+      }).catch(() => { });
       setPending(p => p.filter(t => t.id !== id));
     } else if (action === 'change' && catId) {
       const res = await fetch('/finanzas/api/classify', {

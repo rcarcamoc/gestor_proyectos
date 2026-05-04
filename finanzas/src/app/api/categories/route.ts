@@ -23,7 +23,7 @@ export async function GET(req: Request) {
       },
       include: {
         _count: {
-          select: { transactions: { where: { userId } } }
+          select: { transactions: true }
         }
       }
     });

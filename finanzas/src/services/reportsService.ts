@@ -71,11 +71,11 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   const now = new Date(year, month - 1, 1);
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const endD = new Date(now.getFullYear(), now.getMonth() - i + 1, 0, 23, 59, 59);
+    const periodLabel = `${['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][d.getMonth()]} - ${d.getFullYear()}`;
 
     const groupWhere: any = {
       ignored: false,
-      date: { gte: d, lte: endD }
+      billingPeriod: periodLabel
     };
 
     if (householdId) {

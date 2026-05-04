@@ -65,7 +65,20 @@ export async function POST(req: Request) {
 
         if (rawAmount === undefined || rawDate === undefined) continue;
 
-        const amount = typeof rawAmount === 'number' ? rawAmount : parseFloat(String(rawAmount).replace(/[^0-9.-]+/g, ""));
+        const amount = typeof rawAmount === 'number' 
+            ? rawAmount 
+            : (() => {
+                // Handle Chilean locale: "4,470" = 4470 (comma = thousands separator)
+                // Also handles negative: "-70,147" = -70147
+                const str = String(rawAmount).trim();
+                const isNegative = str.startsWith('-');
+                // Remove dots used as thousands separators (European format)
+                // Remove commas used as thousands separators (Chilean/US format)
+                // Keep only digits, minus sign, and decimal point
+                const cleaned = str.replace(/\./g, '').replace(/,/g, '').replace(/[^0-9-]/g, '');
+                const parsed = parseInt(cleaned, 10);
+                return isNaN(parsed) ? NaN : parsed;
+            })();
         
         let date = new Date(rawDate);
         if (isNaN(date.getTime()) && typeof rawDate === 'string') {
@@ -90,14 +103,18 @@ export async function POST(req: Request) {
 
         // Banking rules for transaction type:
         // - Regular accounts (debit/current): positive = income, negative = expense
-        // - Credit cards: positive = cargo/gasto (EXPENSE), negative = abono/pago (INCOME)
+        // - Credit cards: positive = cargo/gasto (EXPENSE), negative = abono/reversa (INCOME)
+        // Also detect reversa/abono by description keyword
+        const descLower = (tx.description || '').toLowerCase();
+        const isReversa = descLower.includes('rev.') || descLower.includes('reversa') || descLower.includes('abono') || descLower.includes('devol');
+        
         let txType: string;
         if (account.type === 'CREDIT_CARD') {
-            txType = amount < 0 ? "INCOME" : "EXPENSE"; // negative = abono, positive = cargo
+            // Negative OR explicit reversa keywords = abono (INCOME)
+            txType = (amount < 0 || isReversa) ? "INCOME" : "EXPENSE";
         } else {
             txType = amount < 0 ? "EXPENSE" : "INCOME"; // standard rule
         }
-
         
         const absAmount = Math.abs(amount);
 

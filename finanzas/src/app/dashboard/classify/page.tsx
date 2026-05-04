@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 type Stats = { total: number; needsReview: number; trainingDataSize: number; bySource: Record<string, number> };
-type PendingTx = { id: string; description: string; amount: number; date: string; categorySource: string | null };
+type PendingTx = { id: string; description: string; amount: number; date: string; categoryId: string | null; categorySource: string | null; category?: Category | null; metadata?: any };
 type Category = { id: string; name: string; color: string | null };
 
 const SOURCE_META: Record<string, { label: string; color: string }> = {
@@ -34,7 +34,7 @@ function SwipeCard({
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState({ x: 0, y: 0, dragging: false, startX: 0, startY: 0 });
-  const [showEdit, setShowEdit] = useState(false);
+  const [showEdit, setShowEdit] = useState(!tx.categoryId);
   const [exiting, setExiting] = useState<'right'|'left'|null>(null);
 
   const triggerExit = useCallback((dir: 'right'|'left') => {
@@ -66,7 +66,7 @@ function SwipeCard({
     if (!drag.dragging) return;
     const { x } = drag;
     setDrag(d => ({ ...d, dragging: false }));
-    if (x > 80)       triggerExit('right');
+    if (x > 80 && tx.categoryId) triggerExit('right');
     else if (x < -80) triggerExit('left');
     else setDrag({ x: 0, y: 0, dragging: false, startX: 0, startY: 0 });
   };
@@ -103,7 +103,7 @@ function SwipeCard({
       <div className={`w-full h-full rounded-[2rem] bg-white shadow-2xl border overflow-hidden flex flex-col ${isTop ? 'border-stone-200' : 'border-stone-100'}`}>
 
         {/* Swipe overlays */}
-        {showRight && (
+        {showRight && tx.categoryId && (
           <div className="absolute inset-0 bg-emerald-400/20 rounded-[2rem] flex items-center justify-center z-10 pointer-events-none">
             <div className="bg-emerald-500 text-white font-bold text-2xl px-8 py-4 rounded-2xl rotate-[-8deg] shadow-lg">
               ✓ CONFIRMAR
@@ -139,7 +139,24 @@ function SwipeCard({
           {/* Description */}
           <div>
             <p className="text-stone-800 font-semibold text-xl leading-snug">{tx.description || '(sin descripción)'}</p>
+            {tx.metadata?.duplicate_type === 'PROBABLE' && (
+              <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold rounded-lg shadow-sm">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Posible duplicado (misma fecha y monto)
+              </div>
+            )}
           </div>
+
+          {/* Category Suggestion Display */}
+          {!showEdit && tx.category && (
+            <div className="text-center bg-stone-50 p-4 rounded-2xl border border-stone-100 flex flex-col items-center justify-center">
+              <p className="text-xs text-stone-400 font-bold uppercase tracking-widest mb-1">Categoría asignada por IA</p>
+              <div className="flex items-center gap-2">
+                {tx.category.color && <span className="h-3 w-3 rounded-full" style={{ backgroundColor: tx.category.color }} />}
+                <p className="text-2xl font-serif text-stone-800">{tx.category.name}</p>
+              </div>
+            </div>
+          )}
 
           {/* Category selector (edit mode) */}
           {showEdit ? (
@@ -149,7 +166,7 @@ function SwipeCard({
                 <SelectTrigger className="w-full rounded-2xl border-stone-200 h-12 text-sm bg-stone-50">
                   <SelectValue placeholder="Seleccionar categoría..." />
                 </SelectTrigger>
-                <SelectContent className="rounded-2xl max-h-[250px]">
+                <SelectContent className="rounded-2xl">
                   {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>
                       <span className="flex items-center gap-2">
@@ -384,10 +401,12 @@ export default function ClassifyPage() {
 
   const handleSwipeUpdate = async (id: string, action: 'confirm'|'skip'|'delete'|'change', catId?: string) => {
     if (action === 'confirm') {
+      const tx = pending.find(t => t.id === id);
+      if (!tx || !tx.categoryId) return;
       // Already confirmed by AI — just mark as manual
       await fetch(`/finanzas/api/classify`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId: id, categoryId: pending.find(t => t.id === id)?.categorySource }),
+        body: JSON.stringify({ transactionId: id, categoryId: tx.categoryId }),
       }).catch(() => {});
       setPending(p => p.filter(t => t.id !== id));
     } else if (action === 'change' && catId) {

@@ -129,8 +129,15 @@ export async function POST(req: Request) {
             accountId: accountId
         });
 
-        const status = duplicate ? "PENDING_REVIEW" : "CONFIRMED";
-        if (duplicate) results.duplicates++;
+        if (duplicate?.type === 'EXACT') {
+            results.duplicates++;
+            continue; // Completely omit exact duplicates
+        }
+
+        const isProbable = duplicate?.type === 'PROBABLE';
+        const status = isProbable ? "PENDING_REVIEW" : "CONFIRMED";
+        
+        if (isProbable) results.duplicates++;
         else results.imported++;
 
         const newTx: any = {
@@ -150,7 +157,7 @@ export async function POST(req: Request) {
             cardType: tx.cardType ? String(tx.cardType).split(' ')[0] : null,
             metadata: {
                 ...(tx.metadata || {}),
-                duplicate_type: duplicate ? (duplicate as any).type : null
+                duplicate_type: isProbable ? 'PROBABLE' : null
             }
         };
 
@@ -160,7 +167,11 @@ export async function POST(req: Request) {
         let catSource: string = categoryId ? 'manual' : 'none';
         let confidence: number | null = null;
 
-        if (!categoryId) {
+        // If it's a probable duplicate, force it to 'needs_review' and skip auto-classification
+        if (isProbable) {
+            categoryId = null;
+            catSource = 'needs_review';
+        } else if (!categoryId) {
             categoryId = categorizeByKeywords(newTx.description, categories);
             if (categoryId) { catSource = 'keyword'; confidence = 1.0; results.keywordCategorized++; }
         }

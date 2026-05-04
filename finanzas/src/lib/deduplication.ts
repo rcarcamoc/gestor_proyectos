@@ -22,7 +22,8 @@ export async function findDuplicate(data: {
   const endDate = new Date(data.date);
   endDate.setDate(endDate.getDate() + 1);
 
-  const probable = await prisma.transaction.findFirst({
+  // Get all transactions in that window with the same amount
+  const candidates = await prisma.transaction.findMany({
     where: {
       accountId: data.accountId,
       amount: data.amount,
@@ -33,9 +34,18 @@ export async function findDuplicate(data: {
     }
   });
 
-  if (probable) return { type: 'PROBABLE', transaction: probable };
+  if (candidates.length === 0) return null;
 
-  return null;
+  // Check if any candidate has the exact same description
+  const cleanDesc = (data.description || '').toLowerCase().trim();
+  const exactDescMatch = candidates.find(c => (c.description || '').toLowerCase().trim() === cleanDesc);
+
+  if (exactDescMatch) {
+    return { type: 'EXACT', transaction: exactDescMatch };
+  }
+
+  // If amount and date match, but description is different, it's a PROBABLE duplicate
+  return { type: 'PROBABLE', transaction: candidates[0] };
 }
 
 export function generateRowHash(row: any) {

@@ -102,7 +102,7 @@ export async function GET(req: Request) {
         OR: [
           ...(whereFilter.OR || []),
           { categoryId: null },
-          { categorySource: 'needs_review' }
+          { categorySource: { not: 'manual' } }
         ]
       };
     }

@@ -65,16 +65,17 @@ export async function POST(req: Request) {
 
         if (rawAmount === undefined || rawDate === undefined) continue;
 
+        // Skip credit card payment entries completely
+        const descUpper = (tx.description || '').trim().toUpperCase();
+        if (descUpper === 'MONTO CANCELADO') {
+            results.total--;
+            continue;
+        }
+
         const amount = typeof rawAmount === 'number' 
             ? rawAmount 
             : (() => {
-                // Handle Chilean locale: "4,470" = 4470 (comma = thousands separator)
-                // Also handles negative: "-70,147" = -70147
                 const str = String(rawAmount).trim();
-                const isNegative = str.startsWith('-');
-                // Remove dots used as thousands separators (European format)
-                // Remove commas used as thousands separators (Chilean/US format)
-                // Keep only digits, minus sign, and decimal point
                 const cleaned = str.replace(/\./g, '').replace(/,/g, '').replace(/[^0-9-]/g, '');
                 const parsed = parseInt(cleaned, 10);
                 return isNaN(parsed) ? NaN : parsed;
@@ -82,15 +83,11 @@ export async function POST(req: Request) {
         
         let date = new Date(rawDate);
         if (isNaN(date.getTime()) && typeof rawDate === 'string') {
-            // Attempt to parse dd-mm-yyyy or dd/mm/yyyy
             const parts = rawDate.split(/[-/]/);
             if (parts.length === 3) {
-                // If it looks like dd-mm-yyyy
                 if (parts[2].length === 4) {
                     date = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00Z`);
-                } 
-                // If it looks like yyyy-mm-dd
-                else if (parts[0].length === 4) {
+                } else if (parts[0].length === 4) {
                     date = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T12:00:00Z`);
                 }
             }
@@ -101,28 +98,26 @@ export async function POST(req: Request) {
             continue;
         }
 
-        // Banking rules for transaction type:
-        // - Regular accounts (debit/current): positive = income, negative = expense
-        // - Credit cards: positive = cargo/gasto (EXPENSE), negative = abono/reversa (INCOME)
-        // Also detect reversa/abono by description keyword
-        const descLower = (tx.description || '').toLowerCase();
-        const isReversa = descLower.includes('rev.') || descLower.includes('reversa') || descLower.includes('abono') || descLower.includes('devol');
-        
+        // Apply Android Credit Card methodology:
+        // - Credit card transactions are always EXPENSE.
+        // - Amount retains its original sign (positive for charge/gasto, negative for abono/reversa).
+        // - Checking/debit accounts follow standard rule (negative statement amount = EXPENSE, positive = INCOME).
         let txType: string;
+        let finalAmount: number;
+
         if (account.type === 'CREDIT_CARD') {
-            // Negative OR explicit reversa keywords = abono (INCOME)
-            txType = (amount < 0 || isReversa) ? "INCOME" : "EXPENSE";
+            txType = "EXPENSE";
+            finalAmount = amount;
         } else {
-            txType = amount < 0 ? "EXPENSE" : "INCOME"; // standard rule
+            txType = amount < 0 ? "EXPENSE" : "INCOME";
+            finalAmount = Math.abs(amount);
         }
-        
-        const absAmount = Math.abs(amount);
 
         const externalId = tx.externalId || generateRowHash(tx);
 
         // Find duplicate
         const duplicate = await findDuplicate({
-            amount: absAmount,
+            amount: finalAmount,
             date,
             description: tx.description,
             externalId,
@@ -131,7 +126,7 @@ export async function POST(req: Request) {
 
         if (duplicate?.type === 'EXACT') {
             results.duplicates++;
-            continue; // Completely omit exact duplicates
+            continue;
         }
 
         const isProbable = duplicate?.type === 'PROBABLE';
@@ -141,7 +136,7 @@ export async function POST(req: Request) {
         else results.imported++;
 
         const newTx: any = {
-            amount: absAmount,
+            amount: finalAmount,
             currency: account.currency,
             date,
             type: txType as any,
@@ -161,13 +156,11 @@ export async function POST(req: Request) {
             }
         };
 
-        // --- CASCADE DE CLASIFICACIÓN ---
-        // Capa 1: Keywords (instantáneo, sin IA)
+        // --- CLASSIFICATION CASCADE ---
         let categoryId: string | null = tx.categoryId || null;
         let catSource: string = categoryId ? 'manual' : 'none';
         let confidence: number | null = null;
 
-        // If it's a probable duplicate, force it to 'needs_review' and skip auto-classification
         if (isProbable) {
             categoryId = null;
             catSource = 'needs_review';
@@ -176,7 +169,6 @@ export async function POST(req: Request) {
             if (categoryId) { catSource = 'keyword'; confidence = 1.0; results.keywordCategorized++; }
         }
 
-        // Capa 2: Naive Bayes ML (aprende del historial del usuario, cero costo)
         if (!categoryId) {
             const mlResult = mlPredictor(newTx.description);
             if (mlResult.categoryId) {
@@ -187,8 +179,6 @@ export async function POST(req: Request) {
             }
         }
 
-        // Capa 3: Groq LLM (solo si las capas anteriores fallaron — mínimo de llamadas)
-        // Se acumula para procesar en batch al final (más eficiente)
         if (!categoryId) {
             groqBatch.push({ txIndex: transactionsToCreate.length, description: newTx.description, amount: newTx.amount });
         }
@@ -200,8 +190,6 @@ export async function POST(req: Request) {
         transactionsToCreate.push(newTx);
     }
 
-    // Capa 3: Procesar batch de Groq (solo transacciones que llegaron hasta aquí)
-    // NO se ejecuta en dry run para ahorrar costos de API
     if (!dryRun && groqBatch.length > 0 && process.env.GROQ_API_KEY) {
         const aiSuggestions = await categorizeTransactionsBatch(
             groqBatch.map(t => ({ description: t.description, amount: t.amount })),
@@ -218,17 +206,15 @@ export async function POST(req: Request) {
             if (category) {
                 transactionsToCreate[originalIndex].categoryId = category.id;
                 transactionsToCreate[originalIndex].categorySource = 'groq';
-                transactionsToCreate[originalIndex].aiConfidence = 0.8; // Groq default confidence
+                transactionsToCreate[originalIndex].aiConfidence = 0.8;
                 results.aiCategorized++;
             } else {
-                // Groq no pudo clasificar → pedir asistencia al usuario
                 transactionsToCreate[originalIndex].categorySource = 'needs_review';
                 transactionsToCreate[originalIndex].aiConfidence = null;
             }
         });
     }
 
-    // Sin API key o en dry run → marcar como needs_review las que quedaron sin categoría
     if (groqBatch.length > 0) {
         groqBatch.forEach(({ txIndex }) => {
             const tx = transactionsToCreate[txIndex];
@@ -239,9 +225,21 @@ export async function POST(req: Request) {
     }
 
     if (!dryRun && transactionsToCreate.length > 0) {
-        await prisma.transaction.createMany({
-            data: transactionsToCreate
-        });
+        // Calculate net balance change
+        const netBalanceChange = transactionsToCreate.reduce((sum, tx) => {
+            const multiplier = tx.type === 'INCOME' ? 1 : -1;
+            return sum + Number(tx.amount) * multiplier;
+        }, 0);
+
+        await prisma.$transaction([
+            prisma.transaction.createMany({
+                data: transactionsToCreate
+            }),
+            prisma.account.update({
+                where: { id: accountId },
+                data: { balance: { increment: netBalanceChange } }
+            })
+        ]);
     }
 
     return NextResponse.json(results);

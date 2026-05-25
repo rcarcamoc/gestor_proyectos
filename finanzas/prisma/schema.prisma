@@ -26,6 +26,7 @@ model User {
   telegramUser  TelegramUser?
   transactions  Transaction[] @relation("owner")
   createdTransactions Transaction[] @relation("creator")
+  emailAccounts EmailAccount[]
 }
 
 model Household {
@@ -92,6 +93,7 @@ model Account {
   user          User?       @relation(fields: [userId], references: [id])
   household     Household?  @relation(fields: [householdId], references: [id])
   transactions  Transaction[]
+  emailAccounts EmailAccount[]
 }
 
 model Category {
@@ -215,4 +217,26 @@ model TelegramUser {
   createdAt     DateTime  @default(now())
 
   user          User      @relation(fields: [userId], references: [id])
+}
+
+model EmailAccount {
+  id          String    @id @default(cuid())
+  email       String    @unique
+  password    String
+  host        String
+  port        Int
+  secure      Boolean   @default(true)
+  protocol    String    @default("IMAP") // IMAP or POP3
+  isActive    Boolean   @default(true)
+  lastSync    DateTime?
+  userId      String
+  accountId   String
+
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([accountId])
 }

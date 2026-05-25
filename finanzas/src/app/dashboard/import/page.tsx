@@ -13,7 +13,13 @@ import {
   Info,
   Loader2,
   Table as TableIcon,
-  Wallet
+  Wallet,
+  Mail,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  ShieldCheck,
+  Inbox
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -60,12 +66,30 @@ export default function ImportPage() {
   const [duplicates, setDuplicates] = useState<number>(0);
   const [billingPeriod, setBillingPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
-  // Fetch accounts and profiles on mount
+  // Email Sync state
+  const [emailPanelOpen, setEmailPanelOpen] = useState(false);
+  const [emailConfig, setEmailConfig] = useState({
+    email: 'recibemail@recc.001webhospedaje.com',
+    password: 'chuchuG@to',
+    host: 'mail.recc.001webhospedaje.com',
+    port: 993,
+    secure: true,
+    protocol: 'IMAP',
+    accountId: '',
+    isActive: true
+  });
+  const [emailConfigId, setEmailConfigId] = useState<string | null>(null);
+  const [emailLastSync, setEmailLastSync] = useState<string | null>(null);
+  const [emailLoading, setEmailLoading] = useState(false);
+  const [syncResult, setSyncResult] = useState<{ emailsRead: number; importedCount: number } | null>(null);
+
+  // Fetch accounts, profiles, and email config on mount
   useEffect(() => {
     Promise.all([
         fetch('/finanzas/api/accounts?all=true').then(res => res.json()),
-        fetch('/finanzas/api/import/profile').then(res => res.json())
-    ]).then(([accountsData, profilesData]) => {
+        fetch('/finanzas/api/import/profile').then(res => res.json()),
+        fetch('/finanzas/api/import/email').then(res => res.json())
+    ]).then(([accountsData, profilesData, emailData]) => {
         if (Array.isArray(accountsData)) {
             setAccounts(accountsData);
             if (accountsData.length > 0) setAccountId(accountsData[0].id);
@@ -73,8 +97,67 @@ export default function ImportPage() {
         if (Array.isArray(profilesData)) {
             setProfiles(profilesData);
         }
+        if (emailData && emailData.id) {
+            setEmailConfigId(emailData.id);
+            setEmailLastSync(emailData.lastSync);
+            setEmailConfig(prev => ({
+              ...prev,
+              email: emailData.email || prev.email,
+              host: emailData.host || prev.host,
+              port: emailData.port || prev.port,
+              secure: emailData.secure ?? prev.secure,
+              protocol: emailData.protocol || prev.protocol,
+              accountId: emailData.accountId || prev.accountId,
+              isActive: emailData.isActive ?? prev.isActive,
+            }));
+        }
     }).catch(console.error);
   }, []);
+
+  const handleSaveEmailConfig = async () => {
+    if (!emailConfig.accountId) return toast.error("Selecciona una cuenta de destino para el correo");
+    setEmailLoading(true);
+    try {
+      const res = await fetch('/finanzas/api/import/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailConfig)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEmailConfigId(data.id);
+        toast.success("Configuración de correo guardada");
+      } else {
+        const err = await res.json();
+        toast.error(err.message || "Error al guardar la configuración");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
+
+  const handleEmailSync = async () => {
+    if (!emailConfigId) return toast.error("Primero guarda la configuración de correo");
+    setEmailLoading(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/finanzas/api/import/email/sync', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult({ emailsRead: data.emailsRead, importedCount: data.importedCount });
+        setEmailLastSync(new Date().toISOString());
+        toast.success(`Sincronización completa: ${data.importedCount} transacciones importadas`);
+      } else {
+        toast.error(data.message || "Error en sincronización");
+      }
+    } catch {
+      toast.error("Error de conexión");
+    } finally {
+      setEmailLoading(false);
+    }
+  };
 
   const handleProfileChange = (id: string) => {
     setSelectedProfile(id);
@@ -497,6 +580,152 @@ export default function ImportPage() {
               </div>
           </div>
       )}
+
+      {/* Email Sync Section */}
+      <div className="rounded-3xl border border-stone-200/60 shadow-sm overflow-hidden">
+        {/* Header / Toggle */}
+        <button
+          onClick={() => setEmailPanelOpen(o => !o)}
+          className="w-full flex items-center justify-between p-6 sm:p-8 bg-white hover:bg-stone-50/60 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shrink-0">
+              <Mail className="h-6 w-6 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-stone-800 tracking-tight text-lg">Sincronización por Correo</p>
+              <p className="text-sm text-stone-500 font-medium mt-0.5">
+                {emailConfigId
+                  ? emailLastSync
+                    ? `Última sync: ${new Date(emailLastSync).toLocaleString('es-CL')}`
+                    : 'Configurado · Sin sync aún'
+                  : 'Recibe notificaciones bancarias automáticamente'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {emailConfigId && (
+              <span className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1">
+                <ShieldCheck className="h-3.5 w-3.5" /> Activo
+              </span>
+            )}
+            {emailPanelOpen ? <ChevronUp className="h-5 w-5 text-stone-400" /> : <ChevronDown className="h-5 w-5 text-stone-400" />}
+          </div>
+        </button>
+
+        {emailPanelOpen && (
+          <div className="border-t border-stone-100/60 bg-stone-50/30 p-6 sm:p-8 space-y-8">
+            {/* Sync Result Banner */}
+            {syncResult && (
+              <div className="flex items-start gap-4 p-5 bg-emerald-50/80 border border-emerald-200/60 rounded-2xl">
+                <Inbox className="h-6 w-6 text-emerald-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="font-semibold text-emerald-800">Sincronización exitosa</p>
+                  <p className="text-sm text-emerald-700 mt-1">
+                    {syncResult.emailsRead} correos leídos · {syncResult.importedCount} transacciones importadas
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Config Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2 sm:col-span-2">
+                <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Cuenta de correo bancario</Label>
+                <input
+                  type="email"
+                  className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                  value={emailConfig.email}
+                  onChange={e => setEmailConfig(p => ({ ...p, email: e.target.value }))}
+                  placeholder="correo@banco.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Contraseña</Label>
+                <input
+                  type="password"
+                  className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                  value={emailConfig.password}
+                  onChange={e => setEmailConfig(p => ({ ...p, password: e.target.value }))}
+                  placeholder="Contraseña"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Cuenta financiera destino</Label>
+                <Select value={emailConfig.accountId} onValueChange={val => setEmailConfig(p => ({ ...p, accountId: val }))}>
+                  <SelectTrigger className="w-full rounded-xl border-stone-200 h-11 text-sm bg-white shadow-sm">
+                    <SelectValue placeholder="Seleccionar cuenta" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-stone-200 shadow-xl">
+                    {accounts.map(acc => (
+                      <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Servidor IMAP</Label>
+                <input
+                  type="text"
+                  className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                  value={emailConfig.host}
+                  onChange={e => setEmailConfig(p => ({ ...p, host: e.target.value }))}
+                  placeholder="mail.tudominio.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Puerto</Label>
+                <div className="flex gap-3">
+                  <input
+                    type="number"
+                    className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                    value={emailConfig.port}
+                    onChange={e => setEmailConfig(p => ({ ...p, port: Number(e.target.value) }))}
+                    placeholder="993"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setEmailConfig(p => ({ ...p, secure: !p.secure }))}
+                    className={`flex items-center gap-2 px-4 rounded-xl border text-xs font-bold tracking-widest uppercase transition-all shrink-0 ${
+                      emailConfig.secure
+                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                        : 'bg-stone-50 border-stone-200 text-stone-500'
+                    }`}
+                  >
+                    <ShieldCheck className="h-4 w-4" />
+                    SSL
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={handleSaveEmailConfig}
+                disabled={emailLoading}
+                className="rounded-xl h-11 px-6 border-stone-200/60 shadow-sm flex-1 sm:flex-none"
+              >
+                {emailLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Settings2 className="h-4 w-4 mr-2" />}
+                Guardar Configuración
+              </Button>
+              <Button
+                onClick={handleEmailSync}
+                disabled={emailLoading || !emailConfigId}
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-xl h-11 px-8 shadow-md transition-all flex-1 sm:flex-none"
+              >
+                {emailLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                Sincronizar Ahora
+              </Button>
+            </div>
+
+            <p className="text-xs text-stone-400 leading-relaxed">
+              <strong>Protocolo:</strong> IMAP con SSL/TLS · Los correos procesados se marcan como leídos y no se importarán de nuevo.
+            </p>
+          </div>
+        )}
+      </div>
 
       <div className="bg-stone-50/50 p-6 sm:p-8 rounded-3xl flex items-start border border-stone-100/60 shadow-sm">
           <Info className="h-6 w-6 text-stone-400 mr-4 mt-0.5 shrink-0" />

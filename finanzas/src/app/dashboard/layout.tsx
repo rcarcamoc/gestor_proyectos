@@ -15,7 +15,9 @@ import {
   TrendingUp,
   Tags,
   Brain,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -54,6 +56,20 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { selectedScope, setSelectedScope } = useScope();
   const [households, setHouseholds] = useState<any[]>([]);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('zen_sidebar_collapsed');
+    if (stored !== null) {
+      setIsCollapsed(stored === 'true');
+    }
+  }, []);
+
+  const toggleCollapse = () => {
+    const nextState = !isCollapsed;
+    setIsCollapsed(nextState);
+    localStorage.setItem('zen_sidebar_collapsed', String(nextState));
+  };
 
   useEffect(() => {
     fetch('/finanzas/api/households')
@@ -88,25 +104,52 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="zen-bg min-h-screen">
       {/* ── Desktop Sidebar ── */}
-      <aside className="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-64 md:flex-col z-30">
+      <aside className={cn(
+        "hidden md:fixed md:inset-y-0 md:left-0 md:flex md:flex-col z-30 transition-all duration-300",
+        isCollapsed ? "w-20" : "w-64"
+      )}>
         <div className="zen-sidebar flex flex-col h-full py-6 px-3">
           {/* Logo */}
-          <div className="flex items-center justify-between px-4 mb-8">
+          <div className={cn(
+            "flex items-center justify-between px-4 mb-8",
+            isCollapsed && "flex-col gap-4 px-2"
+          )}>
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 flex items-center justify-center shadow-lg flex-shrink-0">
                 <span className="font-serif text-white text-lg leading-none">Z</span>
               </div>
-              <div>
-                <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Zen</p>
-                <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Finanzas</p>
-              </div>
+              {!isCollapsed && (
+                <div className="animate-in fade-in duration-300">
+                  <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Zen</p>
+                  <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Finanzas</p>
+                </div>
+              )}
             </div>
+            <button 
+              onClick={toggleCollapse} 
+              className={cn(
+                "p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors hidden md:block",
+                isCollapsed && "mt-1"
+              )}
+              title={isCollapsed ? "Expandir menú" : "Colapsar menú"}
+            >
+              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
           </div>
           
-          <div className="px-4 mb-6">
+          <div className={cn("mb-6", isCollapsed ? "px-1" : "px-4")}>
             <Select value={selectedScope} onValueChange={(v) => v && setSelectedScope(v)}>
-              <SelectTrigger className="w-full rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm font-semibold text-stone-700">
+              <SelectTrigger className={cn(
+                "w-full rounded-2xl border-stone-200 bg-white shadow-sm text-sm font-semibold text-stone-700 transition-all",
+                isCollapsed ? "h-10 p-0 flex items-center justify-center" : "h-10"
+              )}>
+                {isCollapsed ? (
+                  <span className="w-8 h-8 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center text-xs uppercase font-bold">
+                    {selectedScope === 'personal' ? 'P' : (households.find(h => h.id === selectedScope)?.name?.[0] || 'V')}
+                  </span>
+                ) : (
                   <SelectValue placeholder="Vista" />
+                )}
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
                   <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
@@ -125,19 +168,24 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.name}
                   href={item.href}
+                  title={isCollapsed ? item.name : undefined}
                   className={cn(
                     'nav-link group',
-                    active && 'active'
+                    active && 'active',
+                    isCollapsed && 'justify-center px-0'
                   )}
                 >
                   <div className={cn(
                     'p-1.5 rounded-xl transition-colors flex-shrink-0',
-                    active ? 'bg-stone-100 text-stone-700' : 'text-stone-400 group-hover:text-stone-600'
+                    active ? 'bg-stone-100 text-stone-700' : 'text-stone-400 group-hover:text-stone-600',
+                    isCollapsed && 'mx-auto'
                   )}>
                     <item.icon className="h-4 w-4" />
                   </div>
-                  <span>{item.name}</span>
-                  {active && (
+                  {!isCollapsed && (
+                    <span className="animate-in fade-in duration-300">{item.name}</span>
+                  )}
+                  {active && !isCollapsed && (
                     <div className="ml-auto w-1.5 h-1.5 rounded-full bg-stone-400" />
                   )}
                 </Link>
@@ -149,12 +197,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="mt-4 pt-4 border-t border-stone-200/50">
             <button
               onClick={() => signOut({ callbackUrl: '/finanzas/login' })}
-              className="nav-link w-full text-left text-rose-400 hover:text-rose-600 hover:bg-rose-50 group"
+              className={cn(
+                "nav-link w-full text-left text-rose-400 hover:text-rose-600 hover:bg-rose-50 group",
+                isCollapsed && "justify-center px-0"
+              )}
+              title={isCollapsed ? "Cerrar Sesión" : undefined}
             >
               <div className="p-1.5 rounded-xl text-rose-300 group-hover:text-rose-500 transition-colors flex-shrink-0">
                 <LogOut className="h-4 w-4" />
               </div>
-              Cerrar Sesión
+              {!isCollapsed && <span className="animate-in fade-in duration-300">Cerrar Sesión</span>}
             </button>
           </div>
         </div>
@@ -187,8 +239,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* ── Main Content ── */}
-      <main className="md:pl-64">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+      <main className={cn(
+        "transition-all duration-300",
+        isCollapsed ? "md:pl-20" : "md:pl-64"
+      )}>
+        <div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </div>
       </main>

@@ -325,7 +325,7 @@ export default function ImportPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="w-full space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="text-center">
         <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Importar Datos</h1>
         <p className="text-stone-500 mt-2 font-medium">Carga tus estados de cuenta de forma inteligente.</p>

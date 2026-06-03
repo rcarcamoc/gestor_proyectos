@@ -98,6 +98,11 @@ export default function TransactionsPage() {
   const [deletePeriod, setDeletePeriod] = useState(formatBillingPeriod(new Date()));
   const [accounts, setAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [selectedPeriodFilter, setSelectedPeriodFilter] = useState<string>(formatBillingPeriod(new Date()));
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState<string>('ALL');
+  const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('ALL');
+  const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
     fetchTransactions();
@@ -275,9 +280,18 @@ export default function TransactionsPage() {
   const filteredTransactions = transactions.filter(t => {
     const matchesSearch = t.description?.toLowerCase().includes(search.toLowerCase()) ||
                          t.category?.name.toLowerCase().includes(search.toLowerCase());
-    if (activeTab === 'pending') return matchesSearch && t.status === 'PENDING_REVIEW' && !t.ignored;
-    if (activeTab === 'ignored') return matchesSearch && t.ignored;
-    return matchesSearch && !t.ignored;
+    const matchesPeriod = selectedPeriodFilter === 'ALL' || t.billingPeriod === selectedPeriodFilter;
+    const matchesCategory = selectedCategoryFilter === 'ALL' || t.categoryId === selectedCategoryFilter;
+    const matchesAccount = selectedAccountFilter === 'ALL' || t.accountId === selectedAccountFilter;
+    const matchesType = selectedTypeFilter === 'ALL' || t.type === selectedTypeFilter;
+
+    if (!matchesSearch || !matchesPeriod || !matchesCategory || !matchesAccount || !matchesType) {
+      return false;
+    }
+
+    if (activeTab === 'pending') return t.status === 'PENDING_REVIEW' && !t.ignored;
+    if (activeTab === 'ignored') return t.ignored;
+    return !t.ignored;
   });
 
   const pendingCount = transactions.filter(t => t.status === 'PENDING_REVIEW' && !t.ignored).length;
@@ -287,7 +301,7 @@ export default function TransactionsPage() {
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Transacciones</h1>
@@ -360,23 +374,96 @@ export default function TransactionsPage() {
       </div>
 
       <Card className="border-stone-100/50 shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-shadow duration-300">
-        <CardHeader className="border-b border-stone-100/60 bg-stone-50/50 py-4 px-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
-              <Input 
-                placeholder="Buscar por descripción o categoría..." 
-                className="pl-10 bg-white border-stone-200/60 rounded-full h-10 shadow-sm focus-visible:ring-stone-200"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+        <CardHeader className="border-b border-stone-100/60 bg-stone-50/50 py-5 px-6">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+                <Input 
+                  placeholder="Buscar por descripción o categoría..." 
+                  className="pl-10 bg-white border-stone-200/60 rounded-full h-10 shadow-sm focus-visible:ring-stone-200"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex gap-2">
+                  <Button 
+                    variant={showFilters ? "secondary" : "outline"} 
+                    className="rounded-full border-stone-200/60 text-stone-600 hover:bg-stone-50"
+                    onClick={() => setShowFilters(!showFilters)}
+                  >
+                      <Filter className="h-4 w-4 mr-2" />
+                      Filtros
+                  </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-                <Button variant="outline" className="rounded-full border-stone-200/60 text-stone-600 hover:bg-stone-50">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filtros
-                </Button>
-            </div>
+
+            {showFilters && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-stone-100/60 animate-in slide-in-from-top-2 duration-300">
+                {/* Period Filter */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Periodo</span>
+                  <Select value={selectedPeriodFilter} onValueChange={(val) => setSelectedPeriodFilter(val || 'ALL')}>
+                    <SelectTrigger className="w-full bg-white border-stone-200/60 rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Todos los periodos" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="ALL">Todos los periodos</SelectItem>
+                      {getMonthOptions().map(opt => (
+                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Category Filter */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Categoría</span>
+                  <Select value={selectedCategoryFilter} onValueChange={(val) => setSelectedCategoryFilter(val || 'ALL')}>
+                    <SelectTrigger className="w-full bg-white border-stone-200/60 rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Todas las categorías" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="ALL">Todas las categorías</SelectItem>
+                      {categories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Account Filter */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Cuenta</span>
+                  <Select value={selectedAccountFilter} onValueChange={(val) => setSelectedAccountFilter(val || 'ALL')}>
+                    <SelectTrigger className="w-full bg-white border-stone-200/60 rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Todas las cuentas" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="ALL">Todas las cuentas</SelectItem>
+                      {accounts.map(acc => (
+                        <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Type Filter */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Tipo</span>
+                  <Select value={selectedTypeFilter} onValueChange={(val) => setSelectedTypeFilter(val || 'ALL')}>
+                    <SelectTrigger className="w-full bg-white border-stone-200/60 rounded-xl h-9 text-xs">
+                      <SelectValue placeholder="Todos los tipos" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="ALL">Todos los tipos</SelectItem>
+                      <SelectItem value="EXPENSE">Gastos</SelectItem>
+                      <SelectItem value="INCOME">Ingresos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent className="p-0">

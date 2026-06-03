@@ -100,7 +100,7 @@ export default function DistributionPage() {
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-7xl mx-auto">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 w-full">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl sm:text-4xl font-serif text-stone-800 tracking-tight">Distribución de Gastos</h1>

@@ -652,7 +652,7 @@ export default function ImportPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Cuenta financiera destino</Label>
-                <Select value={emailConfig.accountId} onValueChange={val => setEmailConfig(p => ({ ...p, accountId: val }))}>
+                <Select value={emailConfig.accountId} onValueChange={val => setEmailConfig(p => ({ ...p, accountId: val ?? '' }))}>
                   <SelectTrigger className="w-full rounded-xl border-stone-200 h-11 text-sm bg-white shadow-sm">
                     <SelectValue placeholder="Seleccionar cuenta" />
                   </SelectTrigger>

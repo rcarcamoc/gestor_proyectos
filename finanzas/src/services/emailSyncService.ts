@@ -44,8 +44,9 @@ export async function syncEmailAccount(emailAccountId: string): Promise<SyncResu
     const lock = await client.getMailboxLock('INBOX');
 
     try {
-      // Find all unread messages
-      const messages = await client.search({ unseen: true });
+      // Find all unread messages (seen: false = unread)
+      const searchResult = await client.search({ seen: false });
+      const messages: number[] = Array.isArray(searchResult) ? searchResult : [];
       emailsRead = messages.length;
 
       for (const seq of messages) {

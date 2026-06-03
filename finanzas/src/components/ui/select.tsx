@@ -6,7 +6,41 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+function Select<Value, Multiple extends boolean | undefined = false>({
+  children,
+  items,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const extractedItems = React.useMemo(() => {
+    if (items) return items;
+    const found: Array<{ value: any; label: React.ReactNode }> = [];
+    function traverse(node: React.ReactNode) {
+      if (!node) return;
+      if (React.isValidElement(node)) {
+        const p = node.props as any;
+        if (p && p.value !== undefined) {
+          found.push({
+            value: p.value,
+            label: p.children,
+          });
+        }
+        if (p && p.children) {
+          React.Children.forEach(p.children, traverse);
+        }
+      } else if (Array.isArray(node)) {
+        node.forEach(traverse);
+      }
+    }
+    React.Children.forEach(children, traverse);
+    return found;
+  }, [children, items]);
+
+  return (
+    <SelectPrimitive.Root items={extractedItems} {...props}>
+      {children}
+    </SelectPrimitive.Root>
+  );
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (

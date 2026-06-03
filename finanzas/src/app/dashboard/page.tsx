@@ -11,7 +11,8 @@ import {
   Sparkles, 
   AlertCircle, 
   CheckCircle2, 
-  PieChart as PieChartIcon 
+  PieChart as PieChartIcon,
+  Activity
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn, getMonthOptions, formatBillingPeriod } from '@/lib/utils';
@@ -138,7 +139,7 @@ export default function DashboardPage() {
       ) : stats ? (
         <>
           {/* KPIs */}
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <StatCard
               icon={Wallet}
               iconBg="bg-indigo-50"
@@ -162,6 +163,14 @@ export default function DashboardPage() {
               label="Ingresos del Mes"
               value={fmt(stats.totalIncome)}
               subtitle={`Meta de ahorro: ${fmt(Math.max(0, stats.totalIncome - stats.totalBudget))}`}
+            />
+            <StatCard
+              icon={Activity}
+              iconBg="bg-amber-50"
+              iconColor="text-amber-500"
+              label="Promedio Diario"
+              value={fmt(stats.dailyAverage || 0)}
+              subtitle="Gasto promedio estimado"
             />
           </div>
 
@@ -246,7 +255,114 @@ export default function DashboardPage() {
                 </div>
             </div>
 
-            {/* Expenses by Category (Pie replacement with improved design) */}
+            {/* Top Categories Breakdown (md:col-span-3) */}
+            <div className="md:col-span-3 glass-card p-6 lg:p-8 flex flex-col justify-between">
+                <div>
+                    <p className="font-serif text-2xl text-stone-800 tracking-tight">Distribución de Gastos</p>
+                    <p className="text-xs text-stone-400 font-bold uppercase tracking-widest mt-1">Porcentaje por Categoría</p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-6 my-6">
+                    {stats.expensesByCategory && stats.expensesByCategory.length > 0 ? (
+                        <>
+                            <div className="relative w-36 h-36 shrink-0 mx-auto">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <Pie
+                                            data={stats.expensesByCategory}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={45}
+                                            outerRadius={65}
+                                            paddingAngle={3}
+                                            dataKey="amount"
+                                        >
+                                            {stats.expensesByCategory.map((entry: any, index: number) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip content={<PieTooltip />} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                    <span className="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Total</span>
+                                    <span className="font-serif text-base font-bold text-stone-800 leading-none mt-1">
+                                        {fmt(stats.totalExpenses)}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex-1 space-y-2 w-full max-h-36 overflow-y-auto pr-1">
+                                {stats.expensesByCategory.slice(0, 5).map((entry: any, i: number) => {
+                                    const percent = stats.totalExpenses > 0 ? (entry.amount / stats.totalExpenses) * 100 : 0;
+                                    return (
+                                        <div key={i} className="flex items-center justify-between text-xs">
+                                            <div className="flex items-center gap-2 truncate">
+                                                <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color || COLORS[i % COLORS.length] }} />
+                                                <span className="font-medium text-stone-700 truncate">{entry.name}</span>
+                                            </div>
+                                            <span className="font-bold text-stone-900 shrink-0 ml-2">{Math.round(percent)}%</span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 py-10 text-center">
+                            <PieChartIcon className="h-8 w-8 text-stone-200 mx-auto mb-2 opacity-50" />
+                            <p className="text-xs text-stone-400 italic">Sin gastos registrados.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Anomalous Expenses / Warning Panel (md:col-span-3) */}
+            <div className="md:col-span-3 glass-card p-6 lg:p-8 flex flex-col justify-between">
+                <div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <p className="font-serif text-2xl text-stone-800 tracking-tight">Gastos Inusuales</p>
+                            <p className="text-xs text-stone-400 font-bold uppercase tracking-widest mt-1">Detección de anomalías</p>
+                        </div>
+                        {stats.anomalousExpenses && stats.anomalousExpenses.length > 0 && (
+                            <span className="px-2 py-0.5 rounded bg-amber-50 border border-amber-200 text-[9px] font-bold text-amber-700 uppercase tracking-wider animate-pulse">Alerta</span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1 my-4">
+                    {stats.anomalousExpenses && stats.anomalousExpenses.length > 0 ? (
+                        stats.anomalousExpenses.map((exp: any, i: number) => (
+                            <div key={i} className="flex items-center justify-between p-2.5 rounded-2xl bg-amber-50/40 border border-amber-100/50 hover:bg-amber-50/70 transition-colors">
+                                <div className="min-w-0 flex-1 pr-3">
+                                    <div className="flex items-center gap-1.5 mb-0.5">
+                                        <span 
+                                            className="px-1.5 py-0.5 rounded text-[8px] font-bold text-white tracking-wide" 
+                                            style={{ backgroundColor: exp.categoryColor }}
+                                        >
+                                            {exp.categoryName}
+                                        </span>
+                                        <span className="text-[9px] text-amber-700 font-semibold">
+                                            {exp.deviationFactor}x prom.
+                                        </span>
+                                    </div>
+                                    <p className="text-xs font-bold text-stone-800 truncate">{exp.description || 'Sin descripción'}</p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                    <p className="text-xs font-bold text-stone-900">{fmt(exp.amount)}</p>
+                                    <p className="text-[9px] text-stone-400">{new Date(exp.date).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}</p>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <CheckCircle2 className="h-8 w-8 text-emerald-500 mb-2 opacity-25" />
+                            <p className="text-xs text-stone-400 font-medium italic">No se detectaron gastos anómalos este mes.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Expenses by Category (Progress bars list) */}
             <div className="md:col-span-6 glass-card p-8 lg:p-10">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                     <div>

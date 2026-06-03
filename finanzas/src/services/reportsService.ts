@@ -138,6 +138,41 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     insights.push(`¡Vas bien! Te queda el ${Math.round((1 - totalExpenses / totalBudget) * 100)}% de tu presupuesto total.`);
   }
 
+  // 6. Anomalous Expenses (Outliers)
+  const expenses = transactions.filter(t => t.type === 'EXPENSE');
+  const expenseAmounts = expenses.map(e => Number(e.amount));
+  const anomalousExpenses: any[] = [];
+  if (expenseAmounts.length > 0) {
+    const avg = expenseAmounts.reduce((a, b) => a + b, 0) / expenseAmounts.length;
+    const variance = expenseAmounts.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / expenseAmounts.length;
+    const stdDev = Math.sqrt(variance);
+    // z-score > 1.5 and amount >= 40.000 CLP
+    const threshold = Math.max(avg + 1.5 * stdDev, 40000);
+    expenses.forEach(e => {
+      if (Number(e.amount) > threshold) {
+        anomalousExpenses.push({
+          id: e.id,
+          description: e.description,
+          amount: Number(e.amount),
+          date: e.date,
+          categoryName: e.category?.name || 'Sin Categoría',
+          categoryColor: e.category?.color || '#A8A29E',
+          categoryIcon: e.category?.icon || 'Tag',
+          deviationFactor: (Number(e.amount) / avg).toFixed(1)
+        });
+      }
+    });
+    anomalousExpenses.sort((a, b) => b.amount - a.amount);
+  }
+
+  // 7. Daily Average Calculation
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
+  const isCurrentPeriod = (year === currentYear && month === currentMonth);
+  const daysElapsed = isCurrentPeriod ? Math.max(1, new Date().getDate()) : daysInMonth;
+  const dailyAverage = totalExpenses / daysElapsed;
+
   return {
     month,
     year,
@@ -146,10 +181,20 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     totalIncome,
     totalBudget,
     evolution,
-    expensesByCategory: budgetVsActual.map(b => ({ name: b.categoryName, amount: b.actualAmount })),
+    expensesByCategory: budgetVsActual
+      .map(b => ({ 
+        name: b.categoryName, 
+        amount: b.actualAmount,
+        color: b.categoryColor || '#A8A29E',
+        icon: b.categoryIcon || 'Tag'
+      }))
+      .filter(e => e.amount > 0)
+      .sort((a, b) => b.amount - a.amount),
     budgetVsActual,
     recentTransactions: transactions.slice(0, 5),
     alerts,
-    insights
+    insights,
+    anomalousExpenses,
+    dailyAverage
   };
 }

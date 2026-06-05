@@ -228,7 +228,7 @@ export default function TransactionsPage() {
 
   const handleUpdateStatus = async (id: string, status: string) => {
     try {
-        const res = await fetch(`/api/transactions/${id}`, {
+        const res = await fetch(`/finanzas/api/transactions/${id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status })
@@ -245,7 +245,7 @@ export default function TransactionsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de descartar esta transacción?")) return;
     try {
-        const res = await fetch(`/api/transactions/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/finanzas/api/transactions/${id}`, { method: 'DELETE' });
         if (res.ok) {
             setTransactions(transactions.filter(t => t.id !== id));
             toast.success("Transacción eliminada");

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getBudgets } from "./budgetService";
+import { detectOutliers, detectRecurrence, getPredictions, calculateBehaviorScore } from "./advancedInsightsService";
 
 export async function generateMonthlyReport(params: { month: number; year: number; userId: string; householdId?: string; billingPeriod?: string }) {
   const { month, year, userId, householdId, billingPeriod } = params;
@@ -173,6 +174,29 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   const daysElapsed = isCurrentPeriod ? Math.max(1, new Date().getDate()) : daysInMonth;
   const dailyAverage = totalExpenses / daysElapsed;
 
+  // 8. Advanced Insights integration (Android alignment)
+  let advancedInsights: any[] = [];
+  let advancedOutliers: any[] = [];
+  let projections: any[] = [];
+  let behaviorScore: any = null;
+
+  if (householdId && billingPeriod) {
+    try {
+      const [outliers, recurrence, preds, score] = await Promise.all([
+        detectOutliers(householdId, billingPeriod),
+        detectRecurrence(householdId, billingPeriod),
+        getPredictions(householdId, billingPeriod),
+        calculateBehaviorScore(householdId, billingPeriod)
+      ]);
+      advancedOutliers = outliers;
+      advancedInsights = recurrence;
+      projections = preds;
+      behaviorScore = score;
+    } catch (err) {
+      console.error("Error generating advanced insights:", err);
+    }
+  }
+
   return {
     month,
     year,
@@ -193,8 +217,10 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     budgetVsActual,
     recentTransactions: transactions.slice(0, 5),
     alerts,
-    insights,
-    anomalousExpenses,
+    insights: advancedInsights.length > 0 ? [...insights, ...advancedInsights.map(ai => ai.description)] : insights,
+    anomalousExpenses: advancedOutliers.length > 0 ? advancedOutliers : anomalousExpenses,
+    projections,
+    behaviorScore,
     dailyAverage
   };
 }

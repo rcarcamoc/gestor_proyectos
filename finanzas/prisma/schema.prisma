@@ -8,65 +8,73 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  passwordHash  String
-  name          String?
-  country       String?
-  mainCurrency  String    @default("USD")
-  timezone      String    @default("UTC")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  country      String?
+  mainCurrency String   @default("USD")
+  timezone     String   @default("UTC")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  households    UserHousehold[]
-  accounts      Account[]
-  categories    Category[]
-  budgets       Budget[]
-  savingsGoals  SavingsGoal[]
-  telegramUser  TelegramUser?
-  transactions  Transaction[] @relation("owner")
-  createdTransactions Transaction[] @relation("creator")
-  emailAccounts EmailAccount[]
+  households          UserHousehold[]
+  accounts            Account[]
+  categories          Category[]
+  budgets             Budget[]
+  savingsGoals        SavingsGoal[]
+  telegramUser        TelegramUser?
+  transactions        Transaction[]   @relation("owner")
+  createdTransactions Transaction[]   @relation("creator")
+  emailAccounts       EmailAccount[]
+  salaries            Salary[]
+  debtsDebtor         Debt[]          @relation("Debtor")
+  debtsCreditor       Debt[]          @relation("Creditor")
+  auditLogs           AuditLog[]
 }
 
 model Household {
-  id            String    @id @default(cuid())
-  name          String
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  users         UserHousehold[]
-  accounts      Account[]
-  categories    Category[]
-  budgets       Budget[]
-  savingsGoals  SavingsGoal[]
-  invitations   Invitation[]
-  transactions  Transaction[]
+  users                      UserHousehold[]
+  accounts                   Account[]
+  categories                 Category[]
+  budgets                    Budget[]
+  savingsGoals               SavingsGoal[]
+  invitations                Invitation[]
+  transactions               Transaction[]
+  salaries                   Salary[]
+  debts                      Debt[]
+  autoClassificationPatterns AutoClassificationPattern[]
+  auditLogs                  AuditLog[]
 }
 
 model UserHousehold {
-  id            String    @id @default(cuid())
-  userId        String
-  householdId   String
-  role          String    @default("MEMBER") // ADMIN, MEMBER
-  joinedAt      DateTime  @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  householdId String
+  role        String   @default("MEMBER") // ADMIN, MEMBER
+  joinedAt    DateTime @default(now())
 
-  user          User      @relation(fields: [userId], references: [id])
-  household     Household @relation(fields: [householdId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  household Household @relation(fields: [householdId], references: [id])
 
   @@unique([userId, householdId])
 }
 
 model Invitation {
-  id            String    @id @default(cuid())
-  email         String
-  householdId   String
-  code          String    @unique
-  expiresAt     DateTime
-  usedAt        DateTime?
-  status        String    @default("PENDING") // PENDING, ACCEPTED, EXPIRED
+  id          String    @id @default(cuid())
+  email       String
+  householdId String
+  code        String    @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  status      String    @default("PENDING") // PENDING, ACCEPTED, EXPIRED
 
-  household     Household @relation(fields: [householdId], references: [id])
+  household Household @relation(fields: [householdId], references: [id])
 }
 
 enum AccountType {
@@ -79,38 +87,39 @@ enum AccountType {
 }
 
 model Account {
-  id            String      @id @default(cuid())
-  name          String
-  type          AccountType @default(CHECKING)
-  balance       Decimal     @default(0) @db.Decimal(15, 2)
-  currency      String      @default("USD")
-  isArchived    Boolean     @default(false)
-  userId        String?
-  householdId   String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id          String      @id @default(cuid())
+  name        String
+  type        AccountType @default(CHECKING)
+  balance     Decimal     @default(0) @db.Decimal(15, 2)
+  currency    String      @default("USD")
+  isArchived  Boolean     @default(false)
+  userId      String?
+  householdId String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 
-  user          User?       @relation(fields: [userId], references: [id])
-  household     Household?  @relation(fields: [householdId], references: [id])
+  user          User?          @relation(fields: [userId], references: [id])
+  household     Household?     @relation(fields: [householdId], references: [id])
   transactions  Transaction[]
   emailAccounts EmailAccount[]
 }
 
 model Category {
-  id            String    @id @default(cuid())
-  name          String
-  icon          String?
-  color         String?
-  isDefault     Boolean   @default(false)
-  userId        String?
-  householdId   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  icon        String?
+  color       String?
+  isDefault   Boolean  @default(false)
+  userId      String?
+  householdId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  user          User?       @relation(fields: [userId], references: [id])
-  household     Household?  @relation(fields: [householdId], references: [id])
-  transactions  Transaction[]
-  budgets       Budget[]
+  user                       User?                       @relation(fields: [userId], references: [id])
+  household                  Household?                  @relation(fields: [householdId], references: [id])
+  transactions               Transaction[]
+  budgets                    Budget[]
+  autoClassificationPatterns AutoClassificationPattern[]
 }
 
 enum TransactionType {
@@ -140,46 +149,63 @@ model Transaction {
   description     String?
   source          TransactionSource @default(MANUAL)
   status          TransactionStatus @default(CONFIRMED)
-  categorySource  String?           // 'manual' | 'keyword' | 'ml' | 'groq'
-  aiConfidence    Float?            // 0.0–1.0, only set when source = 'ml' or 'groq'
+  categorySource  String? // 'manual' | 'keyword' | 'ml' | 'groq'
+  aiConfidence    Float? // 0.0–1.0, only set when source = 'ml' or 'groq'
   accountId       String
   categoryId      String?
   userId          String
   userId_internal String
   householdId     String?
-  externalId      String?           // For deduplication (Message-ID, Excel row hash)
-  metadata        Json?             // To store raw data from email/excel
-  billingPeriod   String?           // Format: 'mmmm - yyyy' (e.g., 'Mayo - 2026')
-  cardType        String?           // 'Adicional', 'Titular'
+  externalId      String? // For deduplication (Message-ID, Excel row hash)
+  metadata        Json? // To store raw data from email/excel
+  billingPeriod   String? // Format: 'mmmm - yyyy' (e.g., 'Mayo - 2026')
+  cardType        String? // 'Adicional', 'Titular'
   ignored         Boolean           @default(false) // Excluded from reports
   scope           String            @default("HOUSEHOLD") // 'HOUSEHOLD' | 'PERSONAL'
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  account         Account           @relation(fields: [accountId], references: [id])
-  category        Category?         @relation(fields: [categoryId], references: [id])
-  household       Household?        @relation(fields: [householdId], references: [id])
-  user            User              @relation(fields: [userId], references: [id], name: "owner")
-  creator         User              @relation(fields: [userId_internal], references: [id], name: "creator")
+  // Normalization fields from Android
+  normalizedDescription String @default("undefined")
+  amountCategory        String @default("undefined")
+  dateMonth             String @default("undefined")
+  dateDayOfWeek         String @default("undefined")
+  dateDay               Int    @default(0)
+  dateYear              Int    @default(0)
+  daoResponsable        String @default("API")
+  metodoActualizacion   String @default("INSERT")
+  usuarioResponsable    String @default("SYSTEM")
+
+  account   Account    @relation(fields: [accountId], references: [id])
+  category  Category?  @relation(fields: [categoryId], references: [id])
+  household Household? @relation(fields: [householdId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], name: "owner")
+  creator   User       @relation(fields: [userId_internal], references: [id], name: "creator")
 
   @@index([externalId])
+  @@index([normalizedDescription])
+  @@index([amountCategory])
+  @@index([dateMonth])
+  @@index([categoryId])
+  @@index([type, date])
+  @@index([billingPeriod])
 }
 
 model Budget {
-  id            String    @id @default(cuid())
-  limit         Decimal   @db.Decimal(15, 2)
-  period        String    @default("MONTHLY")
-  month         Int?      // 1-12
-  year          Int?
-  categoryId    String
-  userId        String?
-  householdId   String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  limit       Decimal  @db.Decimal(15, 2)
+  period      String   @default("MONTHLY")
+  month       Int? // 1-12
+  year        Int?
+  categoryId  String
+  userId      String?
+  householdId String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  category      Category  @relation(fields: [categoryId], references: [id])
-  user          User?     @relation(fields: [userId], references: [id])
-  household     Household? @relation(fields: [householdId], references: [id])
+  category  Category   @relation(fields: [categoryId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+  household Household? @relation(fields: [householdId], references: [id])
 
   @@unique([categoryId, month, year, userId])
   @@unique([categoryId, month, year, householdId])
@@ -197,46 +223,124 @@ model SavingsGoal {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  user          User?     @relation(fields: [userId], references: [id])
-  household     Household? @relation(fields: [householdId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+  household Household? @relation(fields: [householdId], references: [id])
 }
 
 model ExcelProfile {
-  id            String    @id @default(cuid())
-  name          String
-  userId        String
-  mapping       Json      // Column mapping configuration
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  mapping   Json // Column mapping configuration
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model TelegramUser {
-  id            String    @id @default(cuid())
-  telegramId    String    @unique
-  userId        String    @unique
-  createdAt     DateTime  @default(now())
+  id         String   @id @default(cuid())
+  telegramId String   @unique
+  userId     String   @unique
+  createdAt  DateTime @default(now())
 
-  user          User      @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model EmailAccount {
-  id          String    @id @default(cuid())
-  email       String    @unique
-  password    String
-  host        String
-  port        Int
-  secure      Boolean   @default(true)
-  protocol    String    @default("IMAP") // IMAP or POP3
-  isActive    Boolean   @default(true)
-  lastSync    DateTime?
-  userId      String
-  accountId   String
+  id        String    @id @default(cuid())
+  email     String    @unique
+  password  String
+  host      String
+  port      Int
+  secure    Boolean   @default(true)
+  protocol  String    @default("IMAP") // IMAP or POP3
+  isActive  Boolean   @default(true)
+  lastSync  DateTime?
+  userId    String
+  accountId String
 
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account     Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([accountId])
+}
+
+model Salary {
+  id            String   @id @default(cuid())
+  householdId   String
+  userId        String? // Optional to allow fictional/local users who are not registered
+  dummyUserName String? // Fictional user name if userId is null
+  amount        Decimal  @db.Decimal(15, 2)
+  period        String // Formato "YYYY-MM"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+}
+
+enum DebtStatus {
+  PENDIENTE
+  COBRADO
+  CANCELADO
+}
+
+model Debt {
+  id            String     @id @default(cuid())
+  householdId   String
+  debtorId      String? // Quién debe (usuario registrado, opcional)
+  debtorName    String // Nombre del deudor (ficticio o real)
+  creditorId    String? // A quién se debe (usuario registrado, opcional)
+  creditorName  String // Nombre del acreedor (ficticio o real)
+  amount        Decimal    @db.Decimal(15, 2)
+  reason        String
+  status        DebtStatus @default(PENDIENTE)
+  billingPeriod String? // Formato "YYYY-MM"
+  dueDate       DateTime?
+  notes         String?    @db.Text
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  debtor    User?     @relation("Debtor", fields: [debtorId], references: [id], onDelete: Cascade)
+  creditor  User?     @relation("Creditor", fields: [creditorId], references: [id], onDelete: Cascade)
+
+  @@index([householdId])
+}
+
+model AutoClassificationPattern {
+  id              String   @id @default(cuid())
+  householdId     String
+  pattern         String
+  categoryId      String
+  confidenceLevel Float    @default(1.0)
+  frequency       Int      @default(1)
+  lastUpdated     DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, pattern, categoryId])
+  @@index([householdId])
+}
+
+model AuditLog {
+  id                 String   @id @default(cuid())
+  householdId        String?
+  userId             String?
+  timestamp          DateTime @default(now())
+  tableName          String
+  operation          String
+  entityId           String?
+  details            String   @db.Text
+  responsibleService String
+
+  user      User?      @relation(fields: [userId], references: [id])
+  household Household? @relation(fields: [householdId], references: [id])
+
+  @@index([householdId])
 }

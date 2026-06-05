@@ -17,7 +17,8 @@ import {
   Brain,
   Loader2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Coins
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
@@ -30,7 +31,7 @@ const navigation = [
   { name: 'Transacciones', href: '/dashboard/transactions', icon: Receipt },
   { name: 'Presupuestos', href: '/dashboard/budgets', icon: TrendingUp },
   { name: 'Cuentas', href: '/dashboard/accounts', icon: Wallet },
-  { name: 'Mi Hogar', href: '/dashboard/households', icon: Users },
+  { name: 'Deudas', href: '/dashboard/debts', icon: Coins },
   { name: 'Distribución', href: '/dashboard/distribution', icon: Scale },
   { name: 'Categorías', href: '/dashboard/categories', icon: Tags },
   { name: 'Clasificar IA', href: '/dashboard/classify', icon: Brain },
@@ -101,8 +102,17 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     return pathname.startsWith(href);
   };
 
+  // Primary links for mobile bottom nav
+  const mobileBottomNav = [
+    { name: 'Inicio', href: '/dashboard', icon: LayoutDashboard },
+    { name: 'Gastos', href: '/dashboard/transactions', icon: Receipt },
+    { name: 'Tinder IA', href: '/dashboard/classify', icon: Brain },
+    { name: 'Deudas', href: '/dashboard/debts', icon: Coins },
+    { name: 'Reparto', href: '/dashboard/distribution', icon: Scale },
+  ];
+
   return (
-    <div className="zen-bg min-h-screen">
+    <div className="zen-bg min-h-screen pb-20 md:pb-0">
       {/* ── Desktop Sidebar ── */}
       <aside className={cn(
         "hidden md:fixed md:inset-y-0 md:left-0 md:flex md:flex-col z-30 transition-all duration-300",
@@ -161,7 +171,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Nav */}
-          <nav className="flex-1 space-y-1">
+          <nav className="flex-1 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
               const active = isActive(item.href);
               return (
@@ -237,6 +247,31 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </Select>
         </div>
       </header>
+
+      {/* ── Mobile Bottom Navigation Bar (Premium App Feel) ── */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-lg border-t border-stone-200/80 md:hidden flex justify-around items-center h-16 px-2 pb-safe shadow-2xl">
+        {mobileBottomNav.map((item) => {
+          const active = isActive(item.href);
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center flex-1 h-full py-1 text-stone-400 transition-all",
+                active ? "text-stone-800 font-bold" : "hover:text-stone-600"
+              )}
+            >
+              <div className={cn(
+                "p-1.5 rounded-full mb-0.5",
+                active ? "bg-stone-900 text-white shadow-md transform -translate-y-1 transition-all duration-300" : ""
+              )}>
+                <item.icon className="h-5 w-5" />
+              </div>
+              <span className="text-[10px] tracking-wide">{item.name}</span>
+            </Link>
+          );
+        })}
+      </div>
 
       {/* ── Main Content ── */}
       <main className={cn(

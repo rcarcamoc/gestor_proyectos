@@ -8,6 +8,7 @@ COPY . .
 RUN npx prisma generate
 ENV DATABASE_URL="mysql://user:pass@localhost:3306/db"
 ENV NEXTAUTH_SECRET="dummy"
+ENV NODE_OPTIONS="--max-old-space-size=512"
 RUN npm run build
 
 # Production Stage

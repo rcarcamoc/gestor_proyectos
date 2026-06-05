@@ -54,6 +54,7 @@ export async function POST(req: Request) {
   const {
     householdId,
     lastSyncTimestamp = 0,
+    overwrite = false,
     transactions = [],
     budgets = [],
     salaries = [],
@@ -71,6 +72,15 @@ export async function POST(req: Request) {
   try {
     const lastSyncDate = new Date(Number(lastSyncTimestamp));
     const serverTimestamp = Date.now();
+
+    // 0. If overwrite is requested, wipe out current server data for this household first
+    if (overwrite) {
+      await prisma.transaction.deleteMany({ where: { householdId } });
+      await prisma.budget.deleteMany({ where: { householdId } });
+      await prisma.salary.deleteMany({ where: { householdId } });
+      await prisma.autoClassificationPattern.deleteMany({ where: { householdId } });
+      await prisma.debt.deleteMany({ where: { householdId } });
+    }
 
     // 1. Get or create a default account for the household
     let defaultAccount = await prisma.account.findFirst({

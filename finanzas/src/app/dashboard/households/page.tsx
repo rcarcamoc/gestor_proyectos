@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useSession } from 'next-auth/react';
 import { Input } from '@/components/ui/input';
 import { 
   Users, 
@@ -27,6 +28,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from 'sonner';
 
 export default function HouseholdsPage() {
+  const { data: session } = useSession();
+  const userEmail = session?.user?.email || '';
+
   const [households, setHouseholds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState('');
@@ -212,6 +216,34 @@ export default function HouseholdsPage() {
                             )}
                         </div>
                     ))}
+                </div>
+
+                {/* Vincular App Móvil */}
+                <div className="mt-6 pt-6 border-t border-stone-100/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <h5 className="font-semibold text-stone-800 text-sm">Sincronización Móvil</h5>
+                    <p className="text-xs text-stone-400 mt-1 font-medium leading-relaxed">
+                      Vincula la app Android con este hogar. Pulsa el botón si estás en tu móvil o escanea el QR con tu cámara.
+                    </p>
+                    <div className="mt-3">
+                      <a 
+                        href={`controlfinanzas://sync?email=${encodeURIComponent(userEmail)}&householdId=${h.id}`}
+                        className="inline-flex items-center text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200/80 px-4 py-2 rounded-full transition-all duration-300 shadow-sm"
+                      >
+                        Vincular esta App
+                      </a>
+                    </div>
+                  </div>
+                  {userEmail && (
+                    <div className="shrink-0 p-2 bg-stone-50/50 border border-stone-100 rounded-2xl flex flex-col items-center">
+                      <img 
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`controlfinanzas://sync?email=${userEmail}&householdId=${h.id}`)}`}
+                        alt="QR Vincular App" 
+                        className="w-20 h-20 rounded-lg shadow-sm"
+                      />
+                      <span className="text-[10px] text-stone-400 mt-1.5 font-bold tracking-tight">Escanear QR</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
               <CardFooter className="bg-stone-50/30 border-t border-stone-100/60 flex flex-col items-stretch p-6 space-y-5">

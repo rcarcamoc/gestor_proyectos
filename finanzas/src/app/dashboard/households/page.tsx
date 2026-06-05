@@ -225,25 +225,29 @@ export default function HouseholdsPage() {
                     <p className="text-xs text-stone-400 mt-1 font-medium leading-relaxed">
                       Vincula la app Android con este hogar. Pulsa el botón si estás en tu móvil o escanea el QR con tu cámara.
                     </p>
-                    <div className="mt-3">
+                    <div className="mt-3 flex gap-2">
                       <a 
-                        href={`controlfinanzas://sync?email=${encodeURIComponent(userEmail)}&householdId=${h.id}`}
+                        href={`/finanzas/dashboard/link-device?householdId=${h.id}&email=${encodeURIComponent(userEmail)}`}
                         className="inline-flex items-center text-xs font-semibold text-stone-700 bg-stone-100 hover:bg-stone-200/80 px-4 py-2 rounded-full transition-all duration-300 shadow-sm"
                       >
-                        Vincular esta App
+                        Iniciar Vinculación Guiada
                       </a>
                     </div>
                   </div>
-                  {userEmail && (
-                    <div className="shrink-0 p-2 bg-stone-50/50 border border-stone-100 rounded-2xl flex flex-col items-center">
-                      <img 
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`controlfinanzas://sync?email=${userEmail}&householdId=${h.id}`)}`}
-                        alt="QR Vincular App" 
-                        className="w-20 h-20 rounded-lg shadow-sm"
-                      />
-                      <span className="text-[10px] text-stone-400 mt-1.5 font-bold tracking-tight">Escanear QR</span>
-                    </div>
-                  )}
+                  {userEmail && (() => {
+                    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://161.153.219.141';
+                    const linkUrl = `${origin}/finanzas/dashboard/link-device?householdId=${h.id}&email=${encodeURIComponent(userEmail)}`;
+                    return (
+                      <div className="shrink-0 p-2 bg-stone-50/50 border border-stone-100 rounded-2xl flex flex-col items-center">
+                        <img 
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(linkUrl)}`}
+                          alt="QR Vincular App" 
+                          className="w-20 h-20 rounded-lg shadow-sm"
+                        />
+                        <span className="text-[10px] text-stone-400 mt-1.5 font-bold tracking-tight">Escanear QR</span>
+                      </div>
+                    );
+                  })()}
                 </div>
               </CardContent>
               <CardFooter className="bg-stone-50/30 border-t border-stone-100/60 flex flex-col items-stretch p-6 space-y-5">

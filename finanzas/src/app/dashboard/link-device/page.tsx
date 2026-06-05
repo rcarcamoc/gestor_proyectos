@@ -31,13 +31,14 @@ export default function LinkDevicePage() {
   const [verifying, setVerifying] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Pre-fill email from search query if provided, or from session
+  // Pre-fill email and household from search query if provided
   const emailFromUrl = searchParams.get('email') || '';
+  const householdIdFromUrl = searchParams.get('householdId') || '';
   const userEmail = session?.user?.email || emailFromUrl;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push(`/login?callbackUrl=${encodeURIComponent('/dashboard/link-device')}`);
+      router.push(`/login?callbackUrl=${encodeURIComponent(`/dashboard/link-device?householdId=${householdIdFromUrl}&email=${emailFromUrl}`)}`);
       return;
     }
     if (status === 'authenticated') {
@@ -52,7 +53,8 @@ export default function LinkDevicePage() {
         const data = await res.json();
         setHouseholds(data);
         if (data.length > 0) {
-          setSelectedHouseholdId(data[0].id);
+          const matched = data.find((h: any) => h.id === householdIdFromUrl);
+          setSelectedHouseholdId(matched ? matched.id : data[0].id);
         }
       }
     } catch (err) {

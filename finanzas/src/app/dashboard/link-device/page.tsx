@@ -218,19 +218,34 @@ export default function LinkDevicePage() {
               </div>
             )}
 
-            {/* Paso 3: Confirmación de Contraseña */}
-            <div className="space-y-2.5 pt-2">
+            {/* Paso 3: Confirmación de Correo y Contraseña */}
+            <div className="space-y-3 pt-2">
               <Label className="text-stone-700 font-semibold flex items-center gap-2">
                 <Lock className="h-4 w-4 text-stone-400" />
-                3. Confirma tu Contraseña del Portal
+                3. Confirma tus Datos de Acceso
               </Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Introduce tu contraseña"
-                className="rounded-2xl h-11 border-stone-200 shadow-sm"
-              />
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-stone-500 font-semibold">Correo Electrónico</Label>
+                <Input
+                  type="email"
+                  value={userEmail}
+                  readOnly
+                  className="rounded-2xl h-11 border-stone-200 bg-stone-50 text-stone-500 cursor-not-allowed shadow-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-stone-500 font-semibold">Contraseña del Portal</Label>
+                <Input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Introduce tu contraseña"
+                  className="rounded-2xl h-11 border-stone-200 shadow-sm"
+                />
+              </div>
+
               <p className="text-[10px] text-stone-400 font-medium">
                 Esto es necesario para verificar tu identidad y configurar de forma segura la autenticación automática en la app.
               </p>

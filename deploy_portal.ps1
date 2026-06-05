@@ -42,8 +42,13 @@ fi && \
 if ! docker compose version >/dev/null 2>&1; then \
     sudo apt-get update && sudo apt-get install -y docker-compose-v2; \
 fi && \
-sudo docker compose down --remove-orphans && \
-sudo docker compose up -d --build && \
+echo '[+] Compilando servicios secuencialmente para ahorrar RAM...' && \
+sudo docker compose build gestor_backend && \
+sudo docker compose build gestor_bot && \
+sudo docker compose build gestor_frontend && \
+sudo docker compose build finanzas_app && \
+echo '[+] Actualizando contenedores en caliente (Zero Downtime)...' && \
+sudo docker compose up -d --remove-orphans && \
 echo '[+] Esperando a que la base de datos esté saludable...' && \
 wait_max=60; counter=0; \
  until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy" | grep -q "smarttrack_db_prod"; do \

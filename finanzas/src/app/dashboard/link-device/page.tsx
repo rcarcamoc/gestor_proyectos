@@ -34,7 +34,15 @@ export default function LinkDevicePage() {
   // Pre-fill email and household from search query if provided
   const emailFromUrl = searchParams.get('email') || '';
   const householdIdFromUrl = searchParams.get('householdId') || '';
-  const userEmail = session?.user?.email || emailFromUrl;
+  const [email, setEmail] = useState('');
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      setEmail(session.user.email);
+    } else if (emailFromUrl) {
+      setEmail(emailFromUrl);
+    }
+  }, [session, emailFromUrl]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -82,7 +90,7 @@ export default function LinkDevicePage() {
       const checkRes = await fetch('/finanzas/api/sync/verify-credentials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: userEmail, password })
+        body: JSON.stringify({ email: email, password })
       });
 
       if (!checkRes.ok) {
@@ -92,8 +100,12 @@ export default function LinkDevicePage() {
         return;
       }
 
+      // Fetch selected household name to pass in the deep link
+      const selectedHousehold = households.find(h => h.id === selectedHouseholdId);
+      const householdNameParam = selectedHousehold ? `&householdName=${encodeURIComponent(selectedHousehold.name)}` : '';
+
       // Build the deep link URL with action and credentials
-      const redirectUri = `controlfinanzas://sync?email=${encodeURIComponent(userEmail)}&householdId=${selectedHouseholdId}&password=${encodeURIComponent(password)}&action=${migrationType}`;
+      const redirectUri = `controlfinanzas://sync?email=${encodeURIComponent(email)}&householdId=${selectedHouseholdId}&password=${encodeURIComponent(password)}&action=${migrationType}${householdNameParam}`;
       
       toast.success('¡Credenciales válidas! Redirigiendo a la aplicación...');
       
@@ -229,9 +241,12 @@ export default function LinkDevicePage() {
                 <Label className="text-xs text-stone-500 font-semibold">Correo Electrónico</Label>
                 <Input
                   type="email"
-                  value={userEmail}
-                  readOnly
-                  className="rounded-2xl h-11 border-stone-200 bg-stone-50 text-stone-500 cursor-not-allowed shadow-sm"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  readOnly={!!session?.user?.email}
+                  className={`rounded-2xl h-11 border-stone-200 shadow-sm ${
+                    session?.user?.email ? 'bg-stone-50 text-stone-500 cursor-not-allowed' : ''
+                  }`}
                 />
               </div>
 

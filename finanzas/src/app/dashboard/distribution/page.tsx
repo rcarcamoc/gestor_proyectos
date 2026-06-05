@@ -53,32 +53,21 @@ export default function DistributionPage() {
     if (!salaryForm.userId || !salaryForm.amount) return toast.error("Completa todos los campos");
     setAddingSalary(true);
     try {
-      // Find the 'sueldo' category first
-      const catsRes = await fetch('/finanzas/api/categories');
-      const cats = await catsRes.json();
-      const sueldoCat = cats.find((c: any) => c.name.toLowerCase() === 'sueldo');
+      const selectedMember = data?.distribution?.find((d: any) => 
+        (d.userId && d.userId === salaryForm.userId) || d.name === salaryForm.userId
+      );
+      const isDummy = !selectedMember || !selectedMember.userId;
+      const period = salaryForm.date.substring(0, 7); // format: "YYYY-MM"
 
-      // Fetch accounts to find a suitable one (Personal or Shared)
-      const accRes = await fetch('/finanzas/api/accounts?all=true');
-      const accounts = await accRes.json();
-      const account = accounts.find((a: any) => a.userId === salaryForm.userId) || accounts[0];
-
-      if (!account) throw new Error("No hay cuenta disponible");
-
-      const res = await fetch('/finanzas/api/transactions', {
+      const res = await fetch('/finanzas/api/salaries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: parseFloat(salaryForm.amount),
-          description: 'Ingreso Sueldo',
-          categoryId: sueldoCat?.id,
-          accountId: account.id,
-          date: salaryForm.date,
-          type: 'INCOME',
-          billingPeriod: formatBillingPeriod(new Date(salaryForm.date)),
           householdId: selectedScope,
-          userId_internal: salaryForm.userId,
-          scope: 'HOUSEHOLD'
+          period: period,
+          amount: parseFloat(salaryForm.amount),
+          targetUserId: isDummy ? null : selectedMember.userId,
+          dummyUserName: isDummy ? (selectedMember?.name || salaryForm.userId) : null
         })
       });
       if (res.ok) {
@@ -257,7 +246,7 @@ export default function DistributionPage() {
                     </SelectTrigger>
                     <SelectContent className="rounded-xl">
                         {data?.distribution?.map((m: any) => (
-                            <SelectItem key={m.userId} value={m.userId}>{m.name}</SelectItem>
+                            <SelectItem key={m.userId || m.name} value={m.userId || m.name}>{m.name}</SelectItem>
                         ))}
                     </SelectContent>
                 </Select>

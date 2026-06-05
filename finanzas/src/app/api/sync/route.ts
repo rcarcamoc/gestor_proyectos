@@ -347,6 +347,14 @@ export async function POST(req: Request) {
       where: {
         householdId,
         updatedAt: { gt: lastSyncDate }
+      },
+      include: {
+        user: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
       }
     });
 
@@ -388,7 +396,7 @@ export async function POST(req: Request) {
         updatedAt: b.updatedAt.getTime()
       })),
       salaries: webSalaries.map(s => ({
-        nombrePersona: s.dummyUserName || s.userId || "Desconocido",
+        nombrePersona: s.dummyUserName || s.user?.name || s.user?.email || "Desconocido",
         periodo: s.period,
         sueldo: Number(s.amount),
         updatedAt: s.updatedAt.getTime()

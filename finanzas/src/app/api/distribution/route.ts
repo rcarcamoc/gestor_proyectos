@@ -51,19 +51,25 @@ export async function GET(request: Request) {
     const incomeResults: { name: string; userId: string | null; income: number }[] = [];
 
     if (dbSalaries.length > 0) {
-      // Use salaries from table (including dummy/fictional users)
-      dbSalaries.forEach(s => {
-        let name = s.dummyUserName || "Desconocido";
-        if (s.userId) {
-          const m = members.find(member => member.userId === s.userId);
-          if (m) name = m.user.name || m.user.email;
-        }
+      // Loop through all registered members of the household first
+      for (const m of members) {
+        const salary = dbSalaries.find(s => s.userId === m.userId);
         incomeResults.push({
-          name,
-          userId: s.userId,
-          income: Number(s.amount)
+          name: m.user.name || m.user.email,
+          userId: m.userId,
+          income: salary ? Number(salary.amount) : 0
         });
-      });
+      }
+
+      // Also add fictional (dummy) users who have salaries in this period
+      const dummySalaries = dbSalaries.filter(s => !s.userId && s.dummyUserName);
+      for (const ds of dummySalaries) {
+        incomeResults.push({
+          name: ds.dummyUserName || "Ficticio",
+          userId: null,
+          income: Number(ds.amount)
+        });
+      }
     } else {
       // Fallback: sum incomes from transactions (compat)
       for (const m of members) {

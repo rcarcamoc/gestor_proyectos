@@ -42,12 +42,14 @@ fi && \
 if ! docker compose version >/dev/null 2>&1; then \
     sudo apt-get update && sudo apt-get install -y docker-compose-v2; \
 fi && \
-echo '[+] Compilando servicios secuencialmente para ahorrar RAM...' && \
+echo '[+] Deteniendo contenedores para liberar RAM...' && \
+sudo docker compose down && \
+echo '[+] Compilando servicios secuencialmente...' && \
 sudo docker compose build gestor_backend && \
 sudo docker compose build gestor_bot && \
 sudo docker compose build gestor_frontend && \
 sudo docker compose build finanzas_app && \
-echo '[+] Actualizando contenedores en caliente (Zero Downtime)...' && \
+echo '[+] Levantando todos los servicios...' && \
 sudo docker compose up -d --remove-orphans && \
 echo '[+] Esperando a que la base de datos esté saludable...' && \
 wait_max=60; counter=0; \

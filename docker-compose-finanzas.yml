@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.4
+    container_name: smarttrack_db_prod
+    restart: always
+    environment:
+      MYSQL_DATABASE: smarttrack
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_prod_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finanzas_network
+
+  finanzas_app:
+    build: ./finanzas
+    container_name: finanzas_app
+    restart: always
+    environment:
+      DATABASE_URL: mysql://user:pass@db:3306/web_finanzas
+      NEXTAUTH_URL: http://129.151.113.195/finanzas
+      NEXTAUTH_URL_INTERNAL: http://localhost:3000
+      NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
+      AUTH_TRUST_HOST: "true"
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - finanzas_network
+
+  nginx:
+    image: nginx:alpine
+    container_name: zen_nginx_proxy
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-finanzas.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - finanzas_network
+    depends_on:
+      - finanzas_app
+
+networks:
+  finanzas_network:
+    driver: bridge
+
+volumes:
+  db_prod_data:
+    name: db_prod_data

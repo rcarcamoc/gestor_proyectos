@@ -36,6 +36,7 @@ const navigation = [
   { name: 'Categorías', href: '/dashboard/categories', icon: Tags },
   { name: 'Clasificar IA', href: '/dashboard/classify', icon: Brain },
   { name: 'Importar', href: '/dashboard/import', icon: FileUp },
+  { name: 'Mi Hogar', href: '/dashboard/households', icon: Users },
 ];
 
 function cn(...classes: (string | boolean | undefined)[]) {

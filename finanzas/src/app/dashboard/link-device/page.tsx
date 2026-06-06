@@ -105,7 +105,8 @@ export default function LinkDevicePage() {
       const householdNameParam = selectedHousehold ? `&householdName=${encodeURIComponent(selectedHousehold.name)}` : '';
 
       // Build the deep link URL with action and credentials
-      const redirectUri = `controlfinanzas://sync?email=${encodeURIComponent(email)}&householdId=${selectedHouseholdId}&password=${encodeURIComponent(password)}&action=${migrationType}${householdNameParam}`;
+      const serverUrlParam = `&serverUrl=${encodeURIComponent(window.location.origin + '/finanzas/api/sync')}`;
+      const redirectUri = `controlfinanzas://sync?email=${encodeURIComponent(email)}&householdId=${selectedHouseholdId}&password=${encodeURIComponent(password)}&action=${migrationType}${householdNameParam}${serverUrlParam}`;
       
       toast.success('¡Credenciales válidas! Redirigiendo a la aplicación...');
       

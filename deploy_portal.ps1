@@ -42,15 +42,10 @@ fi && \
 if ! docker compose version >/dev/null 2>&1; then \
     sudo apt-get update && sudo apt-get install -y docker-compose-v2; \
 fi && \
-echo '[+] Deteniendo contenedores para liberar RAM...' && \
-sudo docker compose down && \
-echo '[+] Compilando servicios secuencialmente...' && \
-sudo docker compose build gestor_backend && \
-sudo docker compose build gestor_bot && \
-sudo docker compose build gestor_frontend && \
+echo '[+] Compilando aplicación de finanzas...' && \
 sudo docker compose build finanzas_app && \
-echo '[+] Levantando todos los servicios...' && \
-sudo docker compose up -d --remove-orphans && \
+echo '[+] Levantando aplicación de finanzas y dependencias...' && \
+sudo docker compose up -d db redis home finanzas_app && \
 echo '[+] Esperando a que la base de datos esté saludable...' && \
 wait_max=60; counter=0; \
  until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy" | grep -q "smarttrack_db_prod"; do \

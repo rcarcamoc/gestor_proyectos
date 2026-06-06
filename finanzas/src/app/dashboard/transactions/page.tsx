@@ -52,7 +52,12 @@ import {
   Trash2,
   EyeOff,
   Eye,
-  UserCheck
+  UserCheck,
+  Camera,
+  Upload,
+  Clipboard,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -84,6 +89,7 @@ export default function TransactionsPage() {
   const [households, setHouseholds] = useState<any[]>([]);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isVisionModalOpen, setIsVisionModalOpen] = useState(false);
   const [newTx, setNewTx] = useState({
     amount: '',
     description: '',
@@ -308,6 +314,13 @@ export default function TransactionsPage() {
           <p className="text-stone-500 mt-1.5 font-medium">Historial completo de tus movimientos financieros.</p>
         </div>
         <div className="flex gap-2">
+            <Button 
+                className="bg-amber-600 hover:bg-amber-700 text-white rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
+                onClick={() => setIsVisionModalOpen(true)}
+            >
+                <Camera className="h-4 w-4 mr-2" />
+                Escanear Captura
+            </Button>
             <Button 
                 className="bg-stone-800 hover:bg-stone-900 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
                 onClick={() => setIsAddModalOpen(true)}
@@ -790,10 +803,394 @@ export default function TransactionsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <VisionImportDialog
+        open={isVisionModalOpen}
+        onOpenChange={setIsVisionModalOpen}
+        accounts={accounts}
+        categories={categories}
+        onSuccess={fetchTransactions}
+      />
     </div>
   );
 }
 
-function cn(...inputs: any[]) {
-    return inputs.filter(Boolean).join(' ');
+interface VisionImportDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  accounts: any[];
+  categories: any[];
+  onSuccess: () => void;
 }
+
+export function VisionImportDialog({
+  open,
+  onOpenChange,
+  accounts,
+  categories,
+  onSuccess
+}: VisionImportDialogProps) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [extractedTxs, setExtractedTxs] = useState<any[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState("");
+  const [step, setStep] = useState<"upload" | "review">("upload");
+
+  // Initialize defaults when modal opens
+  useEffect(() => {
+    if (open) {
+      if (accounts.length > 0 && !selectedAccountId) {
+        setSelectedAccountId(accounts[0].id);
+      }
+      if (!selectedBillingPeriod) {
+        setSelectedBillingPeriod(formatBillingPeriod(new Date()));
+      }
+      // Reset state
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setExtractedTxs([]);
+      setStep("upload");
+    }
+  }, [open, accounts]);
+
+  // Support pasting image from clipboard
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!open || step !== "upload") return;
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf("image") !== -1) {
+          const file = items[i].getAsFile();
+          if (file) {
+            handleImageFile(file);
+          }
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [open, step]);
+
+  const handleImageFile = (file: File) => {
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith("image/")) {
+      handleImageFile(files[0]);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!previewUrl) return toast.error("Por favor selecciona o pega una imagen");
+    setLoading(true);
+    try {
+      const res = await fetch("/finanzas/api/import/vision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          image: previewUrl,
+          currentYear: new Date().getFullYear()
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error("Error en el análisis");
+      }
+
+      const data = await res.json();
+      if (data.transactions && data.transactions.length > 0) {
+        setExtractedTxs(
+          data.transactions.map((tx: any) => ({
+            ...tx,
+            selected: true // checked by default
+          }))
+        );
+        setStep("review");
+      } else {
+        toast.error("No se encontraron transacciones en la imagen. Intenta con otra captura.");
+      }
+    } catch (err) {
+      toast.error("Error al analizar la captura con IA. Verifica tu conexión y la API Key de Groq.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const selectedTxs = extractedTxs.filter(tx => tx.selected);
+    if (selectedTxs.length === 0) return toast.error("No has seleccionado ninguna transacción");
+
+    setSaving(true);
+    try {
+      const res = await fetch("/finanzas/api/import/process", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactions: selectedTxs.map(tx => ({
+            amount: Number(tx.amount),
+            date: tx.date,
+            description: tx.description,
+            categoryId: tx.suggestedCategoryId || undefined,
+            cardType: tx.cardType || undefined
+          })),
+          accountId: selectedAccountId,
+          billingPeriod: selectedBillingPeriod
+        })
+      });
+
+      if (res.ok) {
+        const results = await res.json();
+        toast.success(`Importadas: ${results.imported} transacciones. Duplicadas/Omitidas: ${results.duplicates}`);
+        onOpenChange(false);
+        onSuccess();
+      } else {
+        toast.error("Error al guardar las transacciones");
+      }
+    } catch (err) {
+      toast.error("Error de conexión");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={`rounded-[2rem] border-stone-100 shadow-2xl transition-all duration-300 ${step === "review" ? "max-w-4xl w-[90vw] bg-white text-stone-800" : "max-w-md bg-white text-stone-800"}`}>
+        <DialogHeader>
+          <DialogTitle className="font-serif text-2xl text-stone-800">
+            {step === "upload" ? "Escanear Captura de Gastos" : "Revisar Transacciones Detectadas"}
+          </DialogTitle>
+        </DialogHeader>
+
+        {step === "upload" ? (
+          <div className="space-y-6 py-4">
+            <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={handleDrop}
+              className="border-2 border-dashed border-stone-200 hover:border-amber-500/80 rounded-2xl p-8 text-center cursor-pointer bg-stone-50/50 hover:bg-amber-50/10 transition-colors relative overflow-hidden group flex flex-col items-center justify-center min-h-[200px]"
+              onClick={() => document.getElementById("file-input")?.click()}
+            >
+              <input
+                id="file-input"
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const files = e.target.files;
+                  if (files && files.length > 0) {
+                    handleImageFile(files[0]);
+                  }
+                }}
+              />
+              {previewUrl ? (
+                <div className="absolute inset-0 p-2 bg-white flex items-center justify-center">
+                  <img src={previewUrl} alt="Preview" className="max-h-full object-contain rounded-lg" />
+                  <div className="absolute inset-0 bg-stone-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-semibold text-sm rounded-lg">
+                    Cambiar imagen
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3 flex flex-col items-center">
+                  <div className="p-3 bg-amber-50 rounded-full text-amber-600 inline-block">
+                    <Upload className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-stone-700">Arrastra una imagen o selecciónala</p>
+                    <p className="text-xs text-stone-400 mt-1">O presiona Ctrl+V aquí para pegar una captura del portapapeles</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-stone-500 uppercase tracking-wider">Cuenta Destino</Label>
+                <Select value={selectedAccountId} onValueChange={(val) => val && setSelectedAccountId(val)}>
+                  <SelectTrigger className="rounded-xl border-stone-200 bg-white">
+                    <SelectValue placeholder="Seleccionar cuenta" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl bg-white">
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>
+                        {acc.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-bold text-stone-500 uppercase tracking-wider">Periodo de Facturación</Label>
+                <Select value={selectedBillingPeriod} onValueChange={(val) => val && setSelectedBillingPeriod(val)}>
+                  <SelectTrigger className="rounded-xl border-stone-200 bg-white">
+                    <SelectValue placeholder="Seleccionar periodo" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl bg-white">
+                    {getMonthOptions().map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" className="rounded-full" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button
+                className="bg-amber-600 hover:bg-amber-700 text-white rounded-full px-8 font-semibold"
+                onClick={handleAnalyze}
+                disabled={loading || !previewUrl}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Analizar Captura
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 py-4 max-h-[65vh] overflow-hidden">
+            {/* Image Preview Left */}
+            <div className="lg:col-span-2 border border-stone-100 rounded-2xl bg-stone-50 p-2 flex items-center justify-center max-h-[35vh] lg:max-h-full overflow-hidden">
+              <img src={previewUrl || ""} alt="Capture Preview" className="max-h-full max-w-full object-contain rounded-lg shadow-sm" />
+            </div>
+
+            {/* Editable List Right */}
+            <div className="lg:col-span-3 flex flex-col justify-between overflow-hidden">
+              <div className="overflow-y-auto pr-2 flex-1 space-y-4 max-h-[40vh] lg:max-h-[50vh]">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="w-[40px] pl-2"></TableHead>
+                      <TableHead className="w-[110px] text-xs font-bold uppercase">Fecha</TableHead>
+                      <TableHead className="text-xs font-bold uppercase">Descripción</TableHead>
+                      <TableHead className="w-[160px] text-xs font-bold uppercase">Categoría</TableHead>
+                      <TableHead className="w-[110px] text-right text-xs font-bold uppercase">Monto</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {extractedTxs.map((tx, idx) => (
+                      <TableRow key={idx} className={tx.selected ? "" : "opacity-40"}>
+                        <TableCell className="p-2">
+                          <input
+                            type="checkbox"
+                            checked={tx.selected}
+                            onChange={(e) => {
+                              const updated = [...extractedTxs];
+                              updated[idx].selected = e.target.checked;
+                              setExtractedTxs(updated);
+                            }}
+                            className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input
+                            type="date"
+                            value={tx.date}
+                            disabled={!tx.selected}
+                            onChange={(e) => {
+                              const updated = [...extractedTxs];
+                              updated[idx].date = e.target.value;
+                              setExtractedTxs(updated);
+                            }}
+                            className="h-8 rounded-lg border-stone-200 px-2 py-1 text-xs bg-white text-stone-800"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Input
+                            value={tx.description}
+                            disabled={!tx.selected}
+                            onChange={(e) => {
+                              const updated = [...extractedTxs];
+                              updated[idx].description = e.target.value;
+                              setExtractedTxs(updated);
+                            }}
+                            className="h-8 rounded-lg border-stone-200 px-2 py-1 text-xs font-medium bg-white text-stone-800"
+                          />
+                        </TableCell>
+                        <TableCell className="p-2">
+                          <Select
+                            value={tx.suggestedCategoryId || "none"}
+                            disabled={!tx.selected}
+                            onValueChange={(val) => {
+                              const updated = [...extractedTxs];
+                              updated[idx].suggestedCategoryId = val === "none" ? null : val;
+                              setExtractedTxs(updated);
+                            }}
+                          >
+                            <SelectTrigger className="h-8 rounded-lg border-stone-200 text-xs bg-white">
+                              <SelectValue placeholder="Categorizar..." />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl bg-white">
+                              <SelectItem value="none">Sin categoría</SelectItem>
+                              {categories.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="p-2 text-right">
+                          <Input
+                            type="number"
+                            value={tx.amount}
+                            disabled={!tx.selected}
+                            onChange={(e) => {
+                              const updated = [...extractedTxs];
+                              updated[idx].amount = Number(e.target.value);
+                              setExtractedTxs(updated);
+                            }}
+                            className="h-8 rounded-lg border-stone-200 px-2 py-1 text-xs text-right font-bold w-[90px] ml-auto bg-white text-stone-800"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="flex items-center justify-between border-t border-stone-100 pt-4 mt-4 bg-white">
+                <span className="text-xs text-stone-500 font-semibold">
+                  Seleccionadas: {extractedTxs.filter(t => t.selected).length} de {extractedTxs.length} transacciones
+                </span>
+                <div className="flex gap-2">
+                  <Button variant="ghost" className="rounded-full" onClick={() => setStep("upload")} disabled={saving}>
+                    Volver a Subir
+                  </Button>
+                  <Button
+                    className="bg-amber-600 hover:bg-amber-700 text-white rounded-full px-8 font-semibold"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    Confirmar e Importar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function cn(...inputs: any[]) {
+  return inputs.filter(Boolean).join(' ');
+}
+

@@ -16,7 +16,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'Zen Finanzas — Control Financiero',
+  title: 'Finanzas Familiares',
   description: 'Plataforma de gestión financiera personal y familiar',
 };
 

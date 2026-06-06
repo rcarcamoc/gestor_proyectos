@@ -3,7 +3,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ─── ZEN FINANZAS DESIGN SYSTEM ─────────────────────────────────────── */
+/* ─── FINANZAS FAMILIARES DESIGN SYSTEM ───────────────────────────────── */
 :root {
   /* Paleta Piedra/Arena - base premium */
   --background: #FAFAF9;
@@ -23,6 +23,8 @@
   --accent: #E7E5E4;
   --accent-foreground: #292524;
   --destructive: #EF4444;
+  --accent-clay: #C26D40;
+  --accent-clay-light: #F7E6DC;
 
   --border: #E7E5E4;
   --input: #E7E5E4;

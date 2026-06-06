@@ -154,3 +154,64 @@ export async function categorizeTransactionsBatch(
   });
 }
 
+export async function parseTransactionsFromImage(base64Image: string, currentYear: number) {
+  return enqueue(async () => {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+    const prompt = `
+      Analiza la siguiente imagen que es una captura de pantalla de movimientos bancarios o de tarjeta de crédito (como Líder Bci).
+      Tu tarea es extraer todas las transacciones financieras visibles en la imagen y estructurarlas en formato JSON.
+
+      Instrucciones:
+      - Extrae cada transacción visible con su fecha, descripción y monto.
+      - Para el monto: debe ser un número entero positivo (por ejemplo, si en la imagen dice "$51.614" o "51.614", debe extraerse como 51614. Si dice "$11.440", debe ser 11440). Limpia el formato de moneda quitando signos de dólar/pesos, puntos de miles y comas.
+      - Para la fecha: conviértela a formato ISO estándar "YYYY-MM-DD" (por ejemplo, "04/06/2026" se convierte en "2026-06-04").
+      - Si la fecha no incluye el año explícitamente (ej: "Jueves 04 de Junio" o "04 de Junio"), asume que el año de la transacción es ${currentYear}. Si el mes es de fin de año y el año de corte coincide, usa el año correspondiente.
+      - Para la descripción: extrae el comercio o detalle de la tienda tal como aparece (ej: "ENEL,SANTIAGO", "ACTUCIA SPA,SANTIAGO").
+      - Identifica el tipo de tarjeta (cardType) si aparece en la captura (ej: "Titular", "Adicional", o null si no se especifica).
+
+      Retorna un objeto JSON con el siguiente esquema exacto:
+      {
+        "transactions": [
+          {
+            "date": "YYYY-MM-DD",
+            "description": "nombre del comercio o descripción",
+            "amount": number,
+            "cardType": "Titular" | "Adicional" | null
+          }
+        ]
+      }
+      
+      No inventes datos. Si no hay transacciones visibles, retorna un array vacío. Solo responde con el objeto JSON estructurado, sin texto adicional ni formato markdown.
+    `;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: prompt },
+            {
+              type: "image_url",
+              image_url: {
+                url: base64Image
+              }
+            }
+          ]
+        }
+      ],
+      model: "llama-3.2-11b-vision-preview",
+      response_format: { type: "json_object" }
+    });
+
+    const content = chatCompletion.choices[0]?.message?.content;
+    if (!content) return { transactions: [] };
+
+    return JSON.parse(content);
+  }).catch(err => {
+    console.error("Groq Vision Import Error (Queued):", err);
+    return { transactions: [] };
+  });
+}
+
+

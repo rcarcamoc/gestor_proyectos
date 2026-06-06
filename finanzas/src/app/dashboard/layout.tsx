@@ -127,12 +127,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           )}>
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-2xl bg-gradient-to-br from-stone-800 to-stone-950 flex items-center justify-center shadow-lg flex-shrink-0">
-                <span className="font-serif text-white text-lg leading-none">Z</span>
+                <span className="font-serif text-white text-lg leading-none">F</span>
               </div>
               {!isCollapsed && (
                 <div className="animate-in fade-in duration-300">
-                  <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Zen</p>
-                  <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Finanzas</p>
+                  <p className="font-serif text-stone-900 font-semibold text-lg leading-tight">Finanzas</p>
+                  <p className="text-stone-400 text-xs font-medium tracking-widest uppercase leading-none">Familiares</p>
                 </div>
               )}
             </div>
@@ -232,7 +232,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex-1 flex justify-center">
-          <span className="font-serif text-stone-800 font-semibold text-lg">Zen Finanzas</span>
+          <span className="font-serif text-stone-800 font-semibold text-lg">Finanzas Familiares</span>
         </div>
         <div className="w-auto flex items-center">
             <Select value={selectedScope} onValueChange={(v) => v && setSelectedScope(v)}>
@@ -295,9 +295,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-4 mb-8">
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-2xl bg-stone-900 flex items-center justify-center">
-                  <span className="font-serif text-white text-lg">Z</span>
+                  <span className="font-serif text-white text-lg">F</span>
                 </div>
-                <span className="font-serif text-stone-900 text-lg font-semibold">Zen Finanzas</span>
+                <span className="font-serif text-stone-900 text-lg font-semibold">Finanzas Familiares</span>
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}

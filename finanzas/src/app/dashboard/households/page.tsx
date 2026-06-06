@@ -235,7 +235,7 @@ export default function HouseholdsPage() {
                     </div>
                   </div>
                   {userEmail && (() => {
-                    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://161.153.219.141';
+                    const origin = typeof window !== 'undefined' ? window.location.origin : 'http://129.151.113.195';
                     const linkUrl = `${origin}/finanzas/dashboard/link-device?householdId=${h.id}&email=${encodeURIComponent(userEmail)}`;
                     return (
                       <div className="shrink-0 p-2 bg-stone-50/50 border border-stone-100 rounded-2xl flex flex-col items-center">

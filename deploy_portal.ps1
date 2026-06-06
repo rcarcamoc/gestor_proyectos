@@ -2,7 +2,7 @@
 # Este script sincroniza el repositorio y redespliega todo en Oracle Cloud
 
 $sshKey = "C:\Users\arant\.ssh\smarttrack_key.key"
-$userAtHost = "ubuntu@161.153.219.141"
+$userAtHost = "ubuntu@129.151.113.195"
 $remotePath = "portal_hub"
 
 # Cambiar a la carpeta del script de forma robusta
@@ -70,7 +70,7 @@ ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost "$remoteCmds"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n[V] Portal desplegado y sincronizado exitosamente en producción." -ForegroundColor Green
-    Write-Host "URL: http://161.153.219.141/" -ForegroundColor Gray
+    Write-Host "URL: http://129.151.113.195/" -ForegroundColor Gray
 } else {
     Write-Host "`n[X] Error durante el despliegue en producción. Verifica la conexión o los logs de Docker." -ForegroundColor Red
 }

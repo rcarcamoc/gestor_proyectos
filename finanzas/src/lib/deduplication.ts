@@ -36,9 +36,15 @@ export async function findDuplicate(data: {
 
   if (candidates.length === 0) return null;
 
-  // Check if any candidate has the exact same description
+  // Check if any candidate has the exact same or fuzzy description
   const cleanDesc = (data.description || '').toLowerCase().trim();
-  const exactDescMatch = candidates.find(c => (c.description || '').toLowerCase().trim() === cleanDesc);
+  const exactDescMatch = candidates.find(c => {
+    const candidateDesc = (c.description || '').toLowerCase().trim();
+    return candidateDesc === cleanDesc ||
+           candidateDesc.includes(cleanDesc) ||
+           cleanDesc.includes(candidateDesc) ||
+           candidateDesc.substring(0, 5) === cleanDesc.substring(0, 5);
+  });
 
   if (exactDescMatch) {
     return { type: 'EXACT', transaction: exactDescMatch };

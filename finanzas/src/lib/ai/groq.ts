@@ -87,16 +87,20 @@ export async function extractTransactionFromEmail(text: string, categories: stri
       {
         "amount": number (positive for income, negative for expense),
         "currency": string (3 letter code, e.g. CLP, USD),
-        "date": string (ISO 8601),
-        "description": string (merchant or person),
+        "date": string (ISO 8601 string, including the transaction time if available in the email text, e.g., "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ssZ"),
+        "description": string (merchant or person name, cleaned of HTML or excess whitespaces),
         "category": string (must be one of the available categories),
         "confidence": number (0 to 1)
       }
+
+      Important instructions:
+      - If the email includes a specific date and time for the transaction (e.g. "Fecha: 06/06/2026" and "Hora: 10:18" or similar), combine them into a single ISO 8601 date-time string (e.g. "2026-06-06T10:18:00").
+      - Clean the merchant name from HTML tags, newlines, and double spaces.
     `;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama3-70b-8192",
+      model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
     });
 
@@ -200,7 +204,7 @@ export async function parseTransactionsFromImage(base64Image: string, currentYea
           ]
         }
       ],
-      model: "llama-3.2-11b-vision-preview",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       response_format: { type: "json_object" }
     });
 

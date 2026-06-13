@@ -45,7 +45,6 @@ services:
     networks:
       - portal_network
     depends_on:
-      - gestor_frontend
       - finanzas_app
 
   # --- GESTOR DE PROYECTOS (SMARTTRACK) ---

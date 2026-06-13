@@ -8,10 +8,16 @@ export async function GET(req: Request) {
   if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
-  const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
+  let month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
+  let year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
   const householdId = searchParams.get("householdId") || undefined;
   const billingPeriod = searchParams.get("billingPeriod") || undefined;
+  
+  if (billingPeriod && /^\d{4}-\d{2}$/.test(billingPeriod)) {
+    const parts = billingPeriod.split("-");
+    year = parseInt(parts[0]);
+    month = parseInt(parts[1]);
+  }
   
   const userId = (session.user as any).id;
 

@@ -7,11 +7,8 @@ export function cn(...inputs: ClassValue[]) {
 
 export function formatBillingPeriod(date: Date | string): string {
   const d = new Date(date);
-  const monthNames = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-  return `${monthNames[d.getMonth()]} - ${d.getFullYear()}`;
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${d.getFullYear()}-${month}`;
 }
 
 export function getMonthOptions() {
@@ -25,8 +22,9 @@ export function getMonthOptions() {
   // Last 6 months and next 3 months
   for (let i = -6; i <= 3; i++) {
     const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const value = formatBillingPeriod(d);
     const label = `${monthNames[d.getMonth()]} - ${d.getFullYear()}`;
-    options.push({ value: label, label });
+    options.push({ value, label });
   }
   return options;
 }

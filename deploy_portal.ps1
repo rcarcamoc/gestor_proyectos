@@ -55,6 +55,8 @@ wait_max=60; counter=0; \
  done && \
 echo '[+] Sincronizando esquema de base de datos...' && \
 sudo docker exec finanzas_app npx prisma db push && \
+echo '[+] Ejecutando migración de periodos de facturación...' && \
+sudo docker exec finanzas_app node migrate_periods.js && \
 echo '[+] Inicializando categorias por defecto...' && \
 sudo docker exec finanzas_app npx prisma db seed && \
 echo '[+] Limpiando imágenes antiguas...' && \

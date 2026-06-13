@@ -379,7 +379,7 @@ export async function POST(req: Request) {
       transactions: webTransactions.map(t => ({
         idUnico: t.externalId || t.id,
         amount: Number(t.amount),
-        date: t.date.toISOString(),
+        date: t.date.getTime(),
         type: t.type === TransactionType.INCOME ? "INGRESO" : "GASTO",
         description: t.description || "",
         categoryName: t.category?.name || "",

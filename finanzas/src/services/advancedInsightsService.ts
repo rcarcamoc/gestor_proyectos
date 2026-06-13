@@ -17,8 +17,12 @@ export interface SpendingProjection {
   confiability: number; // 0.0 - 1.0
 }
 
-// Helper to convert "Enero - 2026" to Date
+// Helper to convert "2026-06" or "Enero - 2026" to Date
 function getPeriodDate(periodLabel: string): Date {
+  if (/^\d{4}-\d{2}$/.test(periodLabel)) {
+    const parts = periodLabel.split("-");
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+  }
   const parts = periodLabel.split(" - ");
   if (parts.length !== 2) return new Date();
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -26,15 +30,15 @@ function getPeriodDate(periodLabel: string): Date {
   return new Date(parseInt(parts[1]), monthIdx === -1 ? 0 : monthIdx, 1);
 }
 
-// Helper to get last N period labels from a start period
+// Helper to get last N period labels from a start period in YYYY-MM format
 function getLastNPeriods(startPeriod: string, n = 6): string[] {
   const date = getPeriodDate(startPeriod);
   const periods: string[] = [];
-  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   
   for (let i = 0; i < n; i++) {
     const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
-    periods.push(`${monthNames[d.getMonth()]} - ${d.getFullYear()}`);
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    periods.push(`${d.getFullYear()}-${month}`);
   }
   return periods.reverse();
 }
@@ -292,6 +296,9 @@ export async function calculateBehaviorScore(householdId: string, billingPeriod:
 }
 
 function parseBillingPeriod(billingPeriod: string): string {
+  if (/^\d{4}-\d{2}$/.test(billingPeriod)) {
+    return billingPeriod;
+  }
   const parts = billingPeriod.split(" - ");
   if (parts.length !== 2) return billingPeriod;
   const monthName = parts[0];

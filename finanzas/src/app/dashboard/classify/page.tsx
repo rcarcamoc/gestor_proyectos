@@ -453,8 +453,19 @@ export default function ClassifyPage() {
       const res = await fetch(`/finanzas/api/transactions/${id}`, { method: 'DELETE' });
       if (res.ok) { toast.success('Transacción eliminada'); setPending(p => p.filter(t => t.id !== id)); }
       else toast.error('Error al eliminar');
+    } else if (action === 'skip') {
+      const res = await fetch(`/finanzas/api/transactions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ignored: true }),
+      });
+      if (res.ok) {
+        toast.success('Transacción omitida');
+        setPending(p => p.filter(t => t.id !== id));
+      } else {
+        toast.error('Error al omitir transacción');
+      }
     }
-    // skip: no API call needed
   };
 
   const coverage = stats ? Math.round(((stats.total - stats.needsReview) / Math.max(stats.total, 1)) * 100) : 0;

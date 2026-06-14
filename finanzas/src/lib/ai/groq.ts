@@ -161,6 +161,7 @@ export async function categorizeTransactionsBatch(
 export async function parseTransactionsFromImage(base64Image: string, currentYear: number) {
   return enqueue(async () => {
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    const cleanImage = base64Image.replace(/\s/g, "");
 
     const prompt = `
       Analiza la siguiente imagen que es una captura de pantalla de movimientos bancarios o de tarjeta de crédito (como Líder Bci).
@@ -198,7 +199,7 @@ export async function parseTransactionsFromImage(base64Image: string, currentYea
             {
               type: "image_url",
               image_url: {
-                url: base64Image
+                url: cleanImage
               }
             }
           ]

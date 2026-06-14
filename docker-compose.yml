@@ -81,18 +81,17 @@ services:
     networks:
       - portal_network
 
-  # --- CONTROL DE FINANZAS ---
   finanzas_app:
     build: ./finanzas
     container_name: finanzas_app
     restart: always
+    env_file: ./finanzas/.env
     environment:
       DATABASE_URL: mysql://user:pass@db:3306/web_finanzas
       NEXTAUTH_URL: http://129.151.113.195/finanzas
       NEXTAUTH_URL_INTERNAL: http://localhost:3000
       NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
       AUTH_TRUST_HOST: "true"
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

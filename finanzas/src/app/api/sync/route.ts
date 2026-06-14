@@ -140,6 +140,8 @@ export async function POST(req: Request) {
               cardType: tx.cardType || null,
               billingPeriod: tx.billingPeriod,
               ignored: !!tx.ignored,
+              scope: tx.scope || 'HOUSEHOLD',
+              userId_internal: tx.userId_internal || userId,
               updatedAt: androidUpdated
             }
           });
@@ -157,12 +159,13 @@ export async function POST(req: Request) {
             accountId: defaultAccount.id,
             categoryId: catId,
             userId,
-            userId_internal: userId,
+            userId_internal: tx.userId_internal || userId,
             householdId,
             externalId: tx.idUnico,
             billingPeriod: tx.billingPeriod,
             cardType: tx.cardType || null,
             ignored: !!tx.ignored,
+            scope: tx.scope || 'HOUSEHOLD',
             createdAt: tx.createdAt ? new Date(tx.createdAt) : new Date(),
             updatedAt: tx.updatedAt ? new Date(tx.updatedAt) : new Date()
           }
@@ -178,9 +181,12 @@ export async function POST(req: Request) {
       const [yearStr, monthStr] = b.period.split("-");
       const month = parseInt(monthStr);
       const year = parseInt(yearStr);
+      const isPersonal = b.scope === "PERSONAL";
 
       const existingBudget = await prisma.budget.findFirst({
-        where: { categoryId: catId, month, year, householdId }
+        where: isPersonal
+          ? { categoryId: catId, month, year, userId }
+          : { categoryId: catId, month, year, householdId }
       });
 
       if (existingBudget) {
@@ -196,16 +202,27 @@ export async function POST(req: Request) {
         }
       } else {
         await prisma.budget.create({
-          data: {
-            limit: Number(b.amount),
-            period: "MONTHLY",
-            month,
-            year,
-            categoryId: catId,
-            householdId,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          }
+          data: isPersonal
+            ? {
+                limit: Number(b.amount),
+                period: "MONTHLY",
+                month,
+                year,
+                categoryId: catId,
+                userId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            : {
+                limit: Number(b.amount),
+                period: "MONTHLY",
+                month,
+                year,
+                categoryId: catId,
+                householdId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
         });
       }
     }
@@ -332,12 +349,20 @@ export async function POST(req: Request) {
         householdId,
         updatedAt: { gt: lastSyncDate }
       },
-      include: { category: true }
+      include: { category: true, creator: true }
+    });
+
+    const members = await prisma.userHousehold.findMany({
+      where: { householdId },
+      include: { user: { select: { id: true, name: true, email: true } } }
     });
 
     const webBudgets = await prisma.budget.findMany({
       where: {
-        householdId,
+        OR: [
+          { householdId },
+          { userId }
+        ],
         updatedAt: { gt: lastSyncDate }
       },
       include: { category: true }
@@ -387,13 +412,17 @@ export async function POST(req: Request) {
         billingPeriod: t.billingPeriod || "",
         ignored: t.ignored,
         createdAt: t.createdAt.getTime(),
-        updatedAt: t.updatedAt.getTime()
+        updatedAt: t.updatedAt.getTime(),
+        scope: t.scope,
+        userId_internal: t.userId_internal,
+        userName: t.creator?.name || t.creator?.email || ""
       })),
       budgets: webBudgets.map(b => ({
         categoryName: b.category.name,
         amount: Number(b.limit),
         period: `${b.year}-${String(b.month).padStart(2, "0")}`,
-        updatedAt: b.updatedAt.getTime()
+        updatedAt: b.updatedAt.getTime(),
+        scope: b.userId ? "PERSONAL" : "HOUSEHOLD"
       })),
       salaries: webSalaries.map(s => ({
         nombrePersona: s.dummyUserName || s.user?.name || s.user?.email || "Desconocido",
@@ -418,6 +447,11 @@ export async function POST(req: Request) {
         notes: d.notes || "",
         createdAt: d.createdAt.getTime(),
         updatedAt: d.updatedAt.getTime()
+      })),
+      users: members.map(m => ({
+        id: m.user.id,
+        name: m.user.name || m.user.email || m.user.id,
+        email: m.user.email
       }))
     };
 

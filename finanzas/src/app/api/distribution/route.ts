@@ -109,7 +109,8 @@ export async function GET(request: Request) {
         householdId,
         type: 'EXPENSE',
         billingPeriod,
-        ignored: false
+        ignored: false,
+        scope: 'HOUSEHOLD'
       }
     });
 

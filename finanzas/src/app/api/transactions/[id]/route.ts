@@ -30,21 +30,28 @@ export async function PATCH(
   }
 
   try {
-    // Verify the user has access to this transaction
+    // Verify the user has access to this transaction (checking id or externalId)
     const existing = await prisma.transaction.findFirst({
       where: {
-        id,
         deletedAt: null,
         OR: [
-          { userId },
-          { userId_internal: userId },
+          { id },
+          { externalId: id }
+        ],
+        AND: [
+          {
+            OR: [
+              { userId },
+              { userId_internal: userId }
+            ]
+          }
         ]
       }
     });
     if (!existing) return NextResponse.json({ message: "Not found or unauthorized" }, { status: 404 });
 
     const transaction = await prisma.transaction.update({
-      where: { id },
+      where: { id: existing.id },
       data: updateData,
       include: { category: true, account: true }
     });
@@ -69,8 +76,19 @@ export async function DELETE(
   try {
     const existing = await prisma.transaction.findFirst({
       where: {
-        id,
-        deletedAt: null
+        deletedAt: null,
+        OR: [
+          { id },
+          { externalId: id }
+        ],
+        AND: [
+          {
+            OR: [
+              { userId },
+              { userId_internal: userId }
+            ]
+          }
+        ]
       }
     });
     
@@ -78,7 +96,7 @@ export async function DELETE(
 
     // Mark as soft deleted
     await prisma.transaction.update({
-      where: { id },
+      where: { id: existing.id },
       data: { deletedAt: new Date() }
     });
     return NextResponse.json({ message: "Deleted successfully" });

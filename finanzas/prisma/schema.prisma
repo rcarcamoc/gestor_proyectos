@@ -164,6 +164,7 @@ model Transaction {
   scope           String            @default("HOUSEHOLD") // 'HOUSEHOLD' | 'PERSONAL'
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
+  deletedAt       DateTime?
 
   // Normalization fields from Android
   normalizedDescription String @default("undefined")
@@ -189,6 +190,7 @@ model Transaction {
   @@index([categoryId])
   @@index([type, date])
   @@index([billingPeriod])
+  @@index([deletedAt])
 }
 
 model Budget {

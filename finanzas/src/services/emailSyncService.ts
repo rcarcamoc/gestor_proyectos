@@ -12,6 +12,15 @@ export interface SyncResult {
   error?: string;
 }
 
+// Internal type to hold raw email data before processing
+interface RawEmailData {
+  uid: number;
+  subject: string;
+  bodyText: string;
+  messageId: string;
+  date: Date;
+}
+
 export async function syncEmailAccount(emailAccountId: string): Promise<SyncResult> {
   const emailAccount = await prisma.emailAccount.findUnique({
     where: { id: emailAccountId },
@@ -35,58 +44,61 @@ export async function syncEmailAccount(emailAccountId: string): Promise<SyncResu
     logger: false
   });
 
-  let emailsRead = 0;
   let importedCount = 0;
-  const uidsToMarkAsRead: number[] = [];
+  const rawEmails: RawEmailData[] = [];
 
   try {
     await client.connect();
     const lock = await client.getMailboxLock('INBOX');
 
     try {
-      // Find all unread messages (seen: false = unread)
+      // Step 1: Find all unread messages
       const searchResult = await client.search({ seen: false });
-      const messages: number[] = Array.isArray(searchResult) ? searchResult : [];
-      emailsRead = messages.length;
+      const seqNums: number[] = Array.isArray(searchResult) ? searchResult : [];
 
-      for (const seq of messages) {
-        // Fetch raw mail source and its UID
+      // Step 2: Fetch raw source and UIDs for all unread messages
+      for (const seq of seqNums) {
         const emailSource = await client.fetchOne(seq, { source: true, uid: true });
-        if (!emailSource || !emailSource.source) continue;
+        if (!emailSource?.source || !emailSource.uid) continue;
 
         const parsed = await simpleParser(emailSource.source);
-        const subject = parsed.subject || '';
-        const bodyText = parsed.text || parsed.html || '';
-        const messageId = parsed.messageId || `email-seq-${seq}-${Date.now()}`;
-        const emailDate = parsed.date || new Date();
-
-        // Process the transaction using Groq extraction
-        const wasImported = await processEmailTransaction({
-          bodyText,
-          subject,
-          messageId,
-          date: emailDate,
-          emailAccount
+        rawEmails.push({
+          uid: emailSource.uid,
+          subject: parsed.subject || '',
+          bodyText: parsed.text || String(parsed.html || ''),
+          messageId: parsed.messageId || `email-uid-${emailSource.uid}`,
+          date: parsed.date || new Date(),
         });
+      }
 
-        if (wasImported) {
-          importedCount++;
-        }
-
-        if (emailSource.uid) {
-          uidsToMarkAsRead.push(emailSource.uid);
-        }
+      // Step 3: Mark ALL fetched emails as read BEFORE releasing the lock
+      // This happens before any slow Groq/Prisma calls so the IMAP connection stays alive
+      if (rawEmails.length > 0) {
+        const uids = rawEmails.map(e => e.uid);
+        console.log(`[Email Sync] Marking ${uids.length} email(s) as read: UIDs ${uids.join(', ')}`);
+        await client.messageFlagsAdd(uids, ['\\Seen'], { uid: true });
+        console.log(`[Email Sync] Successfully marked emails as read`);
       }
     } finally {
       lock.release();
     }
 
-    // Mark processed emails as read
-    if (uidsToMarkAsRead.length > 0) {
-      await client.messageFlagsAdd(uidsToMarkAsRead, ['\\Seen'], { uid: true });
-    }
-
     await client.logout();
+
+    // Step 4: Process transactions AFTER disconnecting from IMAP
+    // Now we can safely take as long as needed with Groq/Prisma
+    for (const email of rawEmails) {
+      const wasImported = await processEmailTransaction({
+        bodyText: email.bodyText,
+        subject: email.subject,
+        messageId: email.messageId,
+        date: email.date,
+        emailAccount
+      });
+      if (wasImported) {
+        importedCount++;
+      }
+    }
 
     // Update last sync date
     await prisma.emailAccount.update({
@@ -96,7 +108,7 @@ export async function syncEmailAccount(emailAccountId: string): Promise<SyncResu
 
     return {
       success: true,
-      emailsRead,
+      emailsRead: rawEmails.length,
       importedCount
     };
   } catch (err: any) {
@@ -112,6 +124,7 @@ export async function syncEmailAccount(emailAccountId: string): Promise<SyncResu
     };
   }
 }
+
 
 async function processEmailTransaction({
   bodyText,

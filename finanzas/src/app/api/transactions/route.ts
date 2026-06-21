@@ -4,10 +4,13 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { NextResponse } from "next/server";
 import { formatBillingPeriod } from "@/lib/utils";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
     const {
@@ -22,7 +25,6 @@ export async function POST(req: Request) {
       billingPeriod
     } = await req.json();
 
-    const userId = (session.user as any).id;
     const finalBillingPeriod = billingPeriod || formatBillingPeriod(date);
 
     // Start a transaction to update account balance and create the transaction record
@@ -66,13 +68,14 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const householdId = searchParams.get('householdId');
   const uncategorized = searchParams.get('uncategorized') === 'true';
   const includeIgnored = searchParams.get('includeIgnored') === 'true';
-  const userId = (session.user as any).id;
 
   try {
     // Get all households the user belongs to
@@ -82,18 +85,18 @@ export async function GET(req: Request) {
     });
     const householdIds = userHouseholds.map(uh => uh.householdId);
 
-    let whereFilter: any = {};
+    let whereFilter: any = {
+      deletedAt: null // Only active transactions
+    };
     
     if (householdId) {
-      whereFilter = { householdId };
+      whereFilter.householdId = householdId;
     } else {
       // Return personal transactions OR household transactions for households the user is in
-      whereFilter = {
-        OR: [
-          { userId },
-          { householdId: { in: householdIds } }
-        ]
-      };
+      whereFilter.OR = [
+        { userId },
+        { householdId: { in: householdIds } }
+      ];
     }
 
     if (uncategorized) {
@@ -109,7 +112,7 @@ export async function GET(req: Request) {
 
     // By default hide ignored transactions; show them only when explicitly requested
     if (!includeIgnored) {
-      whereFilter = { ...whereFilter, ignored: false };
+      whereFilter.ignored = false;
     }
 
     const transactions = await prisma.transaction.findMany({
@@ -131,11 +134,12 @@ export async function GET(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const billingPeriod = searchParams.get('billingPeriod');
-  const userId = (session.user as any).id;
 
   if (!billingPeriod) return NextResponse.json({ message: "Billing period is required" }, { status: 400 });
 
@@ -149,6 +153,7 @@ export async function DELETE(req: Request) {
 
     const whereFilter = {
       billingPeriod,
+      deletedAt: null,
       OR: [
         { userId },
         { householdId: { in: householdIds } }
@@ -165,7 +170,7 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ message: "No transactions found for this period", count: 0 });
     }
 
-    // Execute deletion and balance adjustment in a transaction
+    // Execute soft deletion and balance adjustment in a transaction
     await prisma.$transaction(async (tx) => {
       // Group adjustments by account
       const adjustments: Record<string, number> = {};
@@ -183,9 +188,10 @@ export async function DELETE(req: Request) {
         });
       }
 
-      // Delete the transactions
-      await tx.transaction.deleteMany({
-        where: whereFilter
+      // Soft delete the transactions (instead of hard delete)
+      await tx.transaction.updateMany({
+        where: whereFilter,
+        data: { deletedAt: new Date() }
       });
     });
 

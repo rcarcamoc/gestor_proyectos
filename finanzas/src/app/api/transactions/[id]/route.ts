@@ -2,16 +2,18 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { NextResponse } from "next/server";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const userId = (session.user as any).id;
   const body = await req.json();
 
   // Only allow specific fields to be updated (not amount, date, description)
@@ -32,6 +34,7 @@ export async function PATCH(
     const existing = await prisma.transaction.findFirst({
       where: {
         id,
+        deletedAt: null,
         OR: [
           { userId },
           { userId_internal: userId },
@@ -57,17 +60,26 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
 
   try {
-    // Note: In a real app, we should revert the account balance update if deleting a confirmed transaction.
-    // However, PENDING_REVIEW transactions typically haven't updated the balance yet in our import logic, 
-    // BUT our manual POST logic DOES update the balance.
-    // For now, let's just delete.
-    await prisma.transaction.delete({
-      where: { id }
+    const existing = await prisma.transaction.findFirst({
+      where: {
+        id,
+        deletedAt: null
+      }
+    });
+    
+    if (!existing) return NextResponse.json({ message: "Not found" }, { status: 404 });
+
+    // Mark as soft deleted
+    await prisma.transaction.update({
+      where: { id },
+      data: { deletedAt: new Date() }
     });
     return NextResponse.json({ message: "Deleted successfully" });
   } catch (error) {

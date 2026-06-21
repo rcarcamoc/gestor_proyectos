@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/prisma";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 // Helper to convert "YYYY-MM" to "Month - YYYY" (e.g. "2026-06" to "Junio - 2026")
 function formatBillingPeriodForTx(period: string): string {
@@ -154,9 +155,9 @@ async function deleteSalaryTransaction(
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const householdId = searchParams.get("householdId");
   const period = searchParams.get("period"); // Optional, format YYYY-MM
@@ -197,9 +198,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const body = await req.json();
   const { id, householdId, period, amount, targetUserId, dummyUserName } = body;
 
@@ -273,9 +274,9 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 

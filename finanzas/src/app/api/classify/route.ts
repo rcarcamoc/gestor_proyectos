@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { categorizeTransactionsBatch } from "@/lib/ai/groq";
 import { categorizeByKeywords } from "@/services/categorizerService";
 import { trainNaiveBayes } from "@/services/mlCategorizerService";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 /**
  * GET /api/classify
@@ -16,9 +17,9 @@ import { trainNaiveBayes } from "@/services/mlCategorizerService";
  */
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const [total, byCategorySource, trainingSize] = await Promise.all([
     prisma.transaction.count({ where: { userId } }),
@@ -64,9 +65,9 @@ export async function GET(req: Request) {
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const userId = (session.user as any).id;
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
   const { batchSize = 50 } = await req.json().catch(() => ({}));
 
   // Obtener transacciones pendientes de clasificar (sin categoria O en needs_review)
@@ -203,18 +204,21 @@ export async function PATCH(req: Request) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const { transactionId, categoryId } = await req.json();
+  const { transactionId, transactionIds, categoryId } = await req.json();
   const userId = (session.user as any).id;
 
-  // Verificar pertenencia
-  const tx = await prisma.transaction.findFirst({
-    where: { id: transactionId, userId },
-  });
-  if (!tx) return NextResponse.json({ message: "Not found" }, { status: 404 });
+  const idsToUpdate = transactionIds || (transactionId ? [transactionId] : []);
 
+  if (idsToUpdate.length === 0) {
+    return NextResponse.json({ message: "No transaction IDs provided" }, { status: 400 });
+  }
 
-  const updated = await prisma.transaction.update({
-    where: { id: transactionId },
+  // Actualizar todas las transacciones correspondientes en lote
+  const updated = await prisma.transaction.updateMany({
+    where: {
+      id: { in: idsToUpdate },
+      userId,
+    },
     data: {
       categoryId,
       categorySource: "manual",  // Corrección del usuario = dato de entrenamiento confiable
@@ -222,5 +226,5 @@ export async function PATCH(req: Request) {
     },
   });
 
-  return NextResponse.json(updated);
+  return NextResponse.json({ success: true, count: updated.count });
 }

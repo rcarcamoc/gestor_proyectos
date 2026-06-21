@@ -3,8 +3,8 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/prisma";
 import { DebtStatus } from "@prisma/client";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
-// Helper to check if user belongs to the household
 async function checkHouseholdMembership(userId: string, householdId: string) {
   const membership = await prisma.userHousehold.findFirst({
     where: { userId, householdId },
@@ -14,9 +14,10 @@ async function checkHouseholdMembership(userId: string, householdId: string) {
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as any).id;
   const { searchParams } = new URL(req.url);
   const householdId = searchParams.get("householdId");
   const status = searchParams.get("status") as DebtStatus | null;
@@ -58,9 +59,10 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as any).id;
   const body = await req.json();
   const {
     id,
@@ -120,9 +122,10 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
-  const userId = (session.user as any).id;
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
 

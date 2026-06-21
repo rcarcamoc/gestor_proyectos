@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -23,14 +23,55 @@ const SOURCE_META: Record<string, { label: string; color: string }> = {
   needs_review: { label: 'Revisar', color: 'bg-rose-100 text-rose-700 border-rose-200' },
 };
 
+function cleanDescription(desc: string) {
+  return (desc || '').toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(w => w.length > 2);
+}
+
+function getSimilarity(desc1: string, desc2: string) {
+  const words1 = cleanDescription(desc1);
+  const words2 = cleanDescription(desc2);
+  if (words1.length === 0 || words2.length === 0) return 0;
+  const intersection = words1.filter(w => words2.includes(w));
+  const union = Array.from(new Set([...words1, ...words2]));
+  return intersection.length / union.length;
+}
+
+function areSimilar(desc1: string, desc2: string) {
+  const d1 = (desc1 || '').toLowerCase().trim();
+  const d2 = (desc2 || '').toLowerCase().trim();
+  if (d1 === d2) return true;
+  
+  const clean1 = cleanDescription(d1);
+  const clean2 = cleanDescription(d2);
+  
+  if (clean1.length === 0 || clean2.length === 0) return false;
+  
+  if (clean1.length >= 2 && clean2.length >= 2) {
+    if (clean1[0] === clean2[0] && clean1[1] === clean2[1]) return true;
+  }
+  
+  const intersection = clean1.filter(w => clean2.includes(w));
+  const union = Array.from(new Set([...clean1, ...clean2]));
+  const jaccard = intersection.length / union.length;
+  
+  return jaccard >= 0.4;
+}
+
 // ─── Swipe Card Component ────────────────────────────────────────────────────
 function SwipeCard({
-  tx, categories, onConfirm, onSkip, onDelete, onChangeCategory, isTop
+  tx, categories, onConfirm, onSkip, onDelete, onChangeCategory, isTop,
+  similarTxs = [], selectedSimilar = [], setSelectedSimilar = () => {}
 }: {
   tx: PendingTx; categories: Category[];
   onConfirm: () => void; onSkip: () => void;
   onDelete: () => void; onChangeCategory: (catId: string) => void;
   isTop: boolean;
+  similarTxs?: PendingTx[];
+  selectedSimilar?: string[];
+  setSelectedSimilar?: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState({ x: 0, y: 0, dragging: false, startX: 0, startY: 0 });
@@ -158,6 +199,41 @@ function SwipeCard({
             )}
           </div>
 
+          {similarTxs.length > 0 && (
+            <div className="p-3 bg-stone-50 rounded-2xl border border-stone-200" onMouseDown={e => e.stopPropagation()}>
+              <p className="text-xs font-bold text-stone-500 mb-2 flex items-center justify-between">
+                <span>¿Clasificar similares juntos?</span>
+                <span className="bg-stone-200 text-stone-700 px-2 py-0.5 rounded-full text-[10px]">
+                  {selectedSimilar.length} / {similarTxs.length}
+                </span>
+              </p>
+              <div className="max-h-24 overflow-y-auto space-y-1.5 pr-1 select-none">
+                {similarTxs.map(sim => {
+                  const isChecked = selectedSimilar.includes(sim.id);
+                  return (
+                    <label key={sim.id} className="flex items-start gap-2 text-xs text-stone-600 cursor-pointer hover:text-stone-800">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSelectedSimilar(prev =>
+                            isChecked
+                              ? prev.filter(id => id !== sim.id)
+                              : [...prev, sim.id]
+                          );
+                        }}
+                        className="mt-0.5 rounded text-stone-850 focus:ring-stone-500 h-3.5 w-3.5 border-stone-300"
+                      />
+                      <span className="truncate leading-tight font-medium" title={sim.description}>
+                        {sim.description}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Category Suggestion Display */}
           {!showEdit && tx.category && (
             <div className="text-center bg-stone-50 p-4 rounded-2xl border border-stone-100 flex flex-col items-center justify-center">
@@ -236,7 +312,8 @@ function SwipeCard({
 // ─── Swipe Mode ──────────────────────────────────────────────────────────────
 function SwipeMode({ pending, categories, onExit, onUpdate }: {
   pending: PendingTx[]; categories: Category[];
-  onExit: () => void; onUpdate: (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string) => void;
+  onExit: () => void;
+  onUpdate: (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string, batchIds?: string[]) => void;
 }) {
   const [queue, setQueue] = useState([...pending]);
   const [confirmed, setConfirmed] = useState(0);
@@ -248,12 +325,27 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
   const current = queue[0];
   const next = queue[1];
 
+  const similarTxs = useMemo(() => {
+    if (!current) return [];
+    return queue.slice(1).filter(tx => areSimilar(current.description, tx.description));
+  }, [current, queue]);
+
+  const [selectedSimilar, setSelectedSimilar] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (similarTxs.length > 0) {
+      setSelectedSimilar(similarTxs.map(t => t.id));
+    } else {
+      setSelectedSimilar([]);
+    }
+  }, [similarTxs]);
+
   const handleConfirm = async () => {
     if (!current) return;
     setLoadingId(current.id);
-    await onUpdate(current.id, 'confirm');
-    setQueue(q => q.slice(1));
-    setConfirmed(c => c + 1);
+    await onUpdate(current.id, 'confirm', undefined, selectedSimilar);
+    setQueue(q => q.filter(tx => tx.id !== current.id && !selectedSimilar.includes(tx.id)));
+    setConfirmed(c => c + 1 + selectedSimilar.length);
     setStreak(s => s + 1);
     setLoadingId(null);
   };
@@ -278,9 +370,9 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
   const handleChange = async (catId: string) => {
     if (!current) return;
     setLoadingId(current.id);
-    await onUpdate(current.id, 'change', catId);
-    setQueue(q => q.slice(1));
-    setConfirmed(c => c + 1);
+    await onUpdate(current.id, 'change', catId, selectedSimilar);
+    setQueue(q => q.filter(tx => tx.id !== current.id && !selectedSimilar.includes(tx.id)));
+    setConfirmed(c => c + 1 + selectedSimilar.length);
     setStreak(s => s + 1);
     setLoadingId(null);
   };
@@ -350,6 +442,9 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
                 onDelete={handleDelete}
                 onChangeCategory={handleChange}
                 isTop={true}
+                similarTxs={similarTxs}
+                selectedSimilar={selectedSimilar}
+                setSelectedSimilar={setSelectedSimilar}
               />
             ) : null}
           </div>
@@ -383,6 +478,211 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
   );
 }
 
+function CategoryMode({
+  pending,
+  categories,
+  onUpdateBatch,
+}: {
+  pending: PendingTx[];
+  categories: Category[];
+  onUpdateBatch: (ids: string[], catId: string) => Promise<void>;
+}) {
+  const [selectedCatId, setSelectedCatId] = useState<string>('');
+  const [selectedTxIds, setSelectedTxIds] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const activeCategory = categories.find(c => c.id === selectedCatId);
+
+  // Group pending into suggested and other
+  const { suggested, others } = useMemo(() => {
+    if (!selectedCatId) return { suggested: [], others: [] };
+    const sug: PendingTx[] = [];
+    const oth: PendingTx[] = [];
+    
+    pending.forEach(tx => {
+      // Check if match search query
+      if (searchQuery && !tx.description.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return;
+      }
+      
+      if (tx.categoryId === selectedCatId) {
+        sug.push(tx);
+      } else {
+        oth.push(tx);
+      }
+    });
+    
+    return { suggested: sug, others: oth };
+  }, [pending, selectedCatId, searchQuery]);
+
+  // Reset selected checkboxes when category changes
+  useEffect(() => {
+    setSelectedTxIds(suggested.map(t => t.id));
+  }, [suggested, selectedCatId]);
+
+  const handleToggleSelectAll = () => {
+    if (selectedTxIds.length === suggested.length) {
+      setSelectedTxIds([]);
+    } else {
+      setSelectedTxIds(suggested.map(t => t.id));
+    }
+  };
+
+  const handleToggleSelectTx = (id: string) => {
+    setSelectedTxIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <Card className="border-stone-100 shadow-sm rounded-3xl bg-white p-6">
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-serif font-bold text-stone-800">Clasificación Rápida por Categoría</h2>
+          <p className="text-stone-500 text-xs mt-1">Selecciona una categoría para ver y confirmar transacciones sugeridas por la IA en lote.</p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="w-full sm:w-1/3">
+            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Categoría Objetivo</label>
+            <Select value={selectedCatId} onValueChange={setSelectedCatId}>
+              <SelectTrigger className="w-full rounded-xl border-stone-200 bg-stone-50">
+                <SelectValue placeholder="Selecciona una categoría..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="flex items-center gap-2">
+                      {c.color && <span className="h-2.5 w-2.5 rounded-full inline-block" style={{ backgroundColor: c.color }} />}
+                      {c.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedCatId && (
+            <div className="flex-1">
+              <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-1.5">Filtrar Descripción</label>
+              <input
+                type="text"
+                placeholder="Buscar por descripción (ej: Lider)..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full h-10 px-3 text-sm rounded-xl border border-stone-200 bg-stone-50 focus:outline-none focus:ring-2 focus:ring-stone-200"
+              />
+            </div>
+          )}
+        </div>
+
+        {selectedCatId ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Suggested Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-2">
+                <h3 className="text-sm font-bold text-stone-700">
+                  Sugeridas para {activeCategory?.name} ({suggested.length})
+                </h3>
+                {suggested.length > 0 && (
+                  <button
+                    onClick={handleToggleSelectAll}
+                    className="text-xs font-semibold text-violet-600 hover:underline"
+                  >
+                    {selectedTxIds.length === suggested.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
+                  </button>
+                )}
+              </div>
+
+              {suggested.length === 0 ? (
+                <p className="text-xs text-stone-400 italic py-4">No hay transacciones sugeridas pendientes para esta categoría.</p>
+              ) : (
+                <div className="max-h-72 overflow-y-auto border border-stone-100 rounded-2xl divide-y divide-stone-100">
+                  {suggested.map(tx => {
+                    const isChecked = selectedTxIds.includes(tx.id);
+                    return (
+                      <div key={tx.id} className="flex items-center justify-between p-3 hover:bg-stone-50 transition-colors">
+                        <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelectTx(tx.id)}
+                            className="rounded border-stone-300 text-stone-850 focus:ring-stone-500 h-4 w-4"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-stone-800 truncate">{tx.description}</p>
+                            <p className="text-[10px] text-stone-400">{new Date(tx.date).toLocaleDateString('es-CL')}</p>
+                          </div>
+                        </label>
+                        <span className="text-sm font-serif font-bold text-stone-900 ml-4">
+                          {Number(tx.amount).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            {selectedTxIds.length > 0 && (
+              <div className="flex justify-end pt-2">
+                <Button
+                  onClick={() => onUpdateBatch(selectedTxIds, selectedCatId)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-8"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirmar {selectedTxIds.length} transacciones como {activeCategory?.name}
+                </Button>
+              </div>
+            )}
+
+            {/* Other Transactions Section */}
+            {others.length > 0 && (
+              <div className="space-y-3 pt-4 border-t border-stone-100">
+                <h3 className="text-sm font-bold text-stone-500">
+                  Otras transacciones sin categoría ({others.length})
+                </h3>
+                <div className="max-h-60 overflow-y-auto border border-stone-100 rounded-2xl divide-y divide-stone-100">
+                  {others.map(tx => {
+                    const isChecked = selectedTxIds.includes(tx.id);
+                    return (
+                      <div key={tx.id} className="flex items-center justify-between p-3 hover:bg-stone-50 transition-colors">
+                        <label className="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelectTx(tx.id)}
+                            className="rounded border-stone-300 text-stone-850 focus:ring-stone-500 h-4 w-4"
+                          />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-stone-700 truncate">{tx.description}</p>
+                            <span className="inline-block mt-1 text-[9px] font-bold uppercase tracking-widest bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded">
+                              Sugerido: {categories.find(c => c.id === tx.categoryId)?.name || 'Ninguno'}
+                            </span>
+                          </div>
+                        </label>
+                        <span className="text-sm font-serif font-bold text-stone-900 ml-4">
+                          {Number(tx.amount).toLocaleString('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 })}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="text-center py-12 border-2 border-dashed border-stone-200 rounded-3xl bg-stone-50/50">
+            <Tag className="h-10 w-10 text-stone-300 mx-auto mb-3" />
+            <p className="text-stone-500 font-medium text-sm">Selecciona una categoría de la lista para empezar a clasificar en lote.</p>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function ClassifyPage() {
   const [stats, setStats] = useState<Stats | null>(null);
@@ -391,6 +691,7 @@ export default function ClassifyPage() {
   const [classifying, setClassifying] = useState(false);
   const [aiStatus, setAiStatus] = useState<any>(null);
   const [swipeMode, setSwipeMode] = useState(false);
+  const [mode, setMode] = useState<'cards' | 'categories'>('cards');
 
   useEffect(() => {
     fetchAll();
@@ -432,22 +733,23 @@ export default function ClassifyPage() {
     finally { setClassifying(false); }
   };
 
-  const handleSwipeUpdate = async (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string) => {
+  const handleSwipeUpdate = async (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string, batchIds?: string[]) => {
+    const idsToUpdate = batchIds && batchIds.length > 0 ? [id, ...batchIds] : [id];
     if (action === 'confirm') {
       const tx = pending.find(t => t.id === id);
       if (!tx || !tx.categoryId) return;
       // Already confirmed by AI — just mark as manual
       await fetch(`/finanzas/api/classify`, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId: id, categoryId: tx.categoryId }),
+        body: JSON.stringify({ transactionIds: idsToUpdate, categoryId: tx.categoryId }),
       }).catch(() => { });
-      setPending(p => p.filter(t => t.id !== id));
+      setPending(p => p.filter(t => !idsToUpdate.includes(t.id)));
     } else if (action === 'change' && catId) {
       const res = await fetch('/finanzas/api/classify', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionId: id, categoryId: catId }),
+        body: JSON.stringify({ transactionIds: idsToUpdate, categoryId: catId }),
       });
-      if (res.ok) { toast.success('Categoría guardada'); setPending(p => p.filter(t => t.id !== id)); }
+      if (res.ok) { toast.success('Categorías guardadas'); setPending(p => p.filter(t => !idsToUpdate.includes(t.id))); }
       else toast.error('Error al guardar');
     } else if (action === 'delete') {
       const res = await fetch(`/finanzas/api/transactions/${id}`, { method: 'DELETE' });
@@ -465,6 +767,21 @@ export default function ClassifyPage() {
       } else {
         toast.error('Error al omitir transacción');
       }
+    }
+  };
+
+  const handleBatchUpdate = async (ids: string[], catId: string) => {
+    const res = await fetch('/finanzas/api/classify', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transactionIds: ids, categoryId: catId }),
+    });
+    if (res.ok) {
+      toast.success('Transacciones clasificadas');
+      setPending(p => p.filter(t => !ids.includes(t.id)));
+      fetchAll();
+    } else {
+      toast.error('Error al clasificar transacciones');
     }
   };
 
@@ -526,8 +843,25 @@ export default function ClassifyPage() {
         </div>
       )}
 
-      {/* Start Swipe CTA */}
+      {/* Modo de Clasificación Tabs */}
       {pending.length > 0 && (
+        <div className="flex gap-2 p-1.5 bg-stone-100 rounded-2xl w-fit">
+          <button
+            onClick={() => setMode('cards')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${mode === 'cards' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-400 hover:text-stone-700'}`}
+          >
+            Modo Tarjetas (Rápido)
+          </button>
+          <button
+            onClick={() => setMode('categories')}
+            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${mode === 'categories' ? 'bg-white shadow-sm text-stone-800' : 'text-stone-400 hover:text-stone-700'}`}
+          >
+            Modo Categorías (Lote)
+          </button>
+        </div>
+      )}
+
+      {pending.length > 0 && mode === 'cards' && (
         <Card className="border-none bg-gradient-to-br from-stone-800 to-stone-950 text-white shadow-xl rounded-3xl overflow-hidden">
           <CardContent className="p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
             <div>
@@ -544,6 +878,14 @@ export default function ClassifyPage() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {pending.length > 0 && mode === 'categories' && (
+        <CategoryMode
+          pending={pending}
+          categories={categories}
+          onUpdateBatch={handleBatchUpdate}
+        />
       )}
 
       {pending.length === 0 && stats && (

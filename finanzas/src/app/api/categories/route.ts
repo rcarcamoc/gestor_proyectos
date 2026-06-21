@@ -3,13 +3,15 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { NextResponse } from "next/server";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
-    const userId = (session.user as any).id;
     const { searchParams } = new URL(req.url);
     const householdId = searchParams.get('householdId');
 
@@ -40,16 +42,16 @@ export async function GET(req: Request) {
     console.error(error);
     return NextResponse.json({ message: "Error fetching categories" }, { status: 500 });
   }
-
 }
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
     const { name, color, householdId } = await req.json();
-    const userId = (session.user as any).id;
 
     const category = await prisma.category.create({
       data: {

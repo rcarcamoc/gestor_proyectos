@@ -1,3 +1,7 @@
+/**
+ * @deprecated This endpoint is deprecated. Use the new mobile/refresh endpoint instead.
+ * Kept for backward compatibility with older APK versions.
+ */
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
@@ -59,7 +63,8 @@ export async function POST(req: Request) {
     budgets = [],
     salaries = [],
     patterns = [],
-    debts = []
+    debts = [],
+    deletedIds = []
   } = body;
 
   if (!householdId) {
@@ -80,6 +85,19 @@ export async function POST(req: Request) {
       await prisma.salary.deleteMany({ where: { householdId } });
       await prisma.autoClassificationPattern.deleteMany({ where: { householdId } });
       await prisma.debt.deleteMany({ where: { householdId } });
+    } else if (deletedIds.length > 0) {
+      // Soft-delete transactions deleted in Android app
+      await prisma.transaction.updateMany({
+        where: {
+          externalId: { in: deletedIds },
+          householdId,
+          deletedAt: null
+        },
+        data: {
+          deletedAt: new Date()
+        }
+      });
+      console.log(`[Sync] Soft-deleted ${deletedIds.length} transactions in household ${householdId}`);
     }
 
     // 1. Get or create a default account for the household
@@ -108,15 +126,27 @@ export async function POST(req: Request) {
       }
     });
 
-    const getCategoryIdByName = (name?: string) => {
-      if (!name) return null;
-      const match = categories.find(c => c.name.toLowerCase() === name.toLowerCase());
-      return match ? match.id : null;
+    const getOrCreateCategoryIdByName = async (name?: string) => {
+      if (!name || name.trim() === "") return null;
+      const match = categories.find(c => c.name.toLowerCase() === name.trim().toLowerCase());
+      if (match) return match.id;
+
+      // Create new category on the server
+      const newCat = await prisma.category.create({
+        data: {
+          name: name.trim(),
+          householdId,
+          isDefault: false
+        }
+      });
+      // Add to local list so we don't recreate it in this request loop
+      categories.push(newCat);
+      return newCat.id;
     };
 
     // 3. Process incoming Transactions
     for (const tx of transactions) {
-      const catId = getCategoryIdByName(tx.categoryName);
+      const catId = await getOrCreateCategoryIdByName(tx.categoryName);
       const amount = Math.abs(Number(tx.amount));
       const type = tx.type === "INGRESO" || tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
 
@@ -127,8 +157,15 @@ export async function POST(req: Request) {
 
       if (existingTx) {
         // Simple conflict resolution: if android is newer than web, update it
+        // Or if there are field changes (classification, scope, etc.) to prevent losing local updates due to clock skew
         const androidUpdated = tx.updatedAt ? new Date(tx.updatedAt) : new Date();
-        if (androidUpdated > existingTx.updatedAt) {
+        const hasSemanticChanges = existingTx.scope !== (tx.scope || 'HOUSEHOLD') ||
+                                   existingTx.categoryId !== catId ||
+                                   existingTx.ignored !== !!tx.ignored ||
+                                   existingTx.description !== tx.description ||
+                                   Number(existingTx.amount) !== amount ||
+                                   existingTx.deletedAt !== null;
+        if (androidUpdated > existingTx.updatedAt || hasSemanticChanges) {
           await prisma.transaction.update({
             where: { id: existingTx.id },
             data: {
@@ -142,7 +179,8 @@ export async function POST(req: Request) {
               ignored: !!tx.ignored,
               scope: tx.scope || 'HOUSEHOLD',
               userId_internal: tx.userId_internal || userId,
-              updatedAt: androidUpdated
+              updatedAt: androidUpdated,
+              deletedAt: null // Restore if it was soft-deleted
             }
           });
         }
@@ -175,7 +213,7 @@ export async function POST(req: Request) {
 
     // 4. Process incoming Budgets
     for (const b of budgets) {
-      const catId = getCategoryIdByName(b.categoryName);
+      const catId = await getOrCreateCategoryIdByName(b.categoryName);
       if (!catId) continue;
 
       const [yearStr, monthStr] = b.period.split("-");
@@ -260,7 +298,7 @@ export async function POST(req: Request) {
 
     // 6. Process incoming Auto-Classification Patterns
     for (const p of patterns) {
-      const catId = getCategoryIdByName(p.categoryName);
+      const catId = await getOrCreateCategoryIdByName(p.categoryName);
       if (!catId) continue;
 
       const existingPattern = await prisma.autoClassificationPattern.findFirst({
@@ -347,10 +385,23 @@ export async function POST(req: Request) {
     const webTransactions = await prisma.transaction.findMany({
       where: {
         householdId,
-        updatedAt: { gt: lastSyncDate }
+        updatedAt: { gt: lastSyncDate },
+        deletedAt: null
       },
       include: { category: true, creator: true }
     });
+
+    const deletedTransactions = await prisma.transaction.findMany({
+      where: {
+        householdId,
+        deletedAt: { gt: lastSyncDate }
+      },
+      select: {
+        externalId: true,
+        id: true
+      }
+    });
+    const serverDeletedIds = deletedTransactions.map(t => t.externalId || t.id);
 
     const members = await prisma.userHousehold.findMany({
       where: { householdId },
@@ -452,7 +503,8 @@ export async function POST(req: Request) {
         id: m.user.id,
         name: m.user.name || m.user.email || m.user.id,
         email: m.user.email
-      }))
+      })),
+      deletedIds: serverDeletedIds
     };
 
     return NextResponse.json(responsePayload);

@@ -3,13 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { NextResponse } from "next/server";
+import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
     const { name } = await req.json();
@@ -17,8 +17,6 @@ export async function POST(req: Request) {
     if (!name) {
       return NextResponse.json({ message: "Name is required" }, { status: 400 });
     }
-
-    const userId = (session.user as any).id;
 
     const household = await prisma.household.create({
       data: {
@@ -39,16 +37,13 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-  }
+  const basicUser = !session?.user ? await authenticateBasicAuth(req) : null;
+  const userId = session?.user ? (session.user as any).id : basicUser?.id;
+  if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   try {
-    const userId = (session.user as any).id;
-
     const households = await prisma.household.findMany({
       where: {
         users: {

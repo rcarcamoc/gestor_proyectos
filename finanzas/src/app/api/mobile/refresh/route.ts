@@ -41,9 +41,14 @@ export async function GET(req: Request) {
     members
   ] = await Promise.all([
     prisma.transaction.findMany({
-      where: sinceDate
-        ? { householdId, updatedAt: { gt: sinceDate }, deletedAt: null }
-        : { householdId, deletedAt: null },
+      where: {
+        deletedAt: null,
+        OR: [
+          { householdId },
+          { userId: user.id }
+        ],
+        ...(sinceDate ? { updatedAt: { gt: sinceDate } } : {})
+      },
       include: { category: true, creator: true }
     }),
     prisma.category.findMany({
@@ -94,8 +99,11 @@ export async function GET(req: Request) {
   if (sinceDate) {
     const deletedTransactions = await prisma.transaction.findMany({
       where: {
-        householdId,
-        deletedAt: { gt: sinceDate }
+        deletedAt: { gt: sinceDate },
+        OR: [
+          { householdId },
+          { userId: user.id }
+        ]
       },
       select: {
         externalId: true,

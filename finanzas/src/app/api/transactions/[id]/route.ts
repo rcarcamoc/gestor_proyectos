@@ -36,18 +36,21 @@ export async function PATCH(
         OR: [
           { id },
           { externalId: id }
-        ],
-        AND: [
-          {
-            OR: [
-              { userId },
-              { userId_internal: userId }
-            ]
-          }
         ]
       }
     });
     if (!existing) return NextResponse.json({ message: "Not found or unauthorized" }, { status: 404 });
+
+    // Verify user is member of the household
+    const membership = await prisma.userHousehold.findFirst({
+      where: {
+        userId,
+        householdId: existing.householdId
+      }
+    });
+    if (!membership && existing.userId !== userId && existing.userId_internal !== userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
 
     let resolvedCategoryId = categoryId;
     if (!resolvedCategoryId && categoryName && categoryName.trim() !== "") {
@@ -107,19 +110,22 @@ export async function DELETE(
         OR: [
           { id },
           { externalId: id }
-        ],
-        AND: [
-          {
-            OR: [
-              { userId },
-              { userId_internal: userId }
-            ]
-          }
         ]
       }
     });
     
     if (!existing) return NextResponse.json({ message: "Not found" }, { status: 404 });
+
+    // Verify user is member of the household
+    const membership = await prisma.userHousehold.findFirst({
+      where: {
+        userId,
+        householdId: existing.householdId
+      }
+    });
+    if (!membership && existing.userId !== userId && existing.userId_internal !== userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 403 });
+    }
 
     // Mark as soft deleted
     await prisma.transaction.update({

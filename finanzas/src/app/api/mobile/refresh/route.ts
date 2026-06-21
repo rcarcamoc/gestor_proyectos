@@ -25,6 +25,7 @@ export async function GET(req: Request) {
 
   const sinceStr = searchParams.get("since");
   const sinceDate = sinceStr ? new Date(parseInt(sinceStr)) : null;
+  const billingPeriod = searchParams.get("billingPeriod");
 
   const whereCondition = sinceDate
     ? { householdId, updatedAt: { gt: sinceDate } }
@@ -47,6 +48,7 @@ export async function GET(req: Request) {
           { householdId },
           { userId: user.id }
         ],
+        ...(billingPeriod ? { billingPeriod } : {}),
         ...(sinceDate ? { updatedAt: { gt: sinceDate } } : {})
       },
       include: { category: true, creator: true }
@@ -103,7 +105,8 @@ export async function GET(req: Request) {
         OR: [
           { householdId },
           { userId: user.id }
-        ]
+        ],
+        ...(billingPeriod ? { billingPeriod } : {})
       },
       select: {
         externalId: true,

@@ -205,7 +205,7 @@ export async function parseTransactionsFromImage(base64Image: string, currentYea
           ]
         }
       ],
-      model: "llama-3.2-11b-vision-preview",
+      model: "meta-llama/llama-4-scout-17b-16e-instruct",
       response_format: { type: "json_object" }
     });
 

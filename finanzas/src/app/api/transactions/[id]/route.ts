@@ -17,15 +17,14 @@ export async function PATCH(
   const body = await req.json();
 
   // Only allow specific fields to be updated (not amount, date, description)
-  const { status, ignored, scope, userId_internal, categoryId } = body;
+  const { status, ignored, scope, userId_internal, categoryId, categoryName } = body;
   const updateData: Record<string, any> = {};
   if (status !== undefined) updateData.status = status;
   if (ignored !== undefined) updateData.ignored = ignored;
   if (scope !== undefined) updateData.scope = scope;
   if (userId_internal !== undefined) updateData.userId_internal = userId_internal;
-  if (categoryId !== undefined) updateData.categoryId = categoryId;
 
-  if (Object.keys(updateData).length === 0) {
+  if (Object.keys(updateData).length === 0 && categoryId === undefined && categoryName === undefined) {
     return NextResponse.json({ message: "No valid fields to update" }, { status: 400 });
   }
 
@@ -49,6 +48,34 @@ export async function PATCH(
       }
     });
     if (!existing) return NextResponse.json({ message: "Not found or unauthorized" }, { status: 404 });
+
+    let resolvedCategoryId = categoryId;
+    if (!resolvedCategoryId && categoryName && categoryName.trim() !== "") {
+      const trimmedName = categoryName.trim();
+      const match = await prisma.category.findFirst({
+        where: {
+          name: trimmedName,
+          OR: [
+            { householdId: existing.householdId },
+            { isDefault: true }
+          ]
+        }
+      });
+      if (match) {
+        resolvedCategoryId = match.id;
+      } else {
+        const newCat = await prisma.category.create({
+          data: {
+            name: trimmedName,
+            householdId: existing.householdId,
+            isDefault: false
+          }
+        });
+        resolvedCategoryId = newCat.id;
+      }
+    }
+
+    if (resolvedCategoryId !== undefined) updateData.categoryId = resolvedCategoryId;
 
     const transaction = await prisma.transaction.update({
       where: { id: existing.id },

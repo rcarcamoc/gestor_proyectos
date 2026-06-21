@@ -21,34 +21,82 @@ export async function POST(req: Request) {
       description,
       accountId,
       categoryId,
+      categoryName,
       householdId,
-      billingPeriod
+      billingPeriod,
+      externalId
     } = await req.json();
 
     const finalBillingPeriod = billingPeriod || formatBillingPeriod(date);
 
     // Start a transaction to update account balance and create the transaction record
     const result = await prisma.$transaction(async (tx) => {
+      let resolvedAccountId = accountId;
+      if (!resolvedAccountId) {
+        let defaultAccount = await tx.account.findFirst({
+          where: { householdId, isArchived: false }
+        });
+        if (!defaultAccount) {
+          defaultAccount = await tx.account.create({
+            data: {
+              name: "Cuenta Principal",
+              type: "CHECKING",
+              balance: 0,
+              currency: currency || "CLP",
+              householdId
+            }
+          });
+        }
+        resolvedAccountId = defaultAccount.id;
+      }
+
+      let resolvedCategoryId = categoryId;
+      if (!resolvedCategoryId && categoryName && categoryName.trim() !== "") {
+        const trimmedName = categoryName.trim();
+        const match = await tx.category.findFirst({
+          where: {
+            name: trimmedName,
+            OR: [
+              { householdId },
+              { isDefault: true }
+            ]
+          }
+        });
+        if (match) {
+          resolvedCategoryId = match.id;
+        } else {
+          const newCat = await tx.category.create({
+            data: {
+              name: trimmedName,
+              householdId,
+              isDefault: false
+            }
+          });
+          resolvedCategoryId = newCat.id;
+        }
+      }
+
       const transaction = await tx.transaction.create({
         data: {
           amount,
-          currency,
+          currency: currency || "CLP",
           date: new Date(date),
           type,
           description,
-          accountId,
-          categoryId,
+          accountId: resolvedAccountId,
+          categoryId: resolvedCategoryId,
           householdId,
           billingPeriod: finalBillingPeriod,
           userId: userId, // The owner
           userId_internal: userId, // The creator
+          externalId
         },
       });
 
       // Update balance
       const multiplier = type === 'INCOME' ? 1 : -1;
       await tx.account.update({
-        where: { id: accountId },
+        where: { id: resolvedAccountId },
         data: {
           balance: {
             increment: Number(amount) * multiplier,

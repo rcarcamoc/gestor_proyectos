@@ -39,7 +39,10 @@ if (!(Test-Path $sshKey)) {
 }
 
 # Pasar el parámetro Force al comando remoto
-$forceBuildVal = if ($Force) { "1" } else { "0" }
+$forceBuildVal = "0"
+if ($Force) {
+    $forceBuildVal = "1"
+}
 
 # Comandos remotos optimizados
 $remoteCmds = @'

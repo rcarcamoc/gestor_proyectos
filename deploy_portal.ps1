@@ -79,7 +79,7 @@ if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" 
 fi
 
 if [ "$NEEDS_BUILD" -eq 1 ]; then
-    echo '[+] Compilando aplicación de finanzas...'
+    echo '[+] Compilando aplicacion de finanzas...'
     sudo docker compose build finanzas_app
 else
     echo '[*] Sin cambios en finanzas o docker-compose. Omitiendo build.'
@@ -123,10 +123,10 @@ if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" 
 fi
 
 if [ "$NEEDS_MIGRATE" -eq 1 ]; then
-    echo '[+] Ejecutando migración de periodos de facturación...'
+    echo '[+] Ejecutando migracion de periodos de facturacion...'
     sudo docker exec finanzas_app node migrate_periods.js
 else
-    echo '[*] Sin cambios en migración. Omitiendo migrate_periods.'
+    echo '[*] Sin cambios en migracion. Omitiendo migrate_periods.'
 fi
 
 NEEDS_SEED=0
@@ -142,15 +142,16 @@ else
 fi
 
 if [ "$NEEDS_BUILD" -eq 1 ]; then
-    echo '[+] Limpiando imágenes antiguas...'
+    echo '[+] Limpiando imagenes antiguas...'
     sudo docker image prune -f
 fi
 '@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal)
 
-$localTempFile = New-TemporaryFile
-$remoteCmds.Replace("`r", "") | Out-File -FilePath $localTempFile -Encoding ascii
+$localTempFile = [System.IO.Path]::GetTempFileName()
+[System.IO.File]::WriteAllText($localTempFile, ($remoteCmds.Replace("`r", "") + "`n"))
 scp -i "$sshKey" -o StrictHostKeyChecking=no $localTempFile "${userAtHost}:/tmp/deploy_temp.sh"
 ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost "bash /tmp/deploy_temp.sh; rm -f /tmp/deploy_temp.sh"
+Remove-Item $localTempFile -Force
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n[V] Portal desplegado y sincronizado exitosamente en producción." -ForegroundColor Green

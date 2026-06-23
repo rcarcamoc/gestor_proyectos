@@ -46,86 +46,103 @@ if ($Force) {
 
 # Comandos remotos optimizados
 $remoteCmds = @'
-mkdir -p REMOTE_PATH && cd REMOTE_PATH && \
-if [ -d .git ]; then \
-    OLD_COMMIT=$(git rev-parse HEAD); \
-    git fetch origin main && git reset --hard origin/main; \
-    NEW_COMMIT=$(git rev-parse HEAD); \
-else \
-    OLD_COMMIT="none"; \
-    git clone https://github.com/rcarcamoc/gestor_proyectos.git .; \
-    NEW_COMMIT=$(git rev-parse HEAD); \
-fi && \
-if [ "$OLD_COMMIT" = "$NEW_COMMIT" ]; then \
-    CHANGED_FILES=""; \
-    echo '[*] Sin cambios nuevos en el repositorio.'; \
-else \
-    CHANGED_FILES=$(git diff --name-only $OLD_COMMIT $NEW_COMMIT); \
-    echo '[*] Archivos modificados en este commit:'; \
-    echo "$CHANGED_FILES"; \
-fi && \
-if ! docker compose version >/dev/null 2>&1; then \
-    sudo apt-get update && sudo apt-get install -y docker-compose-v2; \
-fi && \
-OLD_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod") && \
-OLD_DB_HEALTH=$(sudo docker inspect --format='{{.State.Health.Status}}' smarttrack_db_prod 2>/dev/null || echo "none") && \
-NEEDS_BUILD=0; \
-if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "^(finanzas/|docker-compose\.yml|Dockerfile)"; then \
-    NEEDS_BUILD=1; \
-fi; \
-if [ "$NEEDS_BUILD" -eq 1 ]; then \
-    echo '[+] Compilando aplicación de finanzas...' && \
-    sudo docker compose build finanzas_app; \
-else \
-    echo '[*] Sin cambios en finanzas o docker-compose. Omitiendo build.'; \
-fi && \
-echo '[+] Levantando servicios...' && \
-sudo docker compose up -d db redis home finanzas_app && \
-NEW_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod") && \
-if [ "$OLD_DB_ID" = "$NEW_DB_ID" ] && [ "$OLD_DB_HEALTH" = "healthy" ]; then \
-    echo '[*] Base de datos activa y saludable. Omitiendo espera.'; \
-else \
-    echo '[+] Esperando a que la base de datos esté saludable...' && \
-    wait_max=60; counter=0; \
-    until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy" | grep -q "smarttrack_db_prod"; do \
-        sleep 2; \
-        counter=$((counter + 2)); \
-        if [ "$counter" -gt "$wait_max" ]; then echo '[X] DB Timeout'; break; fi; \
-    done; \
-fi && \
-NEEDS_PUSH=0; \
-if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "schema\.prisma"; then \
-    NEEDS_PUSH=1; \
-fi; \
-if [ "$NEEDS_PUSH" -eq 1 ]; then \
-    echo '[+] Sincronizando esquema de base de datos con Prisma...' && \
-    sudo docker exec finanzas_app npx prisma db push; \
-else \
-    echo '[*] Sin cambios en schema.prisma. Omitiendo db push.'; \
-fi && \
-NEEDS_MIGRATE=0; \
-if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "(migrate_periods\.js|schema\.prisma)"; then \
-    NEEDS_MIGRATE=1; \
-fi; \
-if [ "$NEEDS_MIGRATE" -eq 1 ]; then \
-    echo '[+] Ejecutando migración de periodos de facturación...' && \
-    sudo docker exec finanzas_app node migrate_periods.js; \
-else \
-    echo '[*] Sin cambios en migración. Omitiendo migrate_periods.'; \
-fi && \
-NEEDS_SEED=0; \
-if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "(seed\.ts|seed\.js|schema\.prisma)"; then \
-    NEEDS_SEED=1; \
-fi; \
-if [ "$NEEDS_SEED" -eq 1 ]; then \
-    echo '[+] Inicializando categorias por defecto...' && \
-    sudo docker exec finanzas_app npx prisma db seed; \
-else \
-    echo '[*] Sin cambios en datos de seed. Omitiendo db seed.'; \
-fi && \
-if [ "$NEEDS_BUILD" -eq 1 ]; then \
-    echo '[+] Limpiando imágenes antiguas...' && \
-    sudo docker image prune -f; \
+mkdir -p REMOTE_PATH
+cd REMOTE_PATH
+if [ -d .git ]; then
+    OLD_COMMIT=$(git rev-parse HEAD)
+    git fetch origin main && git reset --hard origin/main
+    NEW_COMMIT=$(git rev-parse HEAD)
+else
+    OLD_COMMIT="none"
+    git clone https://github.com/rcarcamoc/gestor_proyectos.git .
+    NEW_COMMIT=$(git rev-parse HEAD)
+fi
+
+if [ "$OLD_COMMIT" = "$NEW_COMMIT" ]; then
+    CHANGED_FILES=""
+    echo '[*] Sin cambios nuevos en el repositorio.'
+else
+    CHANGED_FILES=$(git diff --name-only $OLD_COMMIT $NEW_COMMIT)
+    echo '[*] Archivos modificados en este commit:'
+    echo "$CHANGED_FILES"
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+    sudo apt-get update && sudo apt-get install -y docker-compose-v2
+fi
+
+OLD_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod")
+OLD_DB_HEALTH=$(sudo docker inspect --format='{{.State.Health.Status}}' smarttrack_db_prod 2>/dev/null || echo "none")
+NEEDS_BUILD=0
+if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "^(finanzas/|docker-compose\.yml|Dockerfile)"; then
+    NEEDS_BUILD=1
+fi
+
+if [ "$NEEDS_BUILD" -eq 1 ]; then
+    echo '[+] Compilando aplicación de finanzas...'
+    sudo docker compose build finanzas_app
+else
+    echo '[*] Sin cambios en finanzas o docker-compose. Omitiendo build.'
+fi
+
+echo '[+] Levantando servicios...'
+sudo docker compose up -d db redis home finanzas_app
+NEW_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod")
+if [ "$OLD_DB_ID" = "$NEW_DB_ID" ] && [ "$OLD_DB_HEALTH" = "healthy" ]; then
+    echo '[*] Base de datos activa y saludable. Omitiendo espera.'
+else
+    echo '[+] Esperando a que la base de datos esté saludable...'
+    wait_max=60
+    counter=0
+    until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy" | grep -q "smarttrack_db_prod"; do
+        sleep 2
+        counter=$((counter + 2))
+        if [ "$counter" -gt "$wait_max" ]; then
+            echo '[X] DB Timeout'
+            break
+        fi
+    done
+fi
+
+NEEDS_PUSH=0
+if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "schema\.prisma"; then
+    NEEDS_PUSH=1
+fi
+
+if [ "$NEEDS_PUSH" -eq 1 ]; then
+    echo '[+] Sincronizando esquema de base de datos con Prisma...'
+    sudo docker exec finanzas_app npx prisma db push
+else
+    echo '[*] Sin cambios en schema.prisma. Omitiendo db push.'
+fi
+
+NEEDS_MIGRATE=0
+if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "(migrate_periods\.js|schema\.prisma)"; then
+    NEEDS_MIGRATE=1
+fi
+
+if [ "$NEEDS_MIGRATE" -eq 1 ]; then
+    echo '[+] Ejecutando migración de periodos de facturación...'
+    sudo docker exec finanzas_app node migrate_periods.js
+else
+    echo '[*] Sin cambios en migración. Omitiendo migrate_periods.'
+fi
+
+NEEDS_SEED=0
+if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "(seed\.ts|seed\.js|schema\.prisma)"; then
+    NEEDS_SEED=1
+fi
+
+if [ "$NEEDS_SEED" -eq 1 ]; then
+    echo '[+] Inicializando categorias por defecto...'
+    sudo docker exec finanzas_app npx prisma db seed
+else
+    echo '[*] Sin cambios en datos de seed. Omitiendo db seed.'
+fi
+
+if [ "$NEEDS_BUILD" -eq 1 ]; then
+    echo '[+] Limpiando imágenes antiguas...'
+    sudo docker image prune -f
 fi
 '@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal)
 

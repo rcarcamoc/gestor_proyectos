@@ -44,6 +44,21 @@ if ($Force) {
     $forceBuildVal = "1"
 }
 
+# Obtener GROQ_API_KEY de finanzas/.env local
+$localEnvFile = Join-Path $ScriptDir "finanzas\.env"
+$groqKey = ""
+if (Test-Path $localEnvFile) {
+    $envContent = Get-Content $localEnvFile
+    foreach ($line in $envContent) {
+        if ($line -match "^GROQ_API_KEY=(.*)$") {
+            $groqKey = $Matches[1].Trim()
+        }
+    }
+}
+if ([string]::IsNullOrEmpty($groqKey)) {
+    Write-Host "[!] Advertencia: GROQ_API_KEY no encontrada en finanzas/.env" -ForegroundColor Yellow
+}
+
 # Comandos remotos optimizados
 $remoteCmds = @'
 mkdir -p REMOTE_PATH
@@ -69,6 +84,13 @@ fi
 
 if ! docker compose version >/dev/null 2>&1; then
     sudo apt-get update && sudo apt-get install -y docker-compose-v2
+fi
+
+if [ -d finanzas ]; then
+    echo "DATABASE_URL=mysql://user:pass@db:3306/web_finanzas" > finanzas/.env
+    echo "NEXTAUTH_URL=http://localhost/finanzas" >> finanzas/.env
+    echo "NEXTAUTH_SECRET=y0ur_v3ry_s3cr3t_n3xt_4uth_k3y" >> finanzas/.env
+    echo "GROQ_API_KEY=GROQ_KEY_VAL" >> finanzas/.env
 fi
 
 OLD_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod")
@@ -145,7 +167,7 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
     echo '[+] Limpiando imagenes antiguas...'
     sudo docker image prune -f
 fi
-'@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal)
+'@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal).Replace("GROQ_KEY_VAL", $groqKey)
 
 $localTempFile = [System.IO.Path]::GetTempFileName()
 [System.IO.File]::WriteAllText($localTempFile, ($remoteCmds.Replace("`r", "") + "`n"))

@@ -129,7 +129,7 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then \
 fi
 '@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal)
 
-ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost "$remoteCmds"
+$remoteCmds | ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n[V] Portal desplegado y sincronizado exitosamente en producción." -ForegroundColor Green

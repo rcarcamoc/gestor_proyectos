@@ -147,7 +147,10 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
 fi
 '@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal)
 
-$remoteCmds.Replace("`r", "") | ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost
+$localTempFile = New-TemporaryFile
+$remoteCmds.Replace("`r", "") | Out-File -FilePath $localTempFile -Encoding ascii
+scp -i "$sshKey" -o StrictHostKeyChecking=no $localTempFile "${userAtHost}:/tmp/deploy_temp.sh"
+ssh -i "$sshKey" -o StrictHostKeyChecking=no $userAtHost "bash /tmp/deploy_temp.sh; rm -f /tmp/deploy_temp.sh"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n[V] Portal desplegado y sincronizado exitosamente en producción." -ForegroundColor Green

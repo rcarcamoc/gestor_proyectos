@@ -37,8 +37,39 @@ export async function POST(req: Request) {
   const data = await req.json();
 
   try {
+    let categoryId = data.categoryId;
+    if (!categoryId && data.categoryName) {
+      const trimmedName = data.categoryName.trim();
+      const match = await prisma.category.findFirst({
+        where: {
+          name: trimmedName,
+          OR: [
+            { householdId: data.householdId || null },
+            { isDefault: true }
+          ]
+        }
+      });
+      if (match) {
+        categoryId = match.id;
+      } else {
+        const newCat = await prisma.category.create({
+          data: {
+            name: trimmedName,
+            householdId: data.householdId || null,
+            isDefault: false
+          }
+        });
+        categoryId = newCat.id;
+      }
+    }
+
+    if (!categoryId) {
+      return NextResponse.json({ message: "categoryId or categoryName is required" }, { status: 400 });
+    }
+
     const budget = await upsertBudget({
       ...data,
+      categoryId,
       userId: data.householdId ? undefined : userId,
       limit: parseFloat(data.limit)
     });

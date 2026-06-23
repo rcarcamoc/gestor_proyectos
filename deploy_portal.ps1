@@ -83,11 +83,13 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
     sudo docker compose build finanzas_app
 else
     echo '[*] Sin cambios en finanzas o docker-compose. Omitiendo build.'
-fi; \
-echo '[+] Levantando servicios...' && \
-sudo docker compose up -d db redis home finanzas_app && \
-NEW_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod"); \
-if [ "$OLD_DB_ID" = "$NEW_DB_ID" ] && [ "$OLD_DB_HEALTH" = "healthy" ]; then \
+fi
+
+echo '[+] Levantando servicios...'
+sudo docker compose up -d db redis home finanzas_app
+
+NEW_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod")
+if [ "$OLD_DB_ID" = "$NEW_DB_ID" ] && [ "$OLD_DB_HEALTH" = "healthy" ]; then
     echo '[*] Base de datos activa y saludable. Omitiendo espera.'
 else
     echo '[+] Esperando a que la base de datos esté saludable...'
@@ -101,8 +103,9 @@ else
             break
         fi
     done
-fi; \
-NEEDS_PUSH=0; \
+fi
+
+NEEDS_PUSH=0
 if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "schema\.prisma"; then
     NEEDS_PUSH=1
 fi
@@ -112,8 +115,9 @@ if [ "$NEEDS_PUSH" -eq 1 ]; then
     sudo docker exec finanzas_app npx prisma db push
 else
     echo '[*] Sin cambios en schema.prisma. Omitiendo db push.'
-fi; \
-NEEDS_MIGRATE=0; \
+fi
+
+NEEDS_MIGRATE=0
 if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "(migrate_periods\.js|schema\.prisma)"; then
     NEEDS_MIGRATE=1
 fi
@@ -123,8 +127,9 @@ if [ "$NEEDS_MIGRATE" -eq 1 ]; then
     sudo docker exec finanzas_app node migrate_periods.js
 else
     echo '[*] Sin cambios en migración. Omitiendo migrate_periods.'
-fi; \
-NEEDS_SEED=0; \
+fi
+
+NEEDS_SEED=0
 if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "(seed\.ts|seed\.js|schema\.prisma)"; then
     NEEDS_SEED=1
 fi

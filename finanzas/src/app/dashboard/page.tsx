@@ -149,9 +149,9 @@ export default function DashboardPage() {
               icon={Wallet}
               iconBg="bg-indigo-50"
               iconColor="text-indigo-500"
-              label="Balance Total"
+              label="Balance del Periodo"
               value={fmt(stats.totalBalance)}
-              subtitle="En todas tus cuentas"
+              subtitle="Neto para este periodo"
               onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod)}
             />
             <StatCard

@@ -53,7 +53,6 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   ]);
 
   // 2. Metrics calculation
-  const totalBalance = accounts.reduce((acc, a) => acc + Number(a.balance), 0);
   const expensesPerCategory: Record<string, number> = {};
   let totalExpenses = 0;
   let totalIncome = 0;
@@ -67,6 +66,8 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
       totalIncome += Number(t.amount);
     }
   });
+
+  const totalBalance = totalIncome - totalExpenses;
 
   // 3. Evolution (Last 6 months)
   const evolution = [];

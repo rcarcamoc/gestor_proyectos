@@ -13,7 +13,8 @@ RUN npm run build
 
 # Production Stage
 FROM node:20-alpine AS runner
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache libc6-compat openssl python3 py3-pip
+RUN pip install --break-system-packages pypdf
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/next.config.ts ./
@@ -23,6 +24,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/migrate_periods.js ./
+COPY --from=builder /app/src/services ./src/services
 
 EXPOSE 3000
 CMD ["npm", "start"]

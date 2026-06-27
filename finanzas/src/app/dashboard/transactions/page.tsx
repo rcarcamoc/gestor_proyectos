@@ -111,6 +111,24 @@ export default function TransactionsPage() {
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const period = params.get('period');
+      if (period) {
+        setSelectedPeriodFilter(period);
+      }
+      const category = params.get('category');
+      if (category) {
+        setSelectedCategoryFilter(category);
+      }
+      const type = params.get('type');
+      if (type) {
+        setSelectedTypeFilter(type);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     fetchTransactions();
     fetchMetadata();
   }, [showIgnored, selectedScope]);

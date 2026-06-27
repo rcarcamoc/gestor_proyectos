@@ -219,4 +219,67 @@ export async function parseTransactionsFromImage(base64Image: string, currentYea
   });
 }
 
+export async function verifyAndCorrectTransactions(rawText: string, parsedData: any) {
+  return enqueue(async () => {
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+    const prompt = `
+      You are an expert financial auditor. Your task is to verify and correct a list of transactions parsed from a PDF credit card statement (Lider Bci, Chile).
+      
+      We have extracted the raw text from the PDF, and did a first-pass programmatic parsing.
+      However, the programmatic parsing might have missed something, or got a detail slightly wrong (like missing a transaction, getting a date wrong, or failing to parse installment purchases correctly).
+
+      Here is the Raw PDF Text:
+      """
+      ${rawText}
+      """
+
+      Here is the First-Pass Parsed Data:
+      ${JSON.stringify(parsedData, null, 2)}
+
+      Please audit the transactions.
+      Instructions:
+      1. Carefully check the "DETALLE" section in the Raw PDF Text (especially under "1. Total Operaciones", "LIDER", "OTROS COMERCIOS", "2. Productos o Servicios Voluntariamente Contratados", and "3. Cargos / Comisiones, Impuestos / Abonos").
+      2. Verify each transaction in the "First-Pass Parsed Data" against the Raw PDF Text:
+         - Ensure the Date is correct (formatted as "YYYY-MM-DD" in the final output, e.g., "30/05/2026" becomes "2026-05-30").
+         - Ensure the Amount is correct: Expenses should be negative numbers, income/abonos/descuentos should be positive numbers.
+         - Ensure the Description is cleaned, includes the Lugar if applicable (e.g., "LA REINA HIPER LA REINA., SANTIAGO (T)"), and is readable.
+         - For installment purchases (e.g. "TICKETMASTER TC 2... 01/03 $ 92.000"), the amount should reflect the charge of the month (e.g. -92000), not the total amount (e.g. 276000), and description should mention the installment (e.g. "SANTIAGO CL TICKETMASTER TC 2 0,00% (T) (Cuota 01/03)").
+      3. Verify that ALL transactions in the statement are captured. If any transaction (including small taxes, commission fees, or credits) is present in the Raw PDF Text but missing in the First-Pass Parsed Data, ADD IT to the transactions list.
+      4. Compare the sum of all transactions you parsed against the "Monto Total Facturado" or "Total" in the document if possible. The sum of all actual expense and income transactions for this period (e.g., Lider total + Otros Comercios total + Cargos/Impuestos total) should match the statement total.
+      5. Return a JSON object with the audited and corrected data:
+         {
+           "billingPeriod": { "start": "YYYY-MM-DD", "end": "YYYY-MM-DD" },
+           "cardNumber": "string",
+           "transactions": [
+             {
+               "date": "YYYY-MM-DD",
+               "description": "string",
+               "amount": number (integer, e.g. -141621),
+               "type": "EXPENSE" | "INCOME"
+             }
+           ]
+         }
+
+      Ensure all transaction dates are converted to "YYYY-MM-DD" format.
+      Only respond with the valid JSON object, nothing else.
+    `;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" },
+    });
+
+    const content = chatCompletion.choices[0]?.message?.content;
+    if (!content) return parsedData;
+
+    return JSON.parse(content);
+  }).catch(err => {
+    console.error("Groq Verification Error (Queued):", err);
+    return parsedData;
+  });
+}
+
+
 

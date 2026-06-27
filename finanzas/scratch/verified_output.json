@@ -1,0 +1,129 @@
+{
+  "billingPeriod": {
+    "start": "2026-05-25",
+    "end": "2026-06-24"
+  },
+  "cardNumber": "XXXXXXXXXXXX3001",
+  "transactions": [
+    {
+      "date": "2026-05-30",
+      "description": "LA REINA HIPER LA REINA., SANTIAGO (T)",
+      "amount": -141621,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-05-31",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -41030,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-01",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -9556,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-01",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -34990,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-06",
+      "description": "LA REINA HIPER LA REINA., SANTIAGO (T)",
+      "amount": -131870,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-13",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -128091,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-14",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -25980,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-17",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -37172,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-19",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -48044,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-21",
+      "description": "NUNOA HIPER VESPUCIO SUR, SANTIAGO (T)",
+      "amount": -50823,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-05-30",
+      "description": "SANTIAGO CL BIMO SPA (T)",
+      "amount": -5370,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-05-31",
+      "description": "ORPENALOLEN CL TUU*DANIELA ALEJANDRA COR (T)",
+      "amount": -5200,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-05-31",
+      "description": "111SANTIAGOCL PEDRO JARPA (T)",
+      "amount": -5850,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-05-31",
+      "description": "111SANTIAGOCL CLAUDIO ARMIJO (T)",
+      "amount": -6700,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-02",
+      "description": "SANTIAGO CL DL*GOOGLE YOUTUBE (T)",
+      "amount": -5400,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-03",
+      "description": "SANTIAGO CL TICKETMASTER TC 2 0,00% (T) (Cuota 01/03)",
+      "amount": -92000,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-04",
+      "description": "SANTIAGO CL ACTUCIA SPA (T)",
+      "amount": -11440,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-04",
+      "description": "SANTIAGO CL ENEL (T)",
+      "amount": -51614,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-03",
+      "description": "IMPUESTO DL 3475 C. CONTADO (T)",
+      "amount": -729,
+      "type": "EXPENSE"
+    },
+    {
+      "date": "2026-06-25",
+      "description": "-100% DCTO COM ADM|MANTENCION (T)",
+      "amount": 0,
+      "type": "INCOME"
+    }
+  ]
+}

@@ -22,9 +22,12 @@ const COLORS = ['#10B981', '#6366F1', '#F59E0B', '#F43F5E', '#8B5CF6', '#14B8A6'
 const fmt = (n: number) =>
   new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP', maximumFractionDigits: 0 }).format(n);
 
-function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtitle }: any) {
+function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtitle, onClick }: any) {
   return (
-    <div className="zen-stat-card animate-zen-in">
+    <div 
+      className={cn("zen-stat-card animate-zen-in", onClick && "cursor-pointer hover:bg-stone-50/50 transition-all duration-300")}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-4">
         <div className={`p-3 rounded-2xl ${iconBg}`}>
           <Icon className={`h-5 w-5 ${iconColor}`} />
@@ -63,8 +66,10 @@ const PieTooltip = ({ active, payload }: any) => {
 };
 
 import { useScope } from '@/components/ScopeProvider';
+import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const { selectedScope } = useScope();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -147,6 +152,7 @@ export default function DashboardPage() {
               label="Balance Total"
               value={fmt(stats.totalBalance)}
               subtitle="En todas tus cuentas"
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod)}
             />
             <StatCard
               icon={ArrowDownRight}
@@ -155,6 +161,7 @@ export default function DashboardPage() {
               label="Gastos del Mes"
               value={fmt(stats.totalExpenses)}
               subtitle={`${stats.budgetVsActual.filter((b: any) => b.isOverBudget).length} categorías excedidas`}
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod + '&type=EXPENSE')}
             />
             <StatCard
               icon={ArrowUpRight}
@@ -163,6 +170,7 @@ export default function DashboardPage() {
               label="Ingresos del Mes"
               value={fmt(stats.totalIncome)}
               subtitle={`Meta de ahorro: ${fmt(Math.max(0, stats.totalIncome - stats.totalBudget))}`}
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod + '&type=INCOME')}
             />
             <StatCard
               icon={Activity}
@@ -171,6 +179,7 @@ export default function DashboardPage() {
               label="Promedio Diario"
               value={fmt(stats.dailyAverage || 0)}
               subtitle="Gasto promedio estimado"
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod + '&type=EXPENSE')}
             />
           </div>
 
@@ -185,7 +194,20 @@ export default function DashboardPage() {
                 </div>
               </div>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={stats.evolution} margin={{ top: 0, right: 0, left: -20, bottom: 0 }} barCategoryGap="30%">
+                <BarChart 
+                  data={stats.evolution} 
+                  margin={{ top: 0, right: 0, left: -20, bottom: 0 }} 
+                  barCategoryGap="30%"
+                  className="cursor-pointer"
+                  onClick={(state) => {
+                    if (state && state.activePayload && state.activePayload.length > 0) {
+                      const clickedData = state.activePayload[0].payload;
+                      if (clickedData && clickedData.period) {
+                        router.push(`/finanzas/dashboard/transactions?period=${clickedData.period}`);
+                      }
+                    }
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F5F5F4" />
                   <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#A8A29E', fontSize: 11, fontWeight: 600 }} dy={10} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: '#A8A29E', fontSize: 11, fontWeight: 600 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
@@ -239,10 +261,14 @@ export default function DashboardPage() {
                     </div>
                     {stats.alerts.length > 0 ? (
                         <div className="space-y-4">
-                            {stats.alerts.slice(0, 3).map((alert: string, i: number) => (
-                                <div key={i} className="flex gap-3 p-3 rounded-2xl bg-rose-50/50 border border-rose-100/50">
+                            {stats.alerts.slice(0, 3).map((alert: any, i: number) => (
+                                <div 
+                                    key={i} 
+                                    className="flex gap-3 p-3 rounded-2xl bg-rose-50/50 border border-rose-100/50 cursor-pointer hover:bg-rose-100/50 transition-colors"
+                                    onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${alert.categoryId}`)}
+                                >
                                     <AlertCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
-                                    <p className="text-xs font-medium text-rose-800 leading-relaxed">{alert}</p>
+                                    <p className="text-xs font-medium text-rose-800 leading-relaxed">{alert.message || alert}</p>
                                 </div>
                             ))}
                         </div>
@@ -276,6 +302,12 @@ export default function DashboardPage() {
                                             outerRadius={65}
                                             paddingAngle={3}
                                             dataKey="amount"
+                                            onClick={(entry) => {
+                                              if (entry && entry.id) {
+                                                router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${entry.id}`);
+                                              }
+                                            }}
+                                            className="cursor-pointer"
                                         >
                                             {stats.expensesByCategory.map((entry: any, index: number) => (
                                                 <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
@@ -295,7 +327,11 @@ export default function DashboardPage() {
                                 {stats.expensesByCategory.slice(0, 5).map((entry: any, i: number) => {
                                     const percent = stats.totalExpenses > 0 ? (entry.amount / stats.totalExpenses) * 100 : 0;
                                     return (
-                                        <div key={i} className="flex items-center justify-between text-xs">
+                                        <div 
+                                            key={i} 
+                                            className="flex items-center justify-between text-xs cursor-pointer hover:bg-stone-50 p-1 rounded-lg transition-colors"
+                                            onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${entry.id}`)}
+                                        >
                                             <div className="flex items-center gap-2 truncate">
                                                 <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color || COLORS[i % COLORS.length] }} />
                                                 <span className="font-medium text-stone-700 truncate">{entry.name}</span>
@@ -384,7 +420,11 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-12 gap-y-10">
                     {stats.budgetVsActual.length > 0 ? (
                         stats.budgetVsActual.map((item: any, i: number) => (
-                            <div key={i} className="space-y-4 group">
+                            <div 
+                                key={i} 
+                                className="space-y-4 group cursor-pointer hover:bg-stone-50/50 p-3 rounded-2xl border border-transparent hover:border-stone-100 transition-all duration-300"
+                                onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${item.categoryId}`)}
+                            >
                                 <div className="flex justify-between items-end">
                                     <div>
                                         <p className="text-sm font-bold text-stone-800 tracking-tight group-hover:text-stone-600 transition-colors">{item.categoryName}</p>

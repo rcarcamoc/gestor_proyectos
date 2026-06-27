@@ -190,10 +190,64 @@ export default function ImportPage() {
     }
   };
 
+  const [password, setPassword] = useState('2851');
+  const [isPdf, setIsPdf] = useState(false);
+
+  const handleAnalyzePdf = async () => {
+    if (!accountId) return toast.error("Selecciona una cuenta de destino");
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file!);
+      formData.append("password", password);
+      
+      const res = await fetch("/finanzas/api/import/pdf/", {
+        method: "POST",
+        body: formData
+      });
+      
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Error al analizar el PDF");
+      }
+      
+      const result = await res.json();
+      if (result.transactions && result.transactions.length > 0) {
+        setPreviewData(result.transactions);
+        setMapping({
+          date: 'date',
+          amount: 'amount',
+          description: 'description'
+        });
+        if (result.billingPeriod?.end) {
+          setBillingPeriod(formatBillingPeriod(result.billingPeriod.end));
+        }
+        
+        toast.success(`PDF analizado: ${result.transactions.length} transacciones extraídas`);
+        setStep(2); // Go to step 2 to preview transactions
+      } else {
+        toast.error("No se encontraron transacciones en el PDF");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Error al procesar el PDF");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
+      
+      if (selectedFile.name.toLowerCase().endsWith('.pdf')) {
+        setIsPdf(true);
+        setLoading(false);
+        return;
+      }
+      
+      setIsPdf(false);
       setLoading(true);
       
       try {
@@ -349,24 +403,80 @@ export default function ImportPage() {
 
       {step === 1 && (
         <Card className="border-stone-100/50 shadow-sm rounded-3xl overflow-hidden bg-white p-12 hover:shadow-md transition-shadow duration-300">
-          <div className="flex flex-col items-center justify-center text-center space-y-8">
-            <div className="h-28 w-28 rounded-[2rem] bg-stone-50 border border-stone-100 flex items-center justify-center text-stone-400 shadow-sm transition-transform hover:scale-105 duration-300">
-                {loading ? <Loader2 className="h-12 w-12 animate-spin text-stone-600" /> : <FileUp className="h-12 w-12" />}
+          {isPdf && file ? (
+            <div className="flex flex-col space-y-6 max-w-md mx-auto text-left">
+              <div className="text-center space-y-2">
+                <Badge className="bg-stone-850 border-stone-800 text-stone-800 px-3 py-1 font-serif" variant="outline">PDF Estado de Cuenta</Badge>
+                <h3 className="text-xl font-serif text-stone-800 font-bold">{file.name}</h3>
+                <p className="text-xs text-stone-400">{(file.size / 1024).toFixed(1)} KB</p>
+              </div>
+
+              <div className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Cuenta de Destino</Label>
+                  <Select value={accountId} onValueChange={(val) => val && setAccountId(val)}>
+                    <SelectTrigger className="w-full rounded-xl border-stone-200 h-11 text-sm bg-white shadow-sm">
+                      <SelectValue placeholder="Seleccionar cuenta" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl border-stone-200 shadow-xl">
+                      {accounts.map(acc => (
+                        <SelectItem key={acc.id} value={acc.id}>{acc.name} ({acc.currency})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-stone-400 uppercase tracking-widest">Contraseña del PDF</Label>
+                  <input 
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Contraseña de apertura"
+                    className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 rounded-xl h-11 border-stone-200"
+                  onClick={() => { setFile(null); setIsPdf(false); }}
+                  disabled={loading}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1 rounded-xl h-11 bg-stone-800 hover:bg-stone-900 text-white"
+                  onClick={handleAnalyzePdf}
+                  disabled={loading || !accountId}
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                  Analizar PDF con IA
+                </Button>
+              </div>
             </div>
-            <div>
-                <h3 className="text-2xl font-serif text-stone-800 tracking-tight">Selecciona tu archivo</h3>
-                <p className="text-stone-500 mt-2 font-medium">Formatos soportados: Excel (.xlsx) y CSV (.csv)</p>
+          ) : (
+            <div className="flex flex-col items-center justify-center text-center space-y-8">
+              <div className="h-28 w-28 rounded-[2rem] bg-stone-50 border border-stone-100 flex items-center justify-center text-stone-400 shadow-sm transition-transform hover:scale-105 duration-300">
+                  {loading ? <Loader2 className="h-12 w-12 animate-spin text-stone-600" /> : <FileUp className="h-12 w-12" />}
+              </div>
+              <div>
+                  <h3 className="text-2xl font-serif text-stone-800 tracking-tight">Selecciona tu archivo</h3>
+                  <p className="text-stone-500 mt-2 font-medium">Formatos soportados: Excel (.xlsx), CSV (.csv) y PDF</p>
+              </div>
+              <div className="w-full max-w-md mt-4">
+                  <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-stone-200/80 rounded-3xl cursor-pointer hover:bg-stone-50 hover:border-stone-300 transition-all group">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <FileSpreadsheet className="w-10 h-10 mb-3 text-stone-300 group-hover:text-stone-500 transition-colors" />
+                          <p className="text-sm text-stone-500 font-medium">Haz clic o arrastra aquí</p>
+                      </div>
+                      <input type="file" className="hidden" accept=".xlsx,.csv,.xls,.pdf" onChange={handleFileChange} disabled={loading} />
+                  </label>
+              </div>
             </div>
-            <div className="w-full max-w-md mt-4">
-                <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-stone-200/80 rounded-3xl cursor-pointer hover:bg-stone-50 hover:border-stone-300 transition-all group">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <FileSpreadsheet className="w-10 h-10 mb-3 text-stone-300 group-hover:text-stone-500 transition-colors" />
-                        <p className="text-sm text-stone-500 font-medium">Haz clic o arrastra aquí</p>
-                    </div>
-                    <input type="file" className="hidden" accept=".xlsx,.csv,.xls" onChange={handleFileChange} disabled={loading} />
-                </label>
-            </div>
-          </div>
+          )}
         </Card>
       )}
 
@@ -416,53 +526,67 @@ export default function ImportPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    {[
-                        { id: 'date', label: 'Fecha', required: true },
-                        { id: 'amount', label: 'Monto', required: true },
-                        { id: 'description', label: 'Descripción', required: true },
-                        { id: 'cardType', label: 'Tipo de Tarjeta', required: false },
-                        { id: 'reference', label: 'Referencia / ID', required: false },
-                        { id: 'category', label: 'Categoría', required: false },
-                    ].map((field) => (
-                        <div key={field.id} className="space-y-2">
-                            <label className="text-sm font-semibold text-stone-700 flex items-center tracking-tight">
-                                {field.label}
-                                {field.required && <span className="text-rose-400 ml-1.5">*</span>}
-                            </label>
-                            <select 
-                                className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
-                                value={(mapping as any)[field.id]}
-                                onChange={(e) => setMapping({ ...mapping, [field.id]: e.target.value })}
-                            >
-                                <option value="">Seleccionar columna...</option>
-                                {headers.map(h => <option key={h} value={h}>{h}</option>)}
-                            </select>
-                        </div>
-                    ))}
-                </div>
-
-                {!selectedProfile && (
-                    <div className="mt-10 pt-8 border-t border-stone-100/60 flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                        <div className="flex-1 w-full">
-                            <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Guardar este mapeo</p>
-                            <input 
-                                type="text" 
-                                placeholder="Nombre del perfil (ej: Banco Chile Mensual)" 
-                                className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
-                                value={profileName}
-                                onChange={(e) => setProfileName(e.target.value)}
-                            />
-                        </div>
-                        <Button 
-                            variant="outline" 
-                            className="rounded-xl h-11 px-6 border-stone-200/60 shadow-sm w-full sm:w-auto mt-4 sm:mt-0"
-                            onClick={saveProfile}
-                            disabled={!profileName || loading}
-                        >
-                            Guardar Perfil
-                        </Button>
+                {!isPdf ? (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        {[
+                            { id: 'date', label: 'Fecha', required: true },
+                            { id: 'amount', label: 'Monto', required: true },
+                            { id: 'description', label: 'Descripción', required: true },
+                            { id: 'cardType', label: 'Tipo de Tarjeta', required: false },
+                            { id: 'reference', label: 'Referencia / ID', required: false },
+                            { id: 'category', label: 'Categoría', required: false },
+                        ].map((field) => (
+                            <div key={field.id} className="space-y-2">
+                                <label className="text-sm font-semibold text-stone-700 flex items-center tracking-tight">
+                                    {field.label}
+                                    {field.required && <span className="text-rose-400 ml-1.5">*</span>}
+                                </label>
+                                <select 
+                                    className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
+                                    value={(mapping as any)[field.id]}
+                                    onChange={(e) => setMapping({ ...mapping, [field.id]: e.target.value })}
+                                >
+                                    <option value="">Seleccionar columna...</option>
+                                    {headers.map(h => <option key={h} value={h}>{h}</option>)}
+                                </select>
+                            </div>
+                        ))}
                     </div>
+
+                    {!selectedProfile && (
+                        <div className="mt-10 pt-8 border-t border-stone-100/60 flex flex-col sm:flex-row items-start sm:items-end gap-4">
+                            <div className="flex-1 w-full">
+                                <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-2">Guardar este mapeo</p>
+                                <input 
+                                    type="text" 
+                                    placeholder="Nombre del perfil (ej: Banco Chile Mensual)" 
+                                    className="w-full h-11 border border-stone-200/60 rounded-xl px-4 text-sm bg-white shadow-sm focus:ring-2 focus:ring-stone-200 outline-none transition-all"
+                                    value={profileName}
+                                    onChange={(e) => setProfileName(e.target.value)}
+                                />
+                            </div>
+                            <Button 
+                                variant="outline" 
+                                className="rounded-xl h-11 px-6 border-stone-200/60 shadow-sm w-full sm:w-auto mt-4 sm:mt-0"
+                                onClick={saveProfile}
+                                disabled={!profileName || loading}
+                            >
+                                Guardar Perfil
+                            </Button>
+                        </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="bg-stone-50 border border-stone-100 rounded-2xl p-6 flex items-start gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-white border border-stone-100 flex items-center justify-center text-stone-600 shadow-sm shrink-0">
+                      <ShieldCheck className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="font-serif text-stone-850 font-bold">Mapeo Automático y Auditoría Completada</h4>
+                      <p className="text-sm text-stone-500 mt-1">El estado de cuenta PDF se ha procesado con éxito. Groq AI ha verificado la integridad de las transacciones contra el total de tu estado de cuenta.</p>
+                    </div>
+                  </div>
                 )}
                 
                 <div className="mt-10 border border-stone-100/60 rounded-3xl overflow-hidden shadow-sm">
@@ -474,9 +598,17 @@ export default function ImportPage() {
                         <table className="w-full text-left text-sm">
                             <thead className="bg-white border-b border-stone-100/60">
                                 <tr>
-                                    {headers.slice(0, 5).map(h => (
-                                        <th key={h} className="p-4 font-semibold text-stone-500 tracking-tight">{h}</th>
-                                    ))}
+                                    {headers.slice(0, 5).map(h => {
+                                        let label = h;
+                                        if (isPdf) {
+                                            if (h === 'date') label = 'Fecha';
+                                            if (h === 'description') label = 'Descripción';
+                                            if (h === 'amount') label = 'Monto';
+                                        }
+                                        return (
+                                            <th key={h} className="p-4 font-semibold text-stone-500 tracking-tight">{label}</th>
+                                        );
+                                    })}
                                 </tr>
                             </thead>
                             <tbody>

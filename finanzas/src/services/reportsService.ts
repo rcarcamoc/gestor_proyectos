@@ -11,6 +11,7 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   // Build where filter robustly
   const whereFilter: any = {
     ignored: false,
+    deletedAt: null,
   };
   
   if (householdId) {
@@ -77,7 +78,8 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
 
     const groupWhere: any = {
       ignored: false,
-      billingPeriod: periodLabel
+      billingPeriod: periodLabel,
+      deletedAt: null
     };
 
     if (householdId) {
@@ -97,6 +99,7 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     });
 
     evolution.push({
+      period: periodLabel,
       month: d.toLocaleString('es-CL', { month: 'short' }),
       ingresos: Number(monthlyTxs.find(m => m.type === 'INCOME')?._sum.amount || 0),
       gastos: Number(monthlyTxs.find(m => m.type === 'EXPENSE')?._sum.amount || 0)
@@ -122,14 +125,20 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   }).filter(item => item.budgetedAmount > 0 || item.actualAmount > 0);
 
   // 5. Insights & Alerts
-  const alerts: string[] = [];
+  const alerts: { categoryId: string; message: string }[] = [];
   const insights: string[] = [];
 
   budgetVsActual.forEach(item => {
     if (item.isOverBudget) {
-      alerts.push(`Superaste el presupuesto de ${item.categoryName} por ${Math.round(item.actualAmount - item.budgetedAmount)} CLP.`);
+      alerts.push({
+        categoryId: item.categoryId,
+        message: `Superaste el presupuesto de ${item.categoryName} por ${Math.round(item.actualAmount - item.budgetedAmount)} CLP.`
+      });
     } else if (item.percentUsed > 80) {
-      alerts.push(`Has usado el ${Math.round(item.percentUsed)}% en ${item.categoryName}.`);
+      alerts.push({
+        categoryId: item.categoryId,
+        message: `Has usado el ${Math.round(item.percentUsed)}% en ${item.categoryName}.`
+      });
     }
   });
 
@@ -208,6 +217,7 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     evolution,
     expensesByCategory: budgetVsActual
       .map(b => ({ 
+        id: b.categoryId,
         name: b.categoryName, 
         amount: b.actualAmount,
         color: b.categoryColor || '#A8A29E',

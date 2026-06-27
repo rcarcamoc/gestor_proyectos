@@ -78,7 +78,8 @@ export async function GET(request: Request) {
             userId: m.userId,
             type: 'INCOME',
             billingPeriod,
-            ignored: false
+            ignored: false,
+            deletedAt: null
           },
           _sum: { amount: true }
         });
@@ -110,7 +111,8 @@ export async function GET(request: Request) {
         type: 'EXPENSE',
         billingPeriod,
         ignored: false,
-        scope: 'HOUSEHOLD'
+        scope: 'HOUSEHOLD',
+        deletedAt: null
       }
     });
 

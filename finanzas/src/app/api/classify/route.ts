@@ -22,20 +22,21 @@ export async function GET(req: Request) {
   if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const [total, byCategorySource, trainingSize] = await Promise.all([
-    prisma.transaction.count({ where: { userId } }),
+    prisma.transaction.count({ where: { userId, deletedAt: null } }),
     prisma.transaction.groupBy({
       by: ["categorySource"],
-      where: { userId },
+      where: { userId, deletedAt: null },
       _count: { _all: true },
     }),
     prisma.transaction.count({
-      where: { userId, categoryId: { not: null } },
+      where: { userId, categoryId: { not: null }, deletedAt: null },
     }),
   ]);
 
   const needsReview = await prisma.transaction.count({
     where: {
       userId,
+      deletedAt: null,
       OR: [
         { categorySource: "needs_review" },
         { categoryId: null },
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
   const unclassified = await prisma.transaction.findMany({
     where: {
       userId,
+      deletedAt: null,
       OR: [
         { categoryId: null },
         { categorySource: 'needs_review' },
@@ -93,7 +95,7 @@ export async function POST(req: Request) {
       where: { OR: [{ userId }, { isDefault: true }] },
     }),
     prisma.transaction.findMany({
-      where: { userId, categoryId: { not: null } },
+      where: { userId, categoryId: { not: null }, deletedAt: null },
       select: { description: true, categoryId: true },
       take: 2000,
     }),

@@ -23,6 +23,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
+  const overwrite = searchParams.get("overwrite") === "true";
+  if (overwrite) {
+    await prisma.transaction.deleteMany({ where: { householdId } });
+    await prisma.budget.deleteMany({ where: { householdId } });
+    await prisma.salary.deleteMany({ where: { householdId } });
+    await prisma.autoClassificationPattern.deleteMany({ where: { householdId } });
+    await prisma.debt.deleteMany({ where: { householdId } });
+  }
+
   const sinceStr = searchParams.get("since");
   const sinceDate = sinceStr ? new Date(parseInt(sinceStr)) : null;
   const billingPeriod = searchParams.get("billingPeriod");

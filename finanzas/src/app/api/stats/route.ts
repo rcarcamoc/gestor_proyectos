@@ -30,6 +30,7 @@ export async function GET(req: Request) {
       where: {
         ...where,
         type: 'EXPENSE',
+        deletedAt: null,
         ...(billingPeriod ? { billingPeriod } : { date: { gte: startOfMonth } })
       },
       _sum: { amount: true }
@@ -52,6 +53,7 @@ export async function GET(req: Request) {
         by: ['type'],
         where: {
           ...where,
+          deletedAt: null,
           date: { gte: d, lt: nextD }
         },
         _sum: { amount: true }

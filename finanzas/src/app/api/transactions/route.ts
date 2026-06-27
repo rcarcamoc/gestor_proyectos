@@ -107,7 +107,16 @@ export async function POST(req: Request) {
       return transaction;
     });
 
-    return NextResponse.json(result, { status: 201 });
+    const mappedResult = {
+      ...result,
+      amount: Number(result.amount),
+      date: result.date.getTime(),
+      createdAt: result.createdAt.getTime(),
+      updatedAt: result.updatedAt.getTime(),
+      deletedAt: result.deletedAt ? result.deletedAt.getTime() : null
+    };
+
+    return NextResponse.json(mappedResult, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Error creating transaction" }, { status: 500 });
@@ -173,7 +182,27 @@ export async function GET(req: Request) {
       take: 200,
     });
 
-    return NextResponse.json(transactions);
+    const mappedTransactions = transactions.map(t => ({
+      ...t,
+      amount: Number(t.amount),
+      date: t.date.getTime(),
+      createdAt: t.createdAt.getTime(),
+      updatedAt: t.updatedAt.getTime(),
+      deletedAt: t.deletedAt ? t.deletedAt.getTime() : null,
+      account: t.account ? {
+        ...t.account,
+        balance: Number(t.account.balance),
+        createdAt: t.account.createdAt.getTime(),
+        updatedAt: t.account.updatedAt.getTime()
+      } : null,
+      category: t.category ? {
+        ...t.category,
+        createdAt: t.category.createdAt.getTime(),
+        updatedAt: t.category.updatedAt.getTime()
+      } : null
+    }));
+
+    return NextResponse.json(mappedTransactions);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Error fetching transactions" }, { status: 500 });

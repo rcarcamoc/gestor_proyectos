@@ -36,7 +36,11 @@ export async function GET(req: Request) {
       return diff !== 0 ? diff : a.name.localeCompare(b.name);
     });
 
-    const categories = sorted.map(({ _count, ...cat }) => cat);
+    const categories = sorted.map(({ _count, ...cat }) => ({
+      ...cat,
+      createdAt: cat.createdAt.getTime(),
+      updatedAt: cat.updatedAt.getTime()
+    }));
     return NextResponse.json(categories);
   } catch (error) {
     console.error(error);
@@ -63,7 +67,13 @@ export async function POST(req: Request) {
       }
     });
 
-    return NextResponse.json(category);
+    const mappedCategory = {
+      ...category,
+      createdAt: category.createdAt.getTime(),
+      updatedAt: category.updatedAt.getTime()
+    };
+
+    return NextResponse.json(mappedCategory);
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Error creating category" }, { status: 500 });

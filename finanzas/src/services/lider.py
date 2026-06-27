@@ -11,7 +11,12 @@ def parse_pdf(pdf_path, password):
     try:
         reader = pypdf.PdfReader(pdf_path)
         if reader.is_encrypted:
-            reader.decrypt(password)
+            decrypt_status = reader.decrypt(password)
+            if decrypt_status == 0:
+                return {
+                    "success": False,
+                    "error": "Contraseña incorrecta: No se pudo desencriptar el PDF con la contraseña proporcionada."
+                }
             
         full_text = ""
         for idx, page in enumerate(reader.pages):

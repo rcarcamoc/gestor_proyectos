@@ -56,10 +56,34 @@ export async function POST(req: Request) {
 
   try {
     const { name, color, householdId } = await req.json();
+    const trimmedName = name.trim();
+
+    // Check if category already exists (case-insensitive)
+    const existing = await prisma.category.findFirst({
+      where: {
+        name: {
+          equals: trimmedName,
+          mode: "insensitive"
+        },
+        OR: [
+          { userId },
+          { householdId: householdId || null },
+          { isDefault: true }
+        ]
+      }
+    });
+
+    if (existing) {
+      return NextResponse.json({
+        ...existing,
+        createdAt: existing.createdAt.getTime(),
+        updatedAt: existing.updatedAt.getTime()
+      });
+    }
 
     const category = await prisma.category.create({
       data: {
-        name,
+        name: trimmedName,
         color,
         userId,
         householdId: householdId || null,

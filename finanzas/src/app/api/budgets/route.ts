@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { getBudgets, upsertBudget } from "@/services/budgetService";
 import { authenticateBasicAuth } from "@/lib/basicAuth";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: Request) {
   const session = await getServerSession(authOptions);

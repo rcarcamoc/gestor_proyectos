@@ -117,11 +117,47 @@ export async function POST(req: Request) {
       transactions: firstPassResult.transactions
     });
 
+    // Fetch categories for this user to enrich transactions with suggestions
+    const categories = await prisma.category.findMany({
+      where: {
+        OR: [
+          { userId },
+          {
+            household: {
+              users: {
+                some: {
+                  id: userId
+                }
+              }
+            }
+          },
+          { isDefault: true }
+        ]
+      }
+    });
+
+    const txsToEnrich = verifiedResult.transactions || firstPassResult.transactions || [];
+    const enrichedTransactions = txsToEnrich.map((tx: any) => {
+      let suggestedCategoryName: string | null = null;
+      
+      // Basic keyword matching
+      const descLower = (tx.description || "").toLowerCase();
+      const match = categories.find(c => descLower.includes(c.name.toLowerCase()) || c.name.toLowerCase().includes(descLower));
+      if (match) {
+        suggestedCategoryName = match.name;
+      }
+
+      return {
+        ...tx,
+        suggestedCategoryName
+      };
+    });
+
     return NextResponse.json({
       success: true,
       billingPeriod: verifiedResult.billingPeriod || firstPassResult.billingPeriod,
       cardNumber: verifiedResult.cardNumber || firstPassResult.cardNumber,
-      transactions: verifiedResult.transactions || firstPassResult.transactions
+      transactions: enrichedTransactions
     });
 
   } catch (error: any) {

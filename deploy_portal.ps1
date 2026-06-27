@@ -10,7 +10,7 @@ $userAtHost = "ubuntu@129.151.113.195"
 $remotePath = "portal_hub"
 
 # Cambiar a la carpeta del script de forma robusta
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$ScriptDir = $PSScriptRoot
 Set-Location $ScriptDir
 
 Write-Host "[*] Iniciando despliegue del Portal Unificado..." -ForegroundColor Cyan
@@ -167,7 +167,8 @@ if [ "$NEEDS_BUILD" -eq 1 ]; then
     echo '[+] Limpiando imagenes antiguas...'
     sudo docker image prune -f
 fi
-'@.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal).Replace("GROQ_KEY_VAL", $groqKey)
+'@
+$remoteCmds = $remoteCmds.Replace("REMOTE_PATH", $remotePath).Replace("FORCE_VAL", $forceBuildVal).Replace("GROQ_KEY_VAL", $groqKey)
 
 $localTempFile = [System.IO.Path]::GetTempFileName()
 [System.IO.File]::WriteAllText($localTempFile, ($remoteCmds.Replace("`r", "") + "`n"))

@@ -74,7 +74,16 @@ export async function POST(req: Request) {
       userId: data.householdId ? undefined : userId,
       limit: parseFloat(data.limit)
     });
-    return NextResponse.json(budget);
+
+    const responsePayload = {
+      categoryName: (budget as any).category.name,
+      amount: Number(budget.limit),
+      period: `${budget.year}-${String(budget.month).padStart(2, "0")}`,
+      updatedAt: budget.updatedAt.getTime(),
+      scope: budget.userId ? "PERSONAL" : "HOUSEHOLD"
+    };
+
+    return NextResponse.json(responsePayload);
   } catch (error) {
     console.error("Budget POST error:", error);
     return NextResponse.json({ message: "Error saving budget" }, { status: 500 });

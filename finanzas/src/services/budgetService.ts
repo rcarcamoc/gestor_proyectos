@@ -50,6 +50,9 @@ export async function upsertBudget(data: BudgetInput) {
       categoryId,
       userId,
       householdId
+    },
+    include: {
+      category: true
     }
   });
 }

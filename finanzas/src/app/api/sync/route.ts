@@ -144,20 +144,33 @@ export async function POST(req: Request) {
       return newCat.id;
     };
 
-    // 3. Process incoming Transactions
+    // 3. Process incoming Transactions in batches (Optimized)
+    const uniqueCategoryNames = Array.from(new Set(transactions.map(tx => tx.categoryName).filter(Boolean) as string[]));
+    const categoryNameMap = new Map<string, string>();
+    for (const name of uniqueCategoryNames) {
+      const catId = await getOrCreateCategoryIdByName(name);
+      if (catId) categoryNameMap.set(name.toLowerCase(), catId);
+    }
+
+    const externalIds = transactions.map(tx => tx.idUnico).filter(Boolean) as string[];
+    const existingTxs = await prisma.transaction.findMany({
+      where: {
+        externalId: { in: externalIds },
+        householdId
+      }
+    });
+    const existingTxMap = new Map(existingTxs.map(t => [t.externalId, t]));
+
+    const toCreateData = [];
+    const updatePromises = [];
+
     for (const tx of transactions) {
-      const catId = await getOrCreateCategoryIdByName(tx.categoryName);
+      const catId = tx.categoryName ? categoryNameMap.get(tx.categoryName.toLowerCase()) || null : null;
       const amount = Math.abs(Number(tx.amount));
       const type = tx.type === "INGRESO" || tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
-
-      // Find if transaction already exists by externalId (idUnico from Android)
-      const existingTx = await prisma.transaction.findFirst({
-        where: { externalId: tx.idUnico, householdId }
-      });
+      const existingTx = existingTxMap.get(tx.idUnico);
 
       if (existingTx) {
-        // Simple conflict resolution: if android is newer than web, update it
-        // Or if there are field changes (classification, scope, etc.) to prevent losing local updates due to clock skew
         const androidUpdated = tx.updatedAt ? new Date(tx.updatedAt) : new Date();
         const hasSemanticChanges = existingTx.scope !== (tx.scope || 'HOUSEHOLD') ||
                                    existingTx.categoryId !== catId ||
@@ -166,49 +179,60 @@ export async function POST(req: Request) {
                                    Number(existingTx.amount) !== amount ||
                                    existingTx.deletedAt !== null;
         if (androidUpdated > existingTx.updatedAt || hasSemanticChanges) {
-          await prisma.transaction.update({
-            where: { id: existingTx.id },
-            data: {
-              amount,
-              type,
-              date: new Date(tx.date),
-              description: tx.description,
-              categoryId: catId,
-              cardType: tx.cardType || null,
-              billingPeriod: tx.billingPeriod,
-              ignored: !!tx.ignored,
-              scope: tx.scope || 'HOUSEHOLD',
-              userId_internal: tx.userId_internal || userId,
-              updatedAt: androidUpdated,
-              deletedAt: null // Restore if it was soft-deleted
-            }
-          });
+          updatePromises.push(
+            prisma.transaction.update({
+              where: { id: existingTx.id },
+              data: {
+                amount,
+                type,
+                date: new Date(tx.date),
+                description: tx.description,
+                categoryId: catId,
+                cardType: tx.cardType || null,
+                billingPeriod: tx.billingPeriod,
+                ignored: !!tx.ignored,
+                scope: tx.scope || 'HOUSEHOLD',
+                userId_internal: tx.userId_internal || userId,
+                updatedAt: androidUpdated,
+                deletedAt: null
+              }
+            })
+          );
         }
       } else {
-        await prisma.transaction.create({
-          data: {
-            amount,
-            currency: "CLP",
-            date: new Date(tx.date),
-            type,
-            description: tx.description,
-            source: TransactionSource.MANUAL,
-            status: TransactionStatus.CONFIRMED,
-            accountId: defaultAccount.id,
-            categoryId: catId,
-            userId,
-            userId_internal: tx.userId_internal || userId,
-            householdId,
-            externalId: tx.idUnico,
-            billingPeriod: tx.billingPeriod,
-            cardType: tx.cardType || null,
-            ignored: !!tx.ignored,
-            scope: tx.scope || 'HOUSEHOLD',
-            createdAt: tx.createdAt ? new Date(tx.createdAt) : new Date(),
-            updatedAt: tx.updatedAt ? new Date(tx.updatedAt) : new Date()
-          }
+        toCreateData.push({
+          amount,
+          currency: "CLP",
+          date: new Date(tx.date),
+          type,
+          description: tx.description,
+          source: TransactionSource.MANUAL,
+          status: TransactionStatus.CONFIRMED,
+          accountId: defaultAccount.id,
+          categoryId: catId,
+          userId,
+          userId_internal: tx.userId_internal || userId,
+          householdId,
+          externalId: tx.idUnico,
+          billingPeriod: tx.billingPeriod,
+          cardType: tx.cardType || null,
+          ignored: !!tx.ignored,
+          scope: tx.scope || 'HOUSEHOLD',
+          createdAt: tx.createdAt ? new Date(tx.createdAt) : new Date(),
+          updatedAt: tx.updatedAt ? new Date(tx.updatedAt) : new Date()
         });
       }
+    }
+
+    if (toCreateData.length > 0) {
+      await prisma.transaction.createMany({
+        data: toCreateData,
+        skipDuplicates: true
+      });
+    }
+
+    if (updatePromises.length > 0) {
+      await Promise.all(updatePromises);
     }
 
     // 4. Process incoming Budgets

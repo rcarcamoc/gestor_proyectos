@@ -6,6 +6,23 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  compress: true,
+  async headers() {
+    return [
+      {
+        source: '/api/mobile/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, max-age=60, stale-while-revalidate=120' },
+        ],
+      },
+      {
+        source: '/api/stats',
+        headers: [
+          { key: 'Cache-Control', value: 'private, max-age=120, stale-while-revalidate=300' },
+        ],
+      }
+    ];
+  }
 };
 
 export default nextConfig;

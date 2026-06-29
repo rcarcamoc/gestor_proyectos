@@ -14,55 +14,77 @@ export async function GET(req: Request) {
 
   try {
     const where = householdId ? { householdId } : { userId, householdId: null };
-
-    // 1. Total Balance
-    const accounts = await prisma.account.findMany({ where });
-    const totalBalance = accounts.reduce((acc, a) => acc + Number(a.balance), 0);
-
     const billingPeriod = searchParams.get('billingPeriod');
 
-    // 2. Expenses by category
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const oldestDate = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const nextMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    const expensesByCategory = await prisma.transaction.groupBy({
-      by: ['categoryId'],
-      where: {
-        ...where,
-        type: 'EXPENSE',
-        deletedAt: null,
-        ...(billingPeriod ? { billingPeriod } : { date: { gte: startOfMonth } })
-      },
-      _sum: { amount: true }
-    });
+    // Parallel execution of all stats queries
+    const [accounts, expensesByCategory, categories, monthlyTxs] = await Promise.all([
+      prisma.account.findMany({ where }),
+      prisma.transaction.groupBy({
+        by: ['categoryId'],
+        where: {
+          ...where,
+          type: 'EXPENSE',
+          deletedAt: null,
+          ...(billingPeriod ? { billingPeriod } : { date: { gte: startOfMonth } })
+        },
+        _sum: { amount: true }
+      }),
+      prisma.category.findMany({
+        where: {
+          OR: [
+            householdId ? { householdId } : {},
+            { isDefault: true }
+          ]
+        },
+        select: { id: true, name: true }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          ...where,
+          deletedAt: null,
+          date: { gte: oldestDate, lt: nextMonthDate }
+        },
+        select: {
+          amount: true,
+          type: true,
+          date: true
+        }
+      })
+    ]);
 
-    // Resolve category names
-    const categories = await prisma.category.findMany();
+    // 1. Total Balance
+    const totalBalance = accounts.reduce((acc, a) => acc + Number(a.balance), 0);
+
+    // 2. Expenses by category
     const formattedExpenses = expensesByCategory.map(e => ({
       name: categories.find(c => c.id === e.categoryId)?.name || 'Sin categoría',
       amount: Number(e._sum.amount || 0)
     }));
 
-    // 3. Monthly evolution (last 6 months)
+    // 3. Monthly evolution
     const evolution = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const nextD = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
 
-      const monthlyData = await prisma.transaction.groupBy({
-        by: ['type'],
-        where: {
-          ...where,
-          deletedAt: null,
-          date: { gte: d, lt: nextD }
-        },
-        _sum: { amount: true }
-      });
+      const monthlyData = monthlyTxs.filter(tx => tx.date >= d && tx.date < nextD);
+      
+      const ingresos = monthlyData
+        .filter(tx => tx.type === 'INCOME')
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+      const gastos = monthlyData
+        .filter(tx => tx.type === 'EXPENSE')
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
 
       evolution.push({
         month: d.toLocaleString('es-CL', { month: 'short' }),
-        ingresos: Number(monthlyData.find(m => m.type === 'INCOME')?._sum.amount || 0),
-        gastos: Number(monthlyData.find(m => m.type === 'EXPENSE')?._sum.amount || 0)
+        ingresos,
+        gastos
       });
     }
 
@@ -74,5 +96,4 @@ export async function GET(req: Request) {
   } catch (error) {
     console.error(error);
     return NextResponse.json({ message: "Error fetching stats" }, { status: 500 });
-  }
-}
+  }}

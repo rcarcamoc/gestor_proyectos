@@ -71,22 +71,28 @@ export async function GET(request: Request) {
         });
       }
     } else {
-      // Fallback: sum incomes from transactions (compat)
+      // Fallback: sum incomes from transactions (compat) - Grouped in single query
+      const memberUserIds = members.map(m => m.userId);
+      const incomesSum = await prisma.transaction.groupBy({
+        by: ['userId'],
+        where: {
+          userId: { in: memberUserIds },
+          type: 'INCOME',
+          billingPeriod,
+          ignored: false,
+          deletedAt: null
+        },
+        _sum: {
+          amount: true
+        }
+      });
+      
       for (const m of members) {
-        const incomes = await prisma.transaction.aggregate({
-          where: {
-            userId: m.userId,
-            type: 'INCOME',
-            billingPeriod,
-            ignored: false,
-            deletedAt: null
-          },
-          _sum: { amount: true }
-        });
+        const match = incomesSum.find(i => i.userId === m.userId);
         incomeResults.push({
           name: m.user.name || m.user.email,
           userId: m.userId,
-          income: Number(incomes._sum.amount || 0)
+          income: match ? Number(match._sum.amount || 0) : 0
         });
       }
     }

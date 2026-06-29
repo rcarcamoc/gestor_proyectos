@@ -15,6 +15,12 @@ type Stats = { total: number; needsReview: number; trainingDataSize: number; byS
 type PendingTx = { id: string; description: string; amount: number; date: string; categoryId: string | null; categorySource: string | null; category?: Category | null; metadata?: any };
 type Category = { id: string; name: string; color: string | null };
 
+// ─── Pending flush queue — acumula acciones y las envía en lote ───────────────
+type QueuedAction =
+  | { type: 'classify'; ids: string[]; categoryId: string }
+  | { type: 'ignore'; ids: string[] }
+  | { type: 'delete'; id: string };
+
 const SOURCE_META: Record<string, { label: string; color: string }> = {
   keyword: { label: 'Reglas', color: 'bg-blue-100 text-blue-700 border-blue-200' },
   ml: { label: 'ML', color: 'bg-violet-100 text-violet-700 border-violet-200' },
@@ -309,7 +315,7 @@ function SwipeCard({
   );
 }
 
-// ─── Swipe Mode ──────────────────────────────────────────────────────────────
+// ─── Swipe Mode — con cola optimista ─────────────────────────────────────────
 function SwipeMode({ pending, categories, onExit, onUpdate }: {
   pending: PendingTx[]; categories: Category[];
   onExit: () => void;
@@ -319,7 +325,6 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
   const [confirmed, setConfirmed] = useState(0);
   const [skipped, setSkipped] = useState(0);
   const [streak, setStreak] = useState(0);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
   const total = pending.length;
 
   const current = queue[0];
@@ -340,42 +345,47 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
     }
   }, [similarTxs]);
 
-  const handleConfirm = async () => {
+  // ── Optimistic: quitar de la UI INMEDIATAMENTE, notificar en background ──
+  const handleConfirm = useCallback(() => {
     if (!current) return;
-    setLoadingId(current.id);
-    await onUpdate(current.id, 'confirm', undefined, selectedSimilar);
-    setQueue(q => q.filter(tx => tx.id !== current.id && !selectedSimilar.includes(tx.id)));
-    setConfirmed(c => c + 1 + selectedSimilar.length);
+    const idsToRemove = [current.id, ...selectedSimilar];
+    // UI update es INSTANTÁNEO — sin await, sin loading spinner
+    setQueue(q => q.filter(tx => !idsToRemove.includes(tx.id)));
+    setConfirmed(c => c + idsToRemove.length);
     setStreak(s => s + 1);
-    setLoadingId(null);
-  };
+    // Sync al servidor en background — no bloquea la UI
+    onUpdate(current.id, 'confirm', undefined, selectedSimilar);
+  }, [current, selectedSimilar, onUpdate]);
 
-  const handleSkip = async () => {
+  const handleSkip = useCallback(() => {
     if (!current) return;
+    // UI update INMEDIATO
     setQueue(q => q.slice(1));
     setSkipped(s => s + 1);
     setStreak(0);
+    // Sync background
     onUpdate(current.id, 'skip');
-  };
+  }, [current, onUpdate]);
 
-  const handleDelete = async () => {
+  const handleDelete = useCallback(() => {
     if (!current) return;
-    setLoadingId(current.id);
-    await onUpdate(current.id, 'delete');
+    // UI update INMEDIATO
     setQueue(q => q.slice(1));
-    setLoadingId(null);
     setStreak(0);
-  };
+    // Sync background
+    onUpdate(current.id, 'delete');
+  }, [current, onUpdate]);
 
-  const handleChange = async (catId: string) => {
+  const handleChange = useCallback((catId: string) => {
     if (!current) return;
-    setLoadingId(current.id);
-    await onUpdate(current.id, 'change', catId, selectedSimilar);
-    setQueue(q => q.filter(tx => tx.id !== current.id && !selectedSimilar.includes(tx.id)));
-    setConfirmed(c => c + 1 + selectedSimilar.length);
+    const idsToRemove = [current.id, ...selectedSimilar];
+    // UI update INMEDIATO
+    setQueue(q => q.filter(tx => !idsToRemove.includes(tx.id)));
+    setConfirmed(c => c + idsToRemove.length);
     setStreak(s => s + 1);
-    setLoadingId(null);
-  };
+    // Sync background
+    onUpdate(current.id, 'change', catId, selectedSimilar);
+  }, [current, selectedSimilar, onUpdate]);
 
   const done = queue.length === 0;
   const progress = Math.round(((total - queue.length) / total) * 100);
@@ -427,12 +437,8 @@ function SwipeMode({ pending, categories, onExit, onUpdate }: {
                 <div className="w-full h-full rounded-[2rem] bg-white border border-stone-200 shadow-lg" />
               </div>
             )}
-            {/* Current card */}
-            {loadingId === current?.id ? (
-              <div className="absolute inset-0 rounded-[2rem] bg-white flex items-center justify-center shadow-2xl" style={{ zIndex: 20 }}>
-                <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
-              </div>
-            ) : current ? (
+            {/* Current card — sin loadingId, sin spinner */}
+            {current ? (
               <SwipeCard
                 key={current.id}
                 tx={current}
@@ -485,7 +491,7 @@ function CategoryMode({
 }: {
   pending: PendingTx[];
   categories: Category[];
-  onUpdateBatch: (ids: string[], catId: string) => Promise<void>;
+  onUpdateBatch: (ids: string[], catId: string) => void;
 }) {
   const [selectedCatId, setSelectedCatId] = useState<string>('');
   const [selectedTxIds, setSelectedTxIds] = useState<string[]>([]);
@@ -493,18 +499,15 @@ function CategoryMode({
 
   const activeCategory = categories.find(c => c.id === selectedCatId);
 
-  // Group pending into suggested and other
   const { suggested, others } = useMemo(() => {
     if (!selectedCatId) return { suggested: [], others: [] };
     const sug: PendingTx[] = [];
     const oth: PendingTx[] = [];
     
     pending.forEach(tx => {
-      // Check if match search query
       if (searchQuery && !tx.description.toLowerCase().includes(searchQuery.toLowerCase())) {
         return;
       }
-      
       if (tx.categoryId === selectedCatId) {
         sug.push(tx);
       } else {
@@ -515,7 +518,6 @@ function CategoryMode({
     return { suggested: sug, others: oth };
   }, [pending, selectedCatId, searchQuery]);
 
-  // Reset selected checkboxes when category changes
   useEffect(() => {
     setSelectedTxIds(suggested.map(t => t.id));
   }, [suggested, selectedCatId]);
@@ -624,7 +626,7 @@ function CategoryMode({
               )}
             </div>
 
-            {/* Action buttons */}
+            {/* Action buttons — optimista: actualiza UI antes de esperar el fetch */}
             {selectedTxIds.length > 0 && (
               <div className="flex justify-end pt-2">
                 <Button
@@ -693,13 +695,111 @@ export default function ClassifyPage() {
   const [swipeMode, setSwipeMode] = useState(false);
   const [mode, setMode] = useState<'cards' | 'categories'>('cards');
 
+  // Cola de acciones pendientes de flush hacia el servidor
+  const pendingQueue = useRef<QueuedAction[]>([]);
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFlushing = useRef(false);
+
+  // ── Flush the action queue to the server (debounced, non-blocking) ─────────
+  const flushQueue = useCallback(async () => {
+    if (isFlushing.current || pendingQueue.current.length === 0) return;
+    isFlushing.current = true;
+
+    const batch = [...pendingQueue.current];
+    pendingQueue.current = [];
+
+    // Agrupa clasificaciones por categoría para minimizar requests
+    const classifyGroups: Record<string, string[]> = {};
+    const ignoreIds: string[] = [];
+    const deleteIds: string[] = [];
+
+    for (const action of batch) {
+      if (action.type === 'classify') {
+        if (!classifyGroups[action.categoryId]) classifyGroups[action.categoryId] = [];
+        classifyGroups[action.categoryId].push(...action.ids);
+      } else if (action.type === 'ignore') {
+        ignoreIds.push(...action.ids);
+      } else if (action.type === 'delete') {
+        deleteIds.push(action.id);
+      }
+    }
+
+    const requests: Promise<any>[] = [];
+
+    // 1. Clasificaciones agrupadas por categoría
+    for (const [categoryId, ids] of Object.entries(classifyGroups)) {
+      requests.push(
+        fetch('/finanzas/api/classify', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ transactionIds: [...new Set(ids)], categoryId }),
+        }).catch(console.error)
+      );
+    }
+
+    // 2. Ignoradas en lote via PATCH transactions
+    if (ignoreIds.length > 0) {
+      requests.push(
+        fetch('/finanzas/api/transactions', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: ignoreIds, data: { ignored: true } }),
+        }).catch(console.error)
+      );
+    }
+
+    // 3. Eliminaciones (una por una, no hay batch delete endpoint aún)
+    for (const id of deleteIds) {
+      requests.push(
+        fetch(`/finanzas/api/transactions/${id}`, { method: 'DELETE' }).catch(console.error)
+      );
+    }
+
+    await Promise.all(requests);
+    isFlushing.current = false;
+
+    // Si mientras flusheábamos llegaron más, volver a schedular
+    if (pendingQueue.current.length > 0) scheduleFlush();
+  }, []);
+
+  const scheduleFlush = useCallback(() => {
+    if (flushTimer.current) clearTimeout(flushTimer.current);
+    // Flush tras 800ms de inactividad (o en cuanto salga del swipe mode)
+    flushTimer.current = setTimeout(flushQueue, 800);
+  }, [flushQueue]);
+
+  // Encola una acción y schedula el flush
+  const enqueueAction = useCallback((action: QueuedAction) => {
+    pendingQueue.current.push(action);
+    scheduleFlush();
+  }, [scheduleFlush]);
+
+  // Flush inmediato al salir del swipe mode
+  const handleSwipeExit = useCallback(async () => {
+    if (flushTimer.current) clearTimeout(flushTimer.current);
+    await flushQueue();
+    setSwipeMode(false);
+    // Actualizar solo el contador de stats, no recargar la lista completa
+    fetchStats();
+  }, [flushQueue]);
+
   useEffect(() => {
     fetchAll();
     const interval = setInterval(() => {
       fetch('/finanzas/api/ai/status').then(r => r.json()).then(setAiStatus).catch(() => { });
     }, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (flushTimer.current) clearTimeout(flushTimer.current);
+    };
   }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/finanzas/api/classify');
+      if (res.ok) setStats(await res.json());
+    } catch { }
+  };
 
   const fetchAll = async () => {
     try {
@@ -733,57 +833,39 @@ export default function ClassifyPage() {
     finally { setClassifying(false); }
   };
 
-  const handleSwipeUpdate = async (id: string, action: 'confirm' | 'skip' | 'delete' | 'change', catId?: string, batchIds?: string[]) => {
+  // ── Handler de swipe — 100% optimista, no bloquea la UI ──────────────────
+  const handleSwipeUpdate = useCallback((
+    id: string,
+    action: 'confirm' | 'skip' | 'delete' | 'change',
+    catId?: string,
+    batchIds?: string[]
+  ) => {
     const idsToUpdate = batchIds && batchIds.length > 0 ? [id, ...batchIds] : [id];
+
     if (action === 'confirm') {
       const tx = pending.find(t => t.id === id);
-      if (!tx || !tx.categoryId) return;
-      // Already confirmed by AI — just mark as manual
-      await fetch(`/finanzas/api/classify`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionIds: idsToUpdate, categoryId: tx.categoryId }),
-      }).catch(() => { });
-      setPending(p => p.filter(t => !idsToUpdate.includes(t.id)));
+      if (!tx?.categoryId) return;
+      enqueueAction({ type: 'classify', ids: idsToUpdate, categoryId: tx.categoryId });
     } else if (action === 'change' && catId) {
-      const res = await fetch('/finanzas/api/classify', {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactionIds: idsToUpdate, categoryId: catId }),
-      });
-      if (res.ok) { toast.success('Categorías guardadas'); setPending(p => p.filter(t => !idsToUpdate.includes(t.id))); }
-      else toast.error('Error al guardar');
+      enqueueAction({ type: 'classify', ids: idsToUpdate, categoryId: catId });
     } else if (action === 'delete') {
-      const res = await fetch(`/finanzas/api/transactions/${id}`, { method: 'DELETE' });
-      if (res.ok) { toast.success('Transacción eliminada'); setPending(p => p.filter(t => t.id !== id)); }
-      else toast.error('Error al eliminar');
+      enqueueAction({ type: 'delete', id });
     } else if (action === 'skip') {
-      const res = await fetch(`/finanzas/api/transactions/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ignored: true }),
-      });
-      if (res.ok) {
-        toast.success('Transacción omitida');
-        setPending(p => p.filter(t => t.id !== id));
-      } else {
-        toast.error('Error al omitir transacción');
-      }
+      enqueueAction({ type: 'ignore', ids: [id] });
     }
-  };
+    // Actualizar lista local de pending para reflejo inmediato en stats
+    setPending(p => p.filter(t => !idsToUpdate.includes(t.id)));
+  }, [pending, enqueueAction]);
 
-  const handleBatchUpdate = async (ids: string[], catId: string) => {
-    const res = await fetch('/finanzas/api/classify', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transactionIds: ids, categoryId: catId }),
-    });
-    if (res.ok) {
-      toast.success('Transacciones clasificadas');
-      setPending(p => p.filter(t => !ids.includes(t.id)));
-      fetchAll();
-    } else {
-      toast.error('Error al clasificar transacciones');
-    }
-  };
+  // ── Batch update (modo categorías) — optimista ────────────────────────────
+  const handleBatchUpdate = useCallback(async (ids: string[], catId: string) => {
+    // Actualizar UI INMEDIATAMENTE sin esperar al servidor
+    setPending(p => p.filter(t => !ids.includes(t.id)));
+    toast.success(`${ids.length} transacciones clasificadas`);
+    // Enviar al servidor en background
+    enqueueAction({ type: 'classify', ids, categoryId: catId });
+    scheduleFlush();
+  }, [enqueueAction, scheduleFlush]);
 
   const coverage = stats ? Math.round(((stats.total - stats.needsReview) / Math.max(stats.total, 1)) * 100) : 0;
 
@@ -792,7 +874,7 @@ export default function ClassifyPage() {
       <SwipeMode
         pending={pending}
         categories={categories}
-        onExit={() => { setSwipeMode(false); fetchAll(); }}
+        onExit={handleSwipeExit}
         onUpdate={handleSwipeUpdate}
       />
     );

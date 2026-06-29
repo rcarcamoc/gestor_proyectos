@@ -60,7 +60,32 @@ export async function GET(req: Request) {
         ...(billingPeriod ? { billingPeriod } : {}),
         ...(sinceDate ? { updatedAt: { gt: sinceDate } } : {})
       },
-      include: { category: true, creator: true }
+      select: {
+        id: true,
+        externalId: true,
+        amount: true,
+        date: true,
+        type: true,
+        description: true,
+        cardType: true,
+        billingPeriod: true,
+        ignored: true,
+        createdAt: true,
+        updatedAt: true,
+        scope: true,
+        userId_internal: true,
+        category: {
+          select: {
+            name: true
+          }
+        },
+        creator: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
     }),
     prisma.category.findMany({
       where: sinceDate

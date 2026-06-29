@@ -29,51 +29,83 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    // 2. Fetch all transactions for the period (to compute totals in MySQL)
-    // We group by type to get totalIncome and totalExpense
-    const totals = await prisma.transaction.groupBy({
-      by: ["type"],
-      where: {
-        householdId,
-        billingPeriod: period,
-        deletedAt: null,
-        ignored: false,
-      },
-      _sum: {
-        amount: true,
-      },
-    });
+    const [yearStr, monthStr] = period.split("-");
+    const month = parseInt(monthStr);
+    const year = parseInt(yearStr);
 
+    // Get last 6 period strings
+    const periods: string[] = [];
+    const dateObj = new Date(year, month - 1, 1);
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(dateObj.getFullYear(), dateObj.getMonth() - i, 1);
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const y = d.getFullYear();
+      periods.push(`${y}-${m}`);
+    }
+
+    // 2. Parallel fetch
+    const [categoryTotals, budgets, trendsData, categoriesDetails] = await Promise.all([
+      // A. Category totals for current period
+      prisma.transaction.groupBy({
+        by: ["categoryId"],
+        where: {
+          householdId,
+          billingPeriod: period,
+          type: TransactionType.EXPENSE,
+          deletedAt: null,
+          ignored: false,
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // B. Budgets for current month/year
+      prisma.budget.findMany({
+        where: {
+          householdId,
+          month,
+          year,
+        },
+        include: {
+          category: true,
+        },
+      }),
+      // C. Last 6 months trends (including current period)
+      prisma.transaction.groupBy({
+        by: ["billingPeriod", "type"],
+        where: {
+          householdId,
+          billingPeriod: { in: periods },
+          deletedAt: null,
+          ignored: false,
+        },
+        _sum: {
+          amount: true,
+        },
+      }),
+      // D. Categories lookup
+      prisma.category.findMany({
+        where: {
+          OR: [
+            { householdId },
+            { isDefault: true },
+          ],
+        },
+      }),
+    ]);
+
+    // 3. Process totals for current period (from trendsData to save query)
     let totalIncome = 0;
     let totalExpense = 0;
-    totals.forEach((t) => {
-      const amt = Number(t._sum.amount || 0);
-      if (t.type === TransactionType.INCOME) totalIncome = amt;
-      if (t.type === TransactionType.EXPENSE) totalExpense = amt;
+    trendsData.forEach((t) => {
+      if (t.billingPeriod === period) {
+        const amt = Number(t._sum.amount || 0);
+        if (t.type === TransactionType.INCOME) totalIncome = amt;
+        if (t.type === TransactionType.EXPENSE) totalExpense = amt;
+      }
     });
 
-    // 3. Category distribution (Expenses only)
-    const categoryTotals = await prisma.transaction.groupBy({
-      by: ["categoryId"],
-      where: {
-        householdId,
-        billingPeriod: period,
-        type: TransactionType.EXPENSE,
-        deletedAt: null,
-        ignored: false,
-      },
-      _sum: {
-        amount: true,
-      },
-    });
-
-    // Fetch details of those categories
-    const categoriesDetails = await prisma.category.findMany({
-      where: {
-        id: { in: categoryTotals.map((ct) => ct.categoryId).filter(Boolean) as string[] },
-      },
-    });
-
+    // 4. Category distribution
     const categorySummary = categoryTotals.map((ct) => {
       const cat = categoriesDetails.find((c) => c.id === ct.categoryId);
       return {
@@ -85,79 +117,29 @@ export async function GET(req: Request) {
       };
     });
 
-    // 4. Budgets and breaches
-    const [yearStr, monthStr] = period.split("-");
-    const month = parseInt(monthStr);
-    const year = parseInt(yearStr);
-
-    const budgets = await prisma.budget.findMany({
-      where: {
-        householdId,
-        month,
-        year,
-      },
-      include: {
-        category: true,
-      },
+    // 5. Budgets summary (0 extra queries - look up in categoryTotals)
+    const budgetSummary = budgets.map((b) => {
+      const spent = categoryTotals.find((ct) => ct.categoryId === b.categoryId);
+      return {
+        categoryName: b.category.name,
+        limit: Number(b.limit),
+        amount: spent ? Number(spent._sum.amount || 0) : 0,
+      };
     });
 
-    // For each budget, calculate current expense in that category
-    const budgetSummary = await Promise.all(
-      budgets.map(async (b) => {
-        const sumResult = await prisma.transaction.aggregate({
-          where: {
-            householdId,
-            billingPeriod: period,
-            categoryId: b.categoryId,
-            type: TransactionType.EXPENSE,
-            deletedAt: null,
-            ignored: false,
-          },
-          _sum: {
-            amount: true,
-          },
-        });
-        return {
-          categoryName: b.category.name,
-          limit: Number(b.limit),
-          amount: Number(sumResult._sum.amount || 0),
-        };
-      })
-    );
-
-    // 5. Monthly Trend (last 6 periods ending at target period)
-    const trends: { period: string; income: number; expense: number }[] = [];
-    const dateObj = new Date(year, month - 1, 1);
-    
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(dateObj.getFullYear(), dateObj.getMonth() - i, 1);
-      const m = String(d.getMonth() + 1).padStart(2, "0");
-      const y = d.getFullYear();
-      const p = `${y}-${m}`;
-
-      const tTotals = await prisma.transaction.groupBy({
-        by: ["type"],
-        where: {
-          householdId,
-          billingPeriod: p,
-          deletedAt: null,
-          ignored: false,
-        },
-        _sum: {
-          amount: true,
-        },
-      });
-
+    // 6. Format Trends (fill missing periods with 0)
+    const trends = periods.map((p) => {
       let inc = 0;
       let exp = 0;
-      tTotals.forEach((t) => {
-        const amt = Number(t._sum.amount || 0);
-        if (t.type === TransactionType.INCOME) inc = amt;
-        if (t.type === TransactionType.EXPENSE) exp = amt;
+      trendsData.forEach((t) => {
+        if (t.billingPeriod === p) {
+          const amt = Number(t._sum.amount || 0);
+          if (t.type === TransactionType.INCOME) inc = amt;
+          if (t.type === TransactionType.EXPENSE) exp = amt;
+        }
       });
-
-      trends.push({ period: p, income: inc, expense: exp });
-    }
+      return { period: p, income: inc, expense: exp };
+    });
 
     return NextResponse.json({
       period,

@@ -191,6 +191,10 @@ model Transaction {
   @@index([type, date])
   @@index([billingPeriod])
   @@index([deletedAt])
+  @@index([householdId, billingPeriod, type, deletedAt])
+  @@index([householdId, billingPeriod, categoryId, type])
+  @@index([externalId, householdId])
+  @@index([householdId, updatedAt])
 }
 
 model Budget {

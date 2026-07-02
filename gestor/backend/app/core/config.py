@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     DB_NAME: str
     DB_USER: str
     DB_PASSWORD: str
+    DB_SSL_CA: Optional[str] = None
 
     JWT_SECRET: str
     JWT_EXPIRY: int  # minutos

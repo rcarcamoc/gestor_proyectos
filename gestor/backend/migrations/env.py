@@ -73,9 +73,14 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    from sqlalchemy import create_engine
+    connect_args = {}
+    if settings.DB_SSL_CA:
+        connect_args["ssl"] = {"ssl_ca": settings.DB_SSL_CA}
+
+    connectable = create_engine(
+        SQLALCHEMY_DATABASE_URL,
+        connect_args=connect_args,
         poolclass=pool.NullPool,
     )
 

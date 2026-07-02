@@ -2,28 +2,6 @@ version: '3.8'
 
 services:
   # --- INFRAESTRUCTURA COMPARTIDA ---
-  db:
-    image: mysql:8.4
-    container_name: smarttrack_db_prod
-    restart: always
-    environment:
-      MYSQL_DATABASE: smarttrack
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_USER: user
-      MYSQL_PASSWORD: pass
-    ports:
-      - "3306:3306"
-    volumes:
-      - db_prod_data:/var/lib/mysql
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - portal_network
-
   redis:
     image: redis:alpine
     container_name: smarttrack_redis_prod
@@ -52,10 +30,9 @@ services:
     build: ./gestor/backend
     container_name: smarttrack_backend_prod
     restart: always
-    depends_on:
-      db:
-        condition: service_healthy
     env_file: ./gestor/.env
+    volumes:
+      - ./ca.pem:/app/ca.pem:ro
     networks:
       - portal_network
 
@@ -87,14 +64,13 @@ services:
     restart: always
     env_file: ./finanzas/.env
     environment:
-      DATABASE_URL: mysql://user:pass@db:3306/web_finanzas
+      DATABASE_URL: mysql://3EsKTcwyvZVUqyr.root:WE3G5c7BSjmO8y7M@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/web_finanzas?sslaccept=strict&sslca=/app/ca.pem
       NEXTAUTH_URL: http://129.151.113.195/finanzas
       NEXTAUTH_URL_INTERNAL: http://localhost:3000
       NEXTAUTH_SECRET: y0ur_v3ry_s3cr3t_n3xt_4uth_k3y
       AUTH_TRUST_HOST: "true"
-    depends_on:
-      db:
-        condition: service_healthy
+    volumes:
+      - ./ca.pem:/app/ca.pem:ro
     networks:
       - portal_network
 
@@ -102,6 +78,3 @@ networks:
   portal_network:
     driver: bridge
 
-volumes:
-  db_prod_data:
-    name: db_prod_data

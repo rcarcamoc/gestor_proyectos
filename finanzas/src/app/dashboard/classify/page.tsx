@@ -851,7 +851,7 @@ export default function ClassifyPage() {
     } else if (action === 'delete') {
       enqueueAction({ type: 'delete', id });
     } else if (action === 'skip') {
-      enqueueAction({ type: 'ignore', ids: [id] });
+      // No-op: do not mark as ignored in the backend, just skip in the UI during this session.
     }
     // Actualizar lista local de pending para reflejo inmediato en stats
     setPending(p => p.filter(t => !idsToUpdate.includes(t.id)));

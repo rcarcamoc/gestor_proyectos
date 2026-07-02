@@ -87,14 +87,12 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 if [ -d finanzas ]; then
-    echo "DATABASE_URL=mysql://user:pass@db:3306/web_finanzas" > finanzas/.env
+    echo "DATABASE_URL=mysql://3EsKTcwyvZVUqyr.root:WE3G5c7BSjmO8y7M@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/web_finanzas?sslaccept=strict&sslca=/app/ca.pem" > finanzas/.env
     echo "NEXTAUTH_URL=http://localhost/finanzas" >> finanzas/.env
     echo "NEXTAUTH_SECRET=y0ur_v3ry_s3cr3t_n3xt_4uth_k3y" >> finanzas/.env
     echo "GROQ_API_KEY=GROQ_KEY_VAL" >> finanzas/.env
 fi
 
-OLD_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod")
-OLD_DB_HEALTH=$(sudo docker inspect --format='{{.State.Health.Status}}' smarttrack_db_prod 2>/dev/null || echo "none")
 NEEDS_BUILD=0
 if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "^(finanzas/|docker-compose\.yml|Dockerfile)"; then
     NEEDS_BUILD=1
@@ -108,24 +106,8 @@ else
 fi
 
 echo '[+] Levantando servicios...'
-sudo docker compose up -d db redis home finanzas_app
+sudo docker compose up -d redis home finanzas_app
 
-NEW_DB_ID=$(sudo docker ps -q --filter "name=smarttrack_db_prod")
-if [ "$OLD_DB_ID" = "$NEW_DB_ID" ] && [ "$OLD_DB_HEALTH" = "healthy" ]; then
-    echo '[*] Base de datos activa y saludable. Omitiendo espera.'
-else
-    echo '[+] Esperando a que la base de datos esté saludable...'
-    wait_max=60
-    counter=0
-    until sudo docker ps --filter "name=smarttrack_db_prod" --filter "health=healthy" | grep -q "smarttrack_db_prod"; do
-        sleep 2
-        counter=$((counter + 2))
-        if [ "$counter" -gt "$wait_max" ]; then
-            echo '[X] DB Timeout'
-            break
-        fi
-    done
-fi
 
 NEEDS_PUSH=0
 if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "schema\.prisma"; then

@@ -100,7 +100,7 @@ export async function extractTransactionFromEmail(text: string, categories: stri
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
     });
 
@@ -133,10 +133,19 @@ export async function categorizeTransactionsBatch(
       Transactions (index: description (amount in CLP)):
       ${transactionList}
 
+      Instructions for mapping:
+      1. Analyze the transaction description to identify the merchant/business.
+      2. Pay close attention to common local and Chilean merchants to understand their domain:
+         - "COPEC", "Shell", "Petrobras", "Pronto", "Upa" are associated with Fuel/Gas/Transportation (e.g., "Combustible", "Transporte", "Vehículo").
+         - "Jumbo", "Lider", "Unimarc", "Tottus", "Santa Isabel" are supermarkets/groceries (e.g., "Supermercado", "Alimentos", "Comida", "Hogar").
+         - "Enel", "Metrogas", "Aguas Andinas", "Gasco", "Abastible", "VTR", "Movistar", "Entel", "Claro" are utilities/services (e.g., "Servicios", "Servicios Básicos", "Gastos Fijos").
+         - "Uber", "Cabify", "Didi", "Metro", "Bip" are transportation (e.g., "Transporte", "Viajes").
+         - "Cornershop", "Rappi", "PedidosYa" are delivery/food (e.g., "Comida", "Supermercado", "Delivery").
+      3. For any other merchant, use your general knowledge to determine its business type and map it to the closest matching category in the Available Categories list.
+      4. Negative amounts are expenses, positive amounts are income.
+      5. "sueldo" or similar categories are for salary/income transactions.
+
       Rules:
-      - Match each transaction to the most appropriate Spanish category.
-      - Negative amounts are expenses, positive amounts are income.
-      - "sueldo" is the category for salary/income transactions.
       - Return a valid JSON object where keys are the transaction indices as strings ("0", "1", "2"...) and values are the EXACT category names from the list.
       - Do NOT invent categories. Only use names from the Available Categories list.
       - Only return the JSON object, nothing else.
@@ -144,7 +153,7 @@ export async function categorizeTransactionsBatch(
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama-3.1-8b-instant",
+      model: "qwen/qwen3.6-27b",
       response_format: { type: "json_object" },
     });
 
@@ -267,7 +276,7 @@ export async function verifyAndCorrectTransactions(rawText: string, parsedData: 
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
     });
 

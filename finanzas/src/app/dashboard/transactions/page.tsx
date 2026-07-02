@@ -600,12 +600,17 @@ export default function TransactionsPage() {
                     </TableCell>
                     <TableCell className="text-right py-4">
                       <div className="flex flex-col items-end">
-                        <span className={cn(
-                          "font-bold text-base font-serif tracking-tight",
-                          isExpense ? "text-stone-900" : "text-emerald-600"
-                        )}>
-                          {isExpense ? '-' : '+'}{formatCurrency(Number(t.amount))}
-                        </span>
+                        {(() => {
+                          const isReversal = isExpense && Number(t.amount) < 0;
+                          return (
+                            <span className={cn(
+                              "font-bold text-base font-serif tracking-tight",
+                              isReversal ? "text-emerald-600" : isExpense ? "text-stone-900" : "text-emerald-600"
+                            )}>
+                              {isReversal ? '+' : isExpense ? '-' : '+'}{formatCurrency(Math.abs(Number(t.amount)))}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="py-4 pr-4">

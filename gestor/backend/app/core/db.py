@@ -6,8 +6,13 @@ from sqlalchemy import create_engine
 # MySQL connection URL
 SQLALCHEMY_DATABASE_URL = f"mysql+pymysql://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}"
 
+connect_args = {}
+if settings.DB_SSL_CA:
+    connect_args["ssl"] = {"ssl_ca": settings.DB_SSL_CA}
+
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL,
+    connect_args=connect_args,
     pool_recycle=280,      # Recicla conexiones cada ~4.5 min (MySQL cierra a los 8)
     pool_pre_ping=True,    # Verifica la conexión antes de usarla
     pool_size=5,

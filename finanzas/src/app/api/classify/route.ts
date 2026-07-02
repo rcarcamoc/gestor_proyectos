@@ -156,12 +156,38 @@ export async function POST(req: Request) {
       categories.map((c) => ({ id: c.id, name: c.name }))
     );
 
+    const normalizeStr = (str: string) => {
+      return str
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "")
+        .trim();
+    };
+
     Object.entries(aiSuggestions).forEach(([aiIdx, categoryName]) => {
       const queueItem = groqQueue[parseInt(aiIdx)];
       if (!queueItem) return;
-      const category = categories.find(
-        (c) => c.name.toLowerCase() === (categoryName as string).toLowerCase()
+      
+      const normSuggested = normalizeStr(categoryName as string);
+      if (!normSuggested) {
+        results.needs_review++;
+        return;
+      }
+
+      // 1. Intento de coincidencia exacta normalizada
+      let category = categories.find(
+        (c) => normalizeStr(c.name) === normSuggested
       );
+
+      // 2. Fallback de subcadena (ej: si dice "Combustible" y la categoría es "Vehículo / Combustible")
+      if (!category) {
+        category = categories.find((c) => {
+          const normCat = normalizeStr(c.name);
+          return normCat.includes(normSuggested) || normSuggested.includes(normCat);
+        });
+      }
+
       if (category) {
         const upd = updates[queueItem.idx];
         upd.categoryId = category.id;

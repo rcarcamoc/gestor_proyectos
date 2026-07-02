@@ -101,9 +101,10 @@ export async function POST(req: Request) {
     }
 
     // 1. Get or create a default account for the household
-    let defaultAccount = await prisma.account.findFirst({
+    const accounts = await prisma.account.findMany({
       where: { householdId, isArchived: false }
     });
+    let defaultAccount = accounts.find(a => a.type === "CHECKING") || accounts[0];
     if (!defaultAccount) {
       defaultAccount = await prisma.account.create({
         data: {
@@ -114,7 +115,10 @@ export async function POST(req: Request) {
           householdId
         }
       });
+      accounts.push(defaultAccount);
     }
+    const creditCardAccount = accounts.find(a => a.type === "CREDIT_CARD");
+
 
     // 2. Fetch all categories of this household & defaults to match by name
     const categories = await prisma.category.findMany({
@@ -145,18 +149,21 @@ export async function POST(req: Request) {
     };
 
     // 3. Process incoming Transactions in batches (Optimized)
-    const uniqueCategoryNames = Array.from(new Set(transactions.map(tx => tx.categoryName).filter(Boolean) as string[]));
+    const uniqueCategoryNames = Array.from(new Set(transactions.map((tx: any) => tx.categoryName).filter(Boolean) as string[]));
     const categoryNameMap = new Map<string, string>();
     for (const name of uniqueCategoryNames) {
       const catId = await getOrCreateCategoryIdByName(name);
       if (catId) categoryNameMap.set(name.toLowerCase(), catId);
     }
 
-    const externalIds = transactions.map(tx => tx.idUnico).filter(Boolean) as string[];
+    const externalIds = transactions.map((tx: any) => tx.idUnico).filter(Boolean) as string[];
     const existingTxs = await prisma.transaction.findMany({
       where: {
         externalId: { in: externalIds },
         householdId
+      },
+      include: {
+        account: true
       }
     });
     const existingTxMap = new Map(existingTxs.map(t => [t.externalId, t]));
@@ -166,9 +173,16 @@ export async function POST(req: Request) {
 
     for (const tx of transactions) {
       const catId = tx.categoryName ? categoryNameMap.get(tx.categoryName.toLowerCase()) || null : null;
-      const amount = Math.abs(Number(tx.amount));
-      const type = tx.type === "INGRESO" || tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
       const existingTx = existingTxMap.get(tx.idUnico);
+      
+      const isCreditCard = (existingTx?.account?.type === 'CREDIT_CARD') || 
+                           (defaultAccount.type === 'CREDIT_CARD') || 
+                           (tx.cardType && String(tx.cardType).trim() !== "");
+      
+      const amount = isCreditCard ? Number(tx.amount) : Math.abs(Number(tx.amount));
+      const type = tx.type === "INGRESO" || tx.type === "INCOME" ? TransactionType.INCOME : TransactionType.EXPENSE;
+      
+      const targetAccountId = (isCreditCard && creditCardAccount) ? creditCardAccount.id : defaultAccount.id;
 
       if (existingTx) {
         const androidUpdated = tx.updatedAt ? new Date(tx.updatedAt) : new Date();
@@ -208,7 +222,7 @@ export async function POST(req: Request) {
           description: tx.description,
           source: TransactionSource.MANUAL,
           status: TransactionStatus.CONFIRMED,
-          accountId: defaultAccount.id,
+          accountId: targetAccountId,
           categoryId: catId,
           userId,
           userId_internal: tx.userId_internal || userId,

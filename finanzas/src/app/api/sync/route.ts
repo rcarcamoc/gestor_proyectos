@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/prisma";
-import { TransactionType, TransactionSource, TransactionStatus, DebtStatus } from "@prisma/client";
+import { TransactionType, TransactionSource, TransactionStatus, DebtStatus } from "@/generated/client";
 
 import bcrypt from "bcryptjs";
 
@@ -130,30 +130,47 @@ export async function POST(req: Request) {
       }
     });
 
-    const getOrCreateCategoryIdByName = async (name?: string) => {
-      if (!name || name.trim() === "") return null;
-      const match = categories.find(c => c.name.toLowerCase() === name.trim().toLowerCase());
-      if (match) return match.id;
+    // 3. Process incoming Transactions in batches (Optimized)
+    const uniqueCategoryNames = Array.from(new Set([
+      ...transactions.map((tx: any) => tx.categoryName),
+      ...budgets.map((b: any) => b.categoryName),
+      ...patterns.map((p: any) => p.categoryName)
+    ].filter(Boolean) as string[]));
+    
+    const categoriesToCreate = uniqueCategoryNames.filter(name => {
+      const trimmed = name.trim().toLowerCase();
+      return !categories.some(c => c.name.toLowerCase() === trimmed);
+    });
 
-      // Create new category on the server
-      const newCat = await prisma.category.create({
-        data: {
+    if (categoriesToCreate.length > 0) {
+      await prisma.category.createMany({
+        data: categoriesToCreate.map(name => ({
           name: name.trim(),
           householdId,
           isDefault: false
+        })),
+        skipDuplicates: true
+      });
+      
+      // Re-fetch all categories for this household to get their IDs
+      const updatedCategories = await prisma.category.findMany({
+        where: {
+          OR: [
+            { householdId },
+            { isDefault: true }
+          ]
         }
       });
-      // Add to local list so we don't recreate it in this request loop
-      categories.push(newCat);
-      return newCat.id;
-    };
+      categories.length = 0;
+      categories.push(...updatedCategories);
+    }
 
-    // 3. Process incoming Transactions in batches (Optimized)
-    const uniqueCategoryNames = Array.from(new Set(transactions.map((tx: any) => tx.categoryName).filter(Boolean) as string[]));
     const categoryNameMap = new Map<string, string>();
     for (const name of uniqueCategoryNames) {
-      const catId = await getOrCreateCategoryIdByName(name);
-      if (catId) categoryNameMap.set(name.toLowerCase(), catId);
+      const match = categories.find(c => c.name.toLowerCase() === name.trim().toLowerCase());
+      if (match) {
+        categoryNameMap.set(name.toLowerCase(), match.id);
+      }
     }
 
     const externalIds = transactions.map((tx: any) => tx.idUnico).filter(Boolean) as string[];
@@ -170,8 +187,13 @@ export async function POST(req: Request) {
 
     const toCreateData = [];
     const updatePromises = [];
+    const processedExternalIds = new Set<string>();
 
     for (const tx of transactions) {
+      if (tx.idUnico) {
+        if (processedExternalIds.has(tx.idUnico)) continue;
+        processedExternalIds.add(tx.idUnico);
+      }
       const catId = tx.categoryName ? categoryNameMap.get(tx.categoryName.toLowerCase()) || null : null;
       const existingTx = existingTxMap.get(tx.idUnico);
       
@@ -251,7 +273,7 @@ export async function POST(req: Request) {
 
     // 4. Process incoming Budgets
     for (const b of budgets) {
-      const catId = await getOrCreateCategoryIdByName(b.categoryName);
+      const catId = b.categoryName ? categoryNameMap.get(b.categoryName.toLowerCase()) || null : null;
       if (!catId) continue;
 
       const [yearStr, monthStr] = b.period.split("-");
@@ -336,7 +358,7 @@ export async function POST(req: Request) {
 
     // 6. Process incoming Auto-Classification Patterns
     for (const p of patterns) {
-      const catId = await getOrCreateCategoryIdByName(p.categoryName);
+      const catId = p.categoryName ? categoryNameMap.get(p.categoryName.toLowerCase()) || null : null;
       if (!catId) continue;
 
       const existingPattern = await prisma.autoClassificationPattern.findFirst({

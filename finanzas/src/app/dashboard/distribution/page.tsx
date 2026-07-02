@@ -15,15 +15,13 @@ import { Loader2, PlusCircle } from 'lucide-react';
 import { formatBillingPeriod, getMonthOptions } from '@/lib/utils';
 
 export default function DistributionPage() {
-  const { selectedScope } = useScope();
+  const { selectedScope, selectedPeriod } = useScope();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
   const [salaryForm, setSalaryForm] = useState({ userId: '', amount: '', date: new Date().toISOString().split('T')[0] });
   const [addingSalary, setAddingSalary] = useState(false);
-
-  const [selectedPeriod, setSelectedPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
   useEffect(() => {
     setMounted(true);
@@ -96,18 +94,7 @@ export default function DistributionPage() {
           <p className="text-stone-500 mt-1.5 font-medium">Cálculo proporcional basado en los ingresos de la pareja.</p>
         </div>
         <div className="flex items-center gap-4">
-          {mounted && (
-            <Select value={selectedPeriod} onValueChange={(val: string | null) => val && setSelectedPeriod(val)}>
-              <SelectTrigger className="w-[180px] rounded-2xl bg-white border-stone-200 shadow-sm h-10 font-medium">
-                <SelectValue placeholder="Seleccionar mes" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                {getMonthOptions().map(opt => (
-                  <SelectItem key={opt.value} value={opt.value} className="rounded-xl">{opt.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+          {/* Period filter is now in the sidebar */}
           {data && (
             <Button 
                 className="bg-emerald-600 hover:bg-emerald-700 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"

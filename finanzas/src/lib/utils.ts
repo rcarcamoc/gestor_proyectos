@@ -6,7 +6,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatBillingPeriod(date: Date | string): string {
-  const d = new Date(date);
+  let d = new Date(date);
+  if (isNaN(d.getTime()) && typeof date === 'string') {
+    const parts = date.split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[2].length === 4) {
+        // DD/MM/YYYY
+        d = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T12:00:00Z`);
+      } else if (parts[0].length === 4) {
+        // YYYY-MM-DD
+        d = new Date(`${parts[0]}-${parts[1]}-${parts[2]}T12:00:00Z`);
+      }
+    }
+  }
+  if (isNaN(d.getTime())) {
+    d = new Date();
+  }
   const month = String(d.getMonth() + 1).padStart(2, "0");
   return `${d.getFullYear()}-${month}`;
 }

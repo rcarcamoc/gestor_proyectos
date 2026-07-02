@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateBasicAuth } from "@/lib/basicAuth";
-import { TransactionType } from "@prisma/client";
+import { TransactionType } from "@/generated/client";
 
 export async function GET(req: Request) {
   const user = await authenticateBasicAuth(req);

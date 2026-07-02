@@ -18,29 +18,35 @@ import {
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { cn, formatBillingPeriod } from '@/lib/utils';
+import { useScope } from '@/components/ScopeProvider';
 
 export default function BudgetsPage() {
-  const [date, setDate] = useState(new Date());
+  const { selectedScope, selectedPeriod, setSelectedPeriod } = useScope();
   const [categories, setCategories] = useState<any[]>([]);
   const [budgets, setBudgets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
 
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+  const [yearStr, monthStr] = (selectedPeriod || '').split('-');
+  const year = yearStr ? parseInt(yearStr) : new Date().getFullYear();
+  const month = monthStr ? parseInt(monthStr) : new Date().getMonth() + 1;
 
   useEffect(() => {
-    fetchData();
-  }, [date]);
+    if (selectedPeriod) {
+      fetchData();
+    }
+  }, [selectedPeriod, selectedScope]);
 
   const fetchData = async () => {
     setLoading(true);
     try {
+      const catsUrl = selectedScope !== 'personal' ? `/finanzas/api/categories?householdId=${selectedScope}` : '/finanzas/api/categories';
+      const budgetsUrl = `/finanzas/api/budgets?month=${month}&year=${year}${selectedScope !== 'personal' ? `&householdId=${selectedScope}` : ''}`;
       const [catsRes, budgetsRes] = await Promise.all([
-        fetch('/finanzas/api/categories'),
-        fetch(`/finanzas/api/budgets?month=${month}&year=${year}`)
+        fetch(catsUrl),
+        fetch(budgetsUrl)
       ]);
 
       if (catsRes.ok && budgetsRes.ok) {
@@ -76,7 +82,8 @@ export default function BudgetsPage() {
           categoryId,
           month,
           year,
-          limit: parseFloat(limit)
+          limit: parseFloat(limit),
+          householdId: selectedScope === 'personal' ? null : selectedScope
         })
       });
 
@@ -94,21 +101,20 @@ export default function BudgetsPage() {
   };
 
   const nextMonth = () => {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() + 1);
-    setDate(d);
+    const d = new Date(year, month - 1 + 1, 1);
+    setSelectedPeriod(formatBillingPeriod(d));
   };
 
   const prevMonth = () => {
-    const d = new Date(date);
-    d.setMonth(d.getMonth() - 1);
-    setDate(d);
+    const d = new Date(year, month - 1 - 1, 1);
+    setSelectedPeriod(formatBillingPeriod(d));
   };
 
   const formatCurrency = (val: number) => 
     new Intl.NumberFormat('es-CL', { style: 'currency', currency: 'CLP' }).format(val);
 
-  const monthName = date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const dateObj = new Date(year, month - 1, 1);
+  const monthName = dateObj.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 max-w-5xl mx-auto">

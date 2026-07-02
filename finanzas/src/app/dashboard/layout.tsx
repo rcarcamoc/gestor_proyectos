@@ -25,6 +25,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ScopeProvider, useScope } from '@/components/ScopeProvider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getMonthOptions } from '@/lib/utils';
 
 const navigation = [
   { name: 'Resumen', href: '/dashboard', icon: LayoutDashboard },
@@ -56,7 +57,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { data: session, status } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { selectedScope, setSelectedScope } = useScope();
+  const { selectedScope, setSelectedScope, selectedPeriod, setSelectedPeriod } = useScope();
   const [households, setHouseholds] = useState<any[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -171,6 +172,28 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </Select>
           </div>
 
+          <div className={cn("mb-6", isCollapsed ? "px-1" : "px-4")}>
+            <Select value={selectedPeriod} onValueChange={(v) => v && setSelectedPeriod(v)}>
+              <SelectTrigger className={cn(
+                "w-full rounded-2xl border-stone-200 bg-white shadow-sm text-sm font-semibold text-stone-700 transition-all",
+                isCollapsed ? "h-10 p-0 flex items-center justify-center" : "h-10"
+              )}>
+                {isCollapsed ? (
+                  <span className="w-8 h-8 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center text-xs font-bold">
+                    {selectedPeriod.split('-')?.[1] || 'M'}
+                  </span>
+                ) : (
+                  <SelectValue placeholder="Periodo" />
+                )}
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
+                  {getMonthOptions().map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} className="rounded-xl">{opt.label}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Nav */}
           <nav className="flex-1 space-y-1 overflow-y-auto">
             {navigation.map((item) => {
@@ -234,15 +257,26 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex justify-center">
           <span className="font-serif text-stone-800 font-semibold text-lg">Finanzas Familiares</span>
         </div>
-        <div className="w-auto flex items-center">
+        <div className="w-auto flex items-center gap-2">
             <Select value={selectedScope} onValueChange={(v) => v && setSelectedScope(v)}>
-              <SelectTrigger className="w-[120px] rounded-full border-stone-200 bg-stone-50 shadow-sm h-8 text-[11px] font-semibold text-stone-600 focus:ring-0">
+              <SelectTrigger className="w-[110px] rounded-full border-stone-200 bg-stone-50 shadow-sm h-8 text-[11px] font-semibold text-stone-600 focus:ring-0">
                   <SelectValue placeholder="Vista" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl border-stone-200 shadow-xl z-[100]">
                   <SelectItem value="personal" className="rounded-xl">Personal</SelectItem>
                   {households.map(h => (
                   <SelectItem key={h.id} value={h.id} className="rounded-xl">{h.name}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedPeriod} onValueChange={(v) => v && setSelectedPeriod(v)}>
+              <SelectTrigger className="w-[110px] rounded-full border-stone-200 bg-stone-50 shadow-sm h-8 text-[11px] font-semibold text-stone-600 focus:ring-0">
+                  <SelectValue placeholder="Periodo" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl border-stone-200 shadow-xl z-[100]">
+                  {getMonthOptions().map(opt => (
+                    <SelectItem key={opt.value} value={opt.value} className="rounded-xl text-xs">{opt.label}</SelectItem>
                   ))}
               </SelectContent>
             </Select>

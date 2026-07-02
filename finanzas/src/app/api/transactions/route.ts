@@ -133,6 +133,7 @@ export async function GET(req: Request) {
   const householdId = searchParams.get('householdId');
   const uncategorized = searchParams.get('uncategorized') === 'true';
   const includeIgnored = searchParams.get('includeIgnored') === 'true';
+  const billingPeriod = searchParams.get('billingPeriod');
 
   try {
     // Get all households the user belongs to
@@ -145,26 +146,53 @@ export async function GET(req: Request) {
     let whereFilter: any = {
       deletedAt: null // Only active transactions
     };
-    
+
+    const andConditions: any[] = [];
+
+    // 1. Billing Period condition
+    if (billingPeriod) {
+      const parts = billingPeriod.split("-");
+      const year = parseInt(parts[0]);
+      const month = parseInt(parts[1]);
+      const startOfMonth = new Date(year, month - 1, 1);
+      const endOfMonth = new Date(year, month, 0, 23, 59, 59);
+
+      andConditions.push({
+        OR: [
+          { billingPeriod },
+          {
+            billingPeriod: null,
+            date: { gte: startOfMonth, lte: endOfMonth }
+          }
+        ]
+      });
+    }
+
+    // 2. Household ID / User scope condition
     if (householdId) {
       whereFilter.householdId = householdId;
     } else {
-      // Return personal transactions OR household transactions for households the user is in
-      whereFilter.OR = [
-        { userId },
-        { householdId: { in: householdIds } }
-      ];
+      andConditions.push({
+        OR: [
+          { userId },
+          { householdId: { in: householdIds } }
+        ]
+      });
     }
 
+    // 3. Uncategorized condition
     if (uncategorized) {
-      whereFilter = {
-        ...whereFilter,
+      andConditions.push({
         OR: [
-          ...(whereFilter.OR || []),
           { categoryId: null },
           { categorySource: { not: 'manual' } }
         ]
-      };
+      });
+    }
+
+    // Assign AND conditions if any
+    if (andConditions.length > 0) {
+      whereFilter.AND = andConditions;
     }
 
     // By default hide ignored transactions; show them only when explicitly requested
@@ -179,7 +207,7 @@ export async function GET(req: Request) {
         category: true,
       },
       orderBy: { date: 'desc' },
-      take: 200,
+      take: billingPeriod ? 1000 : 200,
     });
 
     const mappedTransactions = transactions.map(t => ({

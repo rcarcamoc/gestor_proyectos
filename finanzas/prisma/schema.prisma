@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/client"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -102,6 +102,9 @@ model Account {
   household     Household?     @relation(fields: [householdId], references: [id])
   transactions  Transaction[]
   emailAccounts EmailAccount[]
+
+  @@index([userId])
+  @@index([householdId])
 }
 
 model Category {
@@ -120,6 +123,9 @@ model Category {
   transactions               Transaction[]
   budgets                    Budget[]
   autoClassificationPatterns AutoClassificationPattern[]
+
+  @@index([userId])
+  @@index([householdId])
 }
 
 enum TransactionType {
@@ -195,6 +201,9 @@ model Transaction {
   @@index([householdId, billingPeriod, categoryId, type])
   @@index([externalId, householdId])
   @@index([householdId, updatedAt])
+  @@index([userId])
+  @@index([userId_internal])
+  @@index([accountId])
 }
 
 model Budget {
@@ -215,6 +224,8 @@ model Budget {
 
   @@unique([categoryId, month, year, userId])
   @@unique([categoryId, month, year, householdId])
+  @@index([userId])
+  @@index([householdId])
 }
 
 model SavingsGoal {
@@ -231,6 +242,9 @@ model SavingsGoal {
 
   user      User?      @relation(fields: [userId], references: [id])
   household Household? @relation(fields: [householdId], references: [id])
+
+  @@index([userId])
+  @@index([householdId])
 }
 
 model ExcelProfile {

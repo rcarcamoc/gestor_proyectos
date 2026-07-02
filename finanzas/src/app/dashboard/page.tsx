@@ -70,21 +70,20 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { selectedScope } = useScope();
+  const { selectedScope, selectedPeriod } = useScope();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [selectedBillingPeriod, setSelectedBillingPeriod] = useState<string>(formatBillingPeriod(new Date()));
 
   useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { fetchStats(); }, [selectedScope, selectedBillingPeriod]);
+  useEffect(() => { if (selectedPeriod) fetchStats(); }, [selectedScope, selectedPeriod]);
 
   const fetchStats = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (selectedScope !== 'personal') params.append('householdId', selectedScope);
-      if (selectedBillingPeriod) params.append('billingPeriod', selectedBillingPeriod);
+      if (selectedPeriod) params.append('billingPeriod', selectedPeriod);
 
       const res = await fetch(`/finanzas/api/reports/monthly?${params.toString()}`);
       if (res.ok) {
@@ -113,22 +112,6 @@ export default function DashboardPage() {
           <h1 className="font-serif text-4xl text-stone-900 tracking-tight">Resumen Financiero</h1>
           <p className="text-stone-400 mt-1.5 text-sm">Tu situación actual de un vistazo.</p>
         </div>
-        {mounted ? (
-          <div className="flex gap-3">
-            <Select value={selectedBillingPeriod} onValueChange={(val) => val && setSelectedBillingPeriod(val)}>
-              <SelectTrigger className="w-[180px] rounded-2xl border-stone-200 bg-white shadow-sm h-10 text-sm">
-                  <SelectValue placeholder="Periodo" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl border-stone-200 shadow-xl">
-                  {getMonthOptions().map(opt => (
-                    <SelectItem key={opt.value} value={opt.value} className="rounded-xl">{opt.label}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-        ) : (
-            <div className="w-[180px] h-10 bg-stone-50 rounded-2xl animate-pulse" />
-        )}
       </div>
 
       {loading ? (
@@ -152,7 +135,7 @@ export default function DashboardPage() {
               label="Balance del Periodo"
               value={fmt(stats.totalBalance)}
               subtitle="Neto para este periodo"
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod)}
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod)}
             />
             <StatCard
               icon={ArrowDownRight}
@@ -161,7 +144,7 @@ export default function DashboardPage() {
               label="Gastos del Mes"
               value={fmt(stats.totalExpenses)}
               subtitle={`${stats.budgetVsActual.filter((b: any) => b.isOverBudget).length} categorías excedidas`}
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod + '&type=EXPENSE')}
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod + '&type=EXPENSE')}
             />
             <StatCard
               icon={ArrowUpRight}
@@ -170,7 +153,7 @@ export default function DashboardPage() {
               label="Ingresos del Mes"
               value={fmt(stats.totalIncome)}
               subtitle={`Meta de ahorro: ${fmt(Math.max(0, stats.totalIncome - stats.totalBudget))}`}
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod + '&type=INCOME')}
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod + '&type=INCOME')}
             />
             <StatCard
               icon={Activity}
@@ -179,7 +162,7 @@ export default function DashboardPage() {
               label="Promedio Diario"
               value={fmt(stats.dailyAverage || 0)}
               subtitle="Gasto promedio estimado"
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedBillingPeriod + '&type=EXPENSE')}
+              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod + '&type=EXPENSE')}
             />
           </div>
 
@@ -265,7 +248,7 @@ export default function DashboardPage() {
                                 <div 
                                     key={i} 
                                     className="flex gap-3 p-3 rounded-2xl bg-rose-50/50 border border-rose-100/50 cursor-pointer hover:bg-rose-100/50 transition-colors"
-                                    onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${alert.categoryId}`)}
+                                    onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${alert.categoryId}`)}
                                 >
                                     <AlertCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
                                     <p className="text-xs font-medium text-rose-800 leading-relaxed">{alert.message || alert}</p>
@@ -304,7 +287,7 @@ export default function DashboardPage() {
                                             dataKey="amount"
                                             onClick={(entry) => {
                                               if (entry && entry.id) {
-                                                router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${entry.id}`);
+                                                router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${entry.id}`);
                                               }
                                             }}
                                             className="cursor-pointer"
@@ -330,7 +313,7 @@ export default function DashboardPage() {
                                         <div 
                                             key={i} 
                                             className="flex items-center justify-between text-xs cursor-pointer hover:bg-stone-50 p-1 rounded-lg transition-colors"
-                                            onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${entry.id}`)}
+                                            onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${entry.id}`)}
                                         >
                                             <div className="flex items-center gap-2 truncate">
                                                 <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color || COLORS[i % COLORS.length] }} />
@@ -423,7 +406,7 @@ export default function DashboardPage() {
                             <div 
                                 key={i} 
                                 className="space-y-4 group cursor-pointer hover:bg-stone-50/50 p-3 rounded-2xl border border-transparent hover:border-stone-100 transition-all duration-300"
-                                onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedBillingPeriod}&category=${item.categoryId}`)}
+                                onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${item.categoryId}`)}
                             >
                                 <div className="flex justify-between items-end">
                                     <div>

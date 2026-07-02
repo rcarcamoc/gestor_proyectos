@@ -99,23 +99,29 @@ export default function TransactionsPage() {
     billingPeriod: formatBillingPeriod(new Date()),
     type: 'EXPENSE'
   });
-  const { selectedScope } = useScope();
+  const { selectedScope, selectedPeriod, setSelectedPeriod } = useScope();
   const [isDeletePeriodOpen, setIsDeletePeriodOpen] = useState(false);
   const [deletePeriod, setDeletePeriod] = useState(formatBillingPeriod(new Date()));
   const [accounts, setAccounts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [selectedPeriodFilter, setSelectedPeriodFilter] = useState<string>(formatBillingPeriod(new Date()));
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('ALL');
   const [selectedAccountFilter, setSelectedAccountFilter] = useState<string>('ALL');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('ALL');
   const [showFilters, setShowFilters] = useState(true);
 
   useEffect(() => {
+    if (selectedPeriod) {
+      setDeletePeriod(selectedPeriod);
+      setNewTx(prev => ({ ...prev, billingPeriod: selectedPeriod }));
+    }
+  }, [selectedPeriod]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const period = params.get('period');
       if (period) {
-        setSelectedPeriodFilter(period);
+        setSelectedPeriod(period);
       }
       const category = params.get('category');
       if (category) {
@@ -126,12 +132,14 @@ export default function TransactionsPage() {
         setSelectedTypeFilter(type);
       }
     }
-  }, []);
+  }, [setSelectedPeriod]);
 
   useEffect(() => {
-    fetchTransactions();
+    if (selectedPeriod) {
+      fetchTransactions();
+    }
     fetchMetadata();
-  }, [showIgnored, selectedScope]);
+  }, [showIgnored, selectedScope, selectedPeriod]);
 
   const fetchMetadata = async () => {
     try {
@@ -169,7 +177,7 @@ export default function TransactionsPage() {
               categoryId: '',
               accountId: '',
               date: new Date().toISOString().split('T')[0],
-              billingPeriod: formatBillingPeriod(new Date()),
+              billingPeriod: selectedPeriod || formatBillingPeriod(new Date()),
               type: 'EXPENSE'
             });
             fetchTransactions();
@@ -191,6 +199,9 @@ export default function TransactionsPage() {
     
     if (selectedScope !== 'personal') {
       url += (url.includes('?') ? '&' : '?') + `householdId=${selectedScope}`;
+    }
+    if (selectedPeriod) {
+      url += (url.includes('?') ? '&' : '?') + `billingPeriod=${selectedPeriod}`;
     }
     const res = await fetch(url);
     if (res.ok) {
@@ -304,7 +315,9 @@ export default function TransactionsPage() {
   const filteredTransactions = transactions.filter(t => {
     const matchesSearch = t.description?.toLowerCase().includes(search.toLowerCase()) ||
                          t.category?.name.toLowerCase().includes(search.toLowerCase());
-    const matchesPeriod = selectedPeriodFilter === 'ALL' || t.billingPeriod === selectedPeriodFilter;
+    const matchesPeriod = !selectedPeriod || 
+                          t.billingPeriod === selectedPeriod ||
+                          (!t.billingPeriod && formatBillingPeriod(t.date) === selectedPeriod);
     const matchesCategory = selectedCategoryFilter === 'ALL' || t.categoryId === selectedCategoryFilter;
     const matchesAccount = selectedAccountFilter === 'ALL' || t.accountId === selectedAccountFilter;
     const matchesType = selectedTypeFilter === 'ALL' || t.type === selectedTypeFilter;
@@ -430,23 +443,7 @@ export default function TransactionsPage() {
             </div>
 
             {showFilters && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-stone-100/60 animate-in slide-in-from-top-2 duration-300">
-                {/* Period Filter */}
-                <div className="space-y-1.5">
-                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Periodo</span>
-                  <Select value={selectedPeriodFilter} onValueChange={(val) => setSelectedPeriodFilter(val || 'ALL')}>
-                    <SelectTrigger className="w-full bg-white border-stone-200/60 rounded-xl h-9 text-xs">
-                      <SelectValue placeholder="Todos los periodos" />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      <SelectItem value="ALL">Todos los periodos</SelectItem>
-                      {getMonthOptions().map(opt => (
-                        <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3 border-t border-stone-100/60 animate-in slide-in-from-top-2 duration-300">
                 {/* Category Filter */}
                 <div className="space-y-1.5">
                   <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Categoría</span>
@@ -766,7 +763,14 @@ export default function TransactionsPage() {
                         type="date" 
                         className="rounded-xl border-stone-200"
                         value={newTx.date}
-                        onChange={(e) => setNewTx({...newTx, date: e.target.value})}
+                        onChange={(e) => {
+                          const newDate = e.target.value;
+                          setNewTx({
+                            ...newTx,
+                            date: newDate,
+                            billingPeriod: formatBillingPeriod(newDate)
+                          });
+                        }}
                     />
                 </div>
                 <div className="space-y-2">

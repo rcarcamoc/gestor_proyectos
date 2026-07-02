@@ -9,25 +9,36 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   const endOfMonth = new Date(year, month, 0, 23, 59, 59);
 
   // Build where filter robustly
+  const targetPeriod = billingPeriod || `${year}-${String(month).padStart(2, "0")}`;
+  
+  const periodOrDateCondition = {
+    OR: [
+      { billingPeriod: targetPeriod },
+      {
+        billingPeriod: null,
+        date: { gte: startOfMonth, lte: endOfMonth }
+      }
+    ]
+  };
+
   const whereFilter: any = {
     ignored: false,
     deletedAt: null,
+    AND: [
+      periodOrDateCondition
+    ]
   };
   
   if (householdId) {
     whereFilter.householdId = householdId;
     whereFilter.scope = 'HOUSEHOLD';
   } else {
-    whereFilter.OR = [
-      { userId, householdId: null },
-      { userId_internal: userId, scope: 'PERSONAL' }
-    ];
-  }
-
-  if (billingPeriod) {
-    whereFilter.billingPeriod = billingPeriod;
-  } else {
-    whereFilter.date = { gte: startOfMonth, lte: endOfMonth };
+    whereFilter.AND.push({
+      OR: [
+        { userId, householdId: null },
+        { userId_internal: userId, scope: 'PERSONAL' }
+      ]
+    });
   }
 
   // 1. Fetch data in parallel

@@ -51,7 +51,7 @@ import { getMonthOptions, formatBillingPeriod } from "@/lib/utils";
 
 export default function DebtsPage() {
   const { data: session } = useSession();
-  const { selectedScope } = useScope();
+  const { selectedScope, selectedPeriod } = useScope();
   
   const [debts, setDebts] = useState<any[]>([]);
   const [households, setHouseholds] = useState<any[]>([]);
@@ -73,7 +73,7 @@ export default function DebtsPage() {
     creditorName: '',
     amount: '',
     reason: '',
-    billingPeriod: formatBillingPeriod(new Date()),
+    billingPeriod: '',
     dueDate: '',
     notes: '',
   });
@@ -91,7 +91,13 @@ export default function DebtsPage() {
       setDebts([]);
       setLoading(false);
     }
-  }, [selectedScope]);
+  }, [selectedScope, selectedPeriod]);
+
+  useEffect(() => {
+    if (selectedPeriod) {
+      setForm(prev => ({ ...prev, billingPeriod: selectedPeriod }));
+    }
+  }, [selectedPeriod]);
 
   const fetchMetadata = async () => {
     try {
@@ -105,7 +111,8 @@ export default function DebtsPage() {
   const fetchDebts = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/finanzas/api/debts?householdId=${selectedScope}`);
+      const url = `/finanzas/api/debts?householdId=${selectedScope}${selectedPeriod ? `&billingPeriod=${selectedPeriod}` : ''}`;
+      const res = await fetch(url);
       if (res.ok) {
         setDebts(await res.json());
       } else {

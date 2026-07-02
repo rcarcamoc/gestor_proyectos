@@ -202,15 +202,41 @@ def get_leader_dashboard(
 
     # 3. Team Status (Optimizado pre-calculando carga)
     members = db.query(User).filter(User.organization_id == org_id).all()
+    member_ids = [m.id for m in members]
     
     # Pre-calcular todas las tareas activas para todos los miembros para evitar N+1
     active_tasks_by_user = {}
-    all_active_tasks = db.query(TaskAssignment.user_id, func.sum(Task.estimated_hours)).join(Task).filter(
-        Task.status.in_(["Pending", "In Progress"])
-    ).group_by(TaskAssignment.user_id).all()
+    if member_ids:
+        all_active_tasks = db.query(TaskAssignment.user_id, func.sum(Task.estimated_hours)).join(Task).filter(
+            TaskAssignment.user_id.in_(member_ids),
+            Task.status.in_(["Pending", "In Progress"])
+        ).group_by(TaskAssignment.user_id).all()
+        
+        for user_id, total_hours in all_active_tasks:
+            active_tasks_by_user[user_id] = total_hours or 0.0
+
+    # Precargar datos relacionales en bloque para evitar consultas N+1 en el motor de nivel
+    from app.models.skill import UserSkill
+    from app.models.availability import UserAvailability
     
-    for user_id, total_hours in all_active_tasks:
-        active_tasks_by_user[user_id] = total_hours or 0.0
+    pre_fetched = {"skills": set(), "availability": set(), "history": set()}
+    if member_ids:
+        pre_fetched["skills"] = {
+            row[0] for row in db.query(UserSkill.user_id)
+            .filter(UserSkill.user_id.in_(member_ids)).distinct().all()
+        }
+        pre_fetched["availability"] = {
+            row[0] for row in db.query(UserAvailability.user_id)
+            .filter(UserAvailability.user_id.in_(member_ids)).distinct().all()
+        }
+        pre_fetched["history"] = {
+            row[0] for row in db.query(TaskAssignment.user_id)
+            .join(Task, TaskAssignment.task_id == Task.id)
+            .filter(
+                TaskAssignment.user_id.in_(member_ids),
+                Task.status == "Completed"
+            ).distinct().all()
+        }
 
     overloaded = []
     underutilized = []
@@ -221,8 +247,8 @@ def get_leader_dashboard(
     for m in members:
         load = active_tasks_by_user.get(m.id, 0.0)
         
-        # El motor sigue siendo semi-costoso pero solo se evalúa nivel superficial
-        engine_eval = engine_service.evaluate_level(m.id)
+        # El motor se evalúa pasando el diccionario de precarga
+        engine_eval = engine_service.evaluate_level(m.id, pre_fetched)
         capacity = 8.0 * 5 # MVP static capacity
         
         mem_data = {
@@ -257,28 +283,32 @@ def get_capacity_dashboard(
     
     # 1. Obtener todos los miembros de la organización
     members = db.query(User).filter(User.organization_id == org_id, User.is_active == True).all()
+    member_ids = [m.id for m in members]
     
     from app.models.availability import UserAvailability
     
     # Pre-fetch availabilities
     availabilities_by_user = {}
-    all_avails = db.query(UserAvailability).filter(UserAvailability.user_id.in_([m.id for m in members])).all()
-    for a in all_avails:
-        if a.user_id not in availabilities_by_user:
-            availabilities_by_user[a.user_id] = 0.0
-        availabilities_by_user[a.user_id] += float(a.hours_available)
+    if member_ids:
+        all_avails = db.query(UserAvailability).filter(UserAvailability.user_id.in_(member_ids)).all()
+        for a in all_avails:
+            if a.user_id not in availabilities_by_user:
+                availabilities_by_user[a.user_id] = 0.0
+            availabilities_by_user[a.user_id] += float(a.hours_available)
 
-    # Pre-fetch active tasks count and hours
+    # Pre-fetch active tasks count and hours (Constreñido a miembros de la organización)
     tasks_info_by_user = {}
-    active_tasks = db.query(TaskAssignment.user_id, Task).join(Task).filter(
-        Task.status.in_(["Pending", "In Progress"])
-    ).all()
-    
-    for user_id, task in active_tasks:
-        if user_id not in tasks_info_by_user:
-            tasks_info_by_user[user_id] = {"hours": 0.0, "project_ids": set()}
-        tasks_info_by_user[user_id]["hours"] += float(task.estimated_hours or 0.0)
-        tasks_info_by_user[user_id]["project_ids"].add(task.project_id)
+    if member_ids:
+        active_tasks = db.query(TaskAssignment.user_id, Task).join(Task).filter(
+            TaskAssignment.user_id.in_(member_ids),
+            Task.status.in_(["Pending", "In Progress"])
+        ).all()
+        
+        for user_id, task in active_tasks:
+            if user_id not in tasks_info_by_user:
+                tasks_info_by_user[user_id] = {"hours": 0.0, "project_ids": set()}
+            tasks_info_by_user[user_id]["hours"] += float(task.estimated_hours or 0.0)
+            tasks_info_by_user[user_id]["project_ids"].add(task.project_id)
 
     # Pre-fetch project names
     all_project_ids = set()

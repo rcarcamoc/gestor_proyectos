@@ -12,15 +12,20 @@ class SmartEngine:
         self.db = db
         self.configs = {c.key: c.value for c in db.query(SystemConfig).all()}
 
-    def evaluate_level(self, user_id: int) -> Dict[str, Any]:
-        from app.models.task import TaskAssignment
-        has_skills = self.db.query(UserSkill).filter(UserSkill.user_id == user_id).first() is not None
-        has_availability = self.db.query(UserAvailability).filter(UserAvailability.user_id == user_id).first() is not None
-        # Check history scoped to THIS user — not the entire organization
-        has_history = self.db.query(Task).join(TaskAssignment, TaskAssignment.task_id == Task.id).filter(
-            TaskAssignment.user_id == user_id,
-            Task.status == "Completed"
-        ).first() is not None
+    def evaluate_level(self, user_id: int, pre_fetched: Dict[str, set] = None) -> Dict[str, Any]:
+        if pre_fetched is not None:
+            has_skills = user_id in pre_fetched.get("skills", set())
+            has_availability = user_id in pre_fetched.get("availability", set())
+            has_history = user_id in pre_fetched.get("history", set())
+        else:
+            from app.models.task import TaskAssignment
+            has_skills = self.db.query(UserSkill).filter(UserSkill.user_id == user_id).first() is not None
+            has_availability = self.db.query(UserAvailability).filter(UserAvailability.user_id == user_id).first() is not None
+            # Check history scoped to THIS user — not the entire organization
+            has_history = self.db.query(Task).join(TaskAssignment, TaskAssignment.task_id == Task.id).filter(
+                TaskAssignment.user_id == user_id,
+                Task.status == "Completed"
+            ).first() is not None
 
         if has_availability and has_skills and has_history:
             return {"level": "FULL", "percentage": 95, "label": "Precisión máxima", "is_estimated": False}

@@ -93,6 +93,24 @@ if [ -d finanzas ]; then
     echo "GROQ_API_KEY=GROQ_KEY_VAL" >> finanzas/.env
 fi
 
+if [ -d gestor ]; then
+    echo "DB_HOST=gateway01.us-east-1.prod.aws.tidbcloud.com" > gestor/.env
+    echo "DB_PORT=4000" >> gestor/.env
+    echo "DB_NAME=smarttrack" >> gestor/.env
+    echo "DB_USER=3EsKTcwyvZVUqyr.root" >> gestor/.env
+    echo "DB_PASSWORD=WE3G5c7BSjmO8y7M" >> gestor/.env
+    echo "DB_SSL_CA=/app/ca.pem" >> gestor/.env
+    echo "JWT_SECRET=tu-secreto-super-seguro-para-desarrollo-2026" >> gestor/.env
+    echo "JWT_EXPIRY=1440" >> gestor/.env
+    echo "FRONTEND_URL=http://161.153.219.141" >> gestor/.env
+    echo "BACKEND_URL=http://backend:8000" >> gestor/.env
+    echo "TELEGRAM_BOT_TOKEN=8684807995:AAH7GmSxXmU0VoLrvM1zdb0I5IuuK63c3OQ" >> gestor/.env
+    echo "GEMINI_API_KEY=AIzaSyBi4sNcDwslXNO4T-RYQfItmY7smpOF76k" >> gestor/.env
+    echo "GROQ_API_KEY=GROQ_KEY_VAL" >> gestor/.env
+    echo "DEV_MODE=true" >> gestor/.env
+fi
+
+
 NEEDS_BUILD=0
 if [ "FORCE_VAL" -eq 1 ] || [ "$OLD_COMMIT" = "none" ] || echo "$CHANGED_FILES" | grep -qE "^(finanzas/|docker-compose\.yml|Dockerfile)"; then
     NEEDS_BUILD=1

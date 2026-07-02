@@ -159,7 +159,7 @@ else
 fi
 
 echo '[+] Iniciando/actualizando servicios...'
-sudo docker compose up -d redis home finanzas_app
+sudo docker compose up -d
 
 
 # F. Prisma push / migrations / seeds

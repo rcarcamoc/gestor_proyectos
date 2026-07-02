@@ -124,7 +124,7 @@ else
 fi
 
 echo '[+] Levantando servicios...'
-sudo docker compose up -d redis home finanzas_app
+sudo docker compose up -d
 
 
 NEEDS_PUSH=0

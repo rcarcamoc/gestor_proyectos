@@ -1,5 +1,11 @@
 # Script de Despliegue Ligero (Lite) - Portal Unificado Zen
 # Sincroniza archivos locales directamente sin pasar por GitHub y compila local/remoto según se requiera.
+#
+# CONSEJO DE USO (Oracle Free Tier - 1 GB RAM):
+# Se recomienda usar SIEMPRE el flag `-LocalBuild` cuando haya cambios en la aplicación de finanzas:
+#    .\deploy_portal_lite.ps1 -LocalBuild
+# Esto compila la aplicación Next.js localmente en tu PC y sube la imagen Docker ya construida.
+# Evita compilar en el servidor de 1 GB de RAM, lo cual suele saturar la memoria y causar congelamientos.
 
 param(
     [switch]$Force,

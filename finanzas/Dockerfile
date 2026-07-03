@@ -10,6 +10,7 @@ ENV DATABASE_URL="mysql://user:pass@localhost:3306/db"
 ENV NEXTAUTH_SECRET="dummy"
 ENV NODE_OPTIONS="--max-old-space-size=512"
 RUN npm run build
+RUN npm prune --production
 
 # Production Stage
 FROM node:20-alpine AS runner

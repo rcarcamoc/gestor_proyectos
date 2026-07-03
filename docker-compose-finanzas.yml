@@ -20,6 +20,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    mem_limit: 256m
     networks:
       - finanzas_network
 
@@ -37,6 +38,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    mem_limit: 512m
     networks:
       - finanzas_network
 
@@ -48,6 +50,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx-finanzas.conf:/etc/nginx/conf.d/default.conf
+    mem_limit: 32m
     networks:
       - finanzas_network
     depends_on:

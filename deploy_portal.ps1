@@ -1,5 +1,14 @@
 # Script Maestro de Despliegue - Portal Unificado Zen
 # Este script sincroniza el repositorio y redespliega todo en Oracle Cloud
+#
+# NOTA DE RENDIMIENTO (Oracle Free Tier - 1 GB RAM):
+# Compilar la aplicación de Next.js (finanzas_app) en el servidor de 1 GB puede saturar 
+# la CPU/RAM y causar bloqueos (swap thrashing). Se recomienda usar el script lite con:
+#    .\deploy_portal_lite.ps1 -LocalBuild
+# para compilar localmente en tu PC y subir la imagen ya compilada al servidor.
+#
+# Se han configurado límites de memoria (mem_limit) en docker-compose.yml para evitar
+# caídas del servidor ante picos de uso.
 
 param(
     [switch]$Force

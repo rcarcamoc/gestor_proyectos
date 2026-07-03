@@ -6,6 +6,7 @@ services:
     image: redis:alpine
     container_name: smarttrack_redis_prod
     restart: always
+    mem_limit: 32m
     networks:
       - portal_network
 
@@ -14,6 +15,7 @@ services:
     image: nginx:alpine
     container_name: zen_portal
     restart: always
+    mem_limit: 32m
     ports:
       - "80:80"
     volumes:
@@ -30,6 +32,7 @@ services:
     build: ./gestor/backend
     container_name: smarttrack_backend_prod
     restart: always
+    mem_limit: 192m
     env_file: ./gestor/.env
     volumes:
       - ./ca.pem:/app/ca.pem:ro
@@ -42,6 +45,7 @@ services:
       dockerfile: Dockerfile.prod
     container_name: smarttrack_frontend_prod
     restart: always
+    mem_limit: 32m
     depends_on:
       - gestor_backend
     networks:
@@ -51,6 +55,7 @@ services:
     build: ./gestor/telegram_bot
     container_name: smarttrack_telegram_bot_prod
     restart: always
+    mem_limit: 128m
     depends_on:
       - gestor_backend
       - redis
@@ -62,6 +67,7 @@ services:
     build: ./finanzas
     container_name: finanzas_app
     restart: always
+    mem_limit: 512m
     env_file: ./finanzas/.env
     environment:
       DATABASE_URL: mysql://hedkzmww_admin:sgsGRrR$$o2@server.001webhospedaje.com:3306/hedkzmww_finanzas

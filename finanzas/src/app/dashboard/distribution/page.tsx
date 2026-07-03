@@ -79,18 +79,6 @@ export default function DistributionPage() {
     setIsSalaryModalOpen(true);
   };
 
-  const fetchDistribution = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/finanzas/api/distribution?householdId=${selectedScope}&billingPeriod=${encodeURIComponent(selectedPeriod)}`);
-      if (res.ok) setData(await res.json());
-      else if (res.status === 401) toast.error("Sesión expirada");
-    } catch (err) {
-      console.error(err);
-    }
-    setLoading(false);
-  };
-
   const handleAddSalary = async () => {
     if (!salaryForm.userId || !salaryForm.amount) return toast.error("Completa todos los campos");
     

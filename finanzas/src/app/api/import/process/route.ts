@@ -105,7 +105,9 @@ export async function POST(req: Request) {
         let txType: string;
         let finalAmount: number;
 
-        if (account.type === 'CREDIT_CARD') {
+        const isCreditCardTx = (account.type === 'CREDIT_CARD') || (tx.cardType && String(tx.cardType).trim() !== "");
+
+        if (isCreditCardTx) {
             txType = "EXPENSE";
             finalAmount = amount;
         } else {

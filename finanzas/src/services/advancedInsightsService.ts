@@ -46,11 +46,11 @@ function getLastNPeriods(startPeriod: string, n = 6): string[] {
 /**
  * Detects outlier transactions where amount exceeds 2 standard deviations of category average.
  */
-export async function detectOutliers(householdId: string, billingPeriod: string): Promise<any[]> {
+export async function detectOutliers(householdId: string, billingPeriod: string, preFetchedTxs?: any[]): Promise<any[]> {
   const periods = getLastNPeriods(billingPeriod, 6);
   
-  // 1. Get transactions for the past 6 periods
-  const txs = await prisma.transaction.findMany({
+  // 1. Get transactions for the past 6 periods (filtered from preFetchedTxs if provided)
+  const txs = (preFetchedTxs ? preFetchedTxs.filter(t => t.type === "EXPENSE" && periods.includes(t.billingPeriod)) : null) || await prisma.transaction.findMany({
     where: {
       householdId,
       type: "EXPENSE",
@@ -110,8 +110,8 @@ export async function detectOutliers(householdId: string, billingPeriod: string)
 /**
  * Detects recurrent expenses that appear multiple times in the current period.
  */
-export async function detectRecurrence(householdId: string, billingPeriod: string): Promise<BehaviourInsight[]> {
-  const txs = await prisma.transaction.findMany({
+export async function detectRecurrence(householdId: string, billingPeriod: string, preFetchedTxs?: any[]): Promise<BehaviourInsight[]> {
+  const txs = (preFetchedTxs ? preFetchedTxs.filter(t => t.type === "EXPENSE" && t.billingPeriod === billingPeriod) : null) || await prisma.transaction.findMany({
     where: { householdId, type: "EXPENSE", billingPeriod, ignored: false },
     include: { category: true }
   });
@@ -153,14 +153,14 @@ export async function detectRecurrence(householdId: string, billingPeriod: strin
 /**
  * Calculates budget projections using linear regression.
  */
-export async function getPredictions(householdId: string, currentPeriod: string): Promise<SpendingProjection[]> {
+export async function getPredictions(householdId: string, currentPeriod: string, preFetchedTxs?: any[], preFetchedCategories?: any[]): Promise<SpendingProjection[]> {
   const periods = getLastNPeriods(currentPeriod, 6); // 6 months of data
   
-  const categories = await prisma.category.findMany({
+  const categories = preFetchedCategories || await prisma.category.findMany({
     where: { OR: [{ householdId }, { isDefault: true }] }
   });
 
-  const txs = await prisma.transaction.findMany({
+  const txs = (preFetchedTxs ? preFetchedTxs.filter(t => t.type === "EXPENSE" && periods.includes(t.billingPeriod)) : null) || await prisma.transaction.findMany({
     where: {
       householdId,
       type: "EXPENSE",
@@ -220,14 +220,14 @@ export async function getPredictions(householdId: string, currentPeriod: string)
 /**
  * Calculates a Behavior Score (0-100) based on household financials.
  */
-export async function calculateBehaviorScore(householdId: string, billingPeriod: string): Promise<{
+export async function calculateBehaviorScore(householdId: string, billingPeriod: string, preFetchedTxs?: any[], preFetchedSalaries?: any[]): Promise<{
   score: number;
   liquidezRatio: number;
   ahorroRatio: number;
   volatilidadRatio: number;
 }> {
   // 1. Fetch incomes & expenses
-  const txs = await prisma.transaction.findMany({
+  const txs = (preFetchedTxs ? preFetchedTxs.filter(t => t.billingPeriod === billingPeriod) : null) || await prisma.transaction.findMany({
     where: { householdId, billingPeriod, ignored: false }
   });
 
@@ -237,7 +237,7 @@ export async function calculateBehaviorScore(householdId: string, billingPeriod:
   // Fallback: check salaries if no INCOME transactions logged
   if (incomes === 0) {
     const periodStr = parseBillingPeriod(billingPeriod);
-    const salaries = await prisma.salary.findMany({
+    const salaries = preFetchedSalaries || await prisma.salary.findMany({
       where: { householdId, period: periodStr }
     });
     incomes = salaries.reduce((acc, s) => acc + Number(s.amount), 0);
@@ -250,7 +250,7 @@ export async function calculateBehaviorScore(householdId: string, billingPeriod:
 
   // Volatility across 3 months
   const periods = getLastNPeriods(billingPeriod, 3);
-  const historicalTxs = await prisma.transaction.findMany({
+  const historicalTxs = (preFetchedTxs ? preFetchedTxs.filter(t => t.type === "EXPENSE" && periods.includes(t.billingPeriod)) : null) || await prisma.transaction.findMany({
     where: { householdId, type: "EXPENSE", billingPeriod: { in: periods }, ignored: false }
   });
 

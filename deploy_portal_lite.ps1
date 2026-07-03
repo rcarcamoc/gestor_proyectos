@@ -115,19 +115,19 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 if [ -d finanzas ]; then
-    echo "DATABASE_URL=mysql://3EsKTcwyvZVUqyr.root:WE3G5c7BSjmO8y7M@gateway01.us-east-1.prod.aws.tidbcloud.com:4000/web_finanzas?sslaccept=strict&sslca=/app/ca.pem" > finanzas/.env
+    echo 'DATABASE_URL=mysql://hedkzmww_admin:sgsGRrR$o2@server.001webhospedaje.com:3306/hedkzmww_finanzas' > finanzas/.env
     echo "NEXTAUTH_URL=http://localhost/finanzas" >> finanzas/.env
     echo "NEXTAUTH_SECRET=y0ur_v3ry_s3cr3t_n3xt_4uth_k3y" >> finanzas/.env
     echo "GROQ_API_KEY=GROQ_KEY_VAL" >> finanzas/.env
 fi
 
 if [ -d gestor ]; then
-    echo "DB_HOST=gateway01.us-east-1.prod.aws.tidbcloud.com" > gestor/.env
-    echo "DB_PORT=4000" >> gestor/.env
-    echo "DB_NAME=smarttrack" >> gestor/.env
-    echo "DB_USER=3EsKTcwyvZVUqyr.root" >> gestor/.env
-    echo "DB_PASSWORD=WE3G5c7BSjmO8y7M" >> gestor/.env
-    echo "DB_SSL_CA=/app/ca.pem" >> gestor/.env
+    echo "DB_HOST=server.001webhospedaje.com" > gestor/.env
+    echo "DB_PORT=3306" >> gestor/.env
+    echo "DB_NAME=hedkzmww_finanzas" >> gestor/.env
+    echo "DB_USER=hedkzmww_admin" >> gestor/.env
+    echo 'DB_PASSWORD=sgsGRrR$o2' >> gestor/.env
+    echo "DB_SSL_CA=" >> gestor/.env
     echo "JWT_SECRET=tu-secreto-super-seguro-para-desarrollo-2026" >> gestor/.env
     echo "JWT_EXPIRY=1440" >> gestor/.env
     echo "FRONTEND_URL=http://161.153.219.141" >> gestor/.env
@@ -170,7 +170,7 @@ fi
 
 if [ "$NEEDS_PUSH" -eq 1 ]; then
     echo '[+] Sincronizando esquema de base de datos con Prisma...'
-    sudo docker exec finanzas_app npx prisma db push
+    sudo docker exec -e DATABASE_URL='mysql://hedkzmww_admin:sgsGRrR$o2@server.001webhospedaje.com:3306/hedkzmww_finanzas' finanzas_app npx prisma db push
 else
     echo '[*] Sin cambios en schema.prisma. Omitiendo db push.'
 fi
@@ -182,7 +182,7 @@ fi
 
 if [ "$NEEDS_MIGRATE" -eq 1 ]; then
     echo '[+] Ejecutando migracion de periodos de facturacion...'
-    sudo docker exec finanzas_app node migrate_periods.js
+    sudo docker exec -e DATABASE_URL='mysql://hedkzmww_admin:sgsGRrR$o2@server.001webhospedaje.com:3306/hedkzmww_finanzas' finanzas_app node migrate_periods.js
 else
     echo '[*] Sin cambios en migracion. Omitiendo migrate_periods.'
 fi
@@ -194,7 +194,7 @@ fi
 
 if [ "$NEEDS_SEED" -eq 1 ]; then
     echo '[+] Inicializando categorias por defecto...'
-    sudo docker exec finanzas_app npx prisma db seed
+    sudo docker exec -e DATABASE_URL='mysql://hedkzmww_admin:sgsGRrR$o2@server.001webhospedaje.com:3306/hedkzmww_finanzas' finanzas_app npx prisma db seed
 else
     echo '[*] Sin cambios en datos de seed. Omitiendo db seed.'
 fi

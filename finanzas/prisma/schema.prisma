@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/client"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -204,6 +203,9 @@ model Transaction {
   @@index([userId])
   @@index([userId_internal])
   @@index([accountId])
+  @@index([userId, deletedAt, billingPeriod])
+  @@index([userId_internal, deletedAt, billingPeriod])
+  @@index([householdId, deletedAt, billingPeriod])
 }
 
 model Budget {

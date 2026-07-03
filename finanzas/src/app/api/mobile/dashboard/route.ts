@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateBasicAuth } from "@/lib/basicAuth";
-import { TransactionType } from "@/generated/client";
+import { TransactionType } from "@prisma/client";
 
 export async function GET(req: Request) {
   const user = await authenticateBasicAuth(req);
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
     }
 
     // 2. Parallel fetch
-    const [categoryTotals, budgets, trendsData, categoriesDetails] = await Promise.all([
+    const [categoryTotals, budgets, trendsData, categoriesDetails, salaries] = await Promise.all([
       // A. Category totals for current period
       prisma.transaction.groupBy({
         by: ["categoryId"],
@@ -92,15 +92,21 @@ export async function GET(req: Request) {
           ],
         },
       }),
+      // E. Salaries for periods
+      prisma.salary.findMany({
+        where: {
+          householdId,
+          period: { in: periods }
+        }
+      })
     ]);
 
-    // 3. Process totals for current period (from trendsData to save query)
-    let totalIncome = 0;
+    // 3. Process totals for current period (from trendsData and salaries)
+    const totalIncome = salaries.filter(s => s.period === period).reduce((sum, s) => sum + Number(s.amount), 0);
     let totalExpense = 0;
     trendsData.forEach((t) => {
       if (t.billingPeriod === period) {
         const amt = Number(t._sum.amount || 0);
-        if (t.type === TransactionType.INCOME) totalIncome = amt;
         if (t.type === TransactionType.EXPENSE) totalExpense = amt;
       }
     });
@@ -129,12 +135,11 @@ export async function GET(req: Request) {
 
     // 6. Format Trends (fill missing periods with 0)
     const trends = periods.map((p) => {
-      let inc = 0;
+      const inc = salaries.filter(s => s.period === p).reduce((sum, s) => sum + Number(s.amount), 0);
       let exp = 0;
       trendsData.forEach((t) => {
         if (t.billingPeriod === p) {
           const amt = Number(t._sum.amount || 0);
-          if (t.type === TransactionType.INCOME) inc = amt;
           if (t.type === TransactionType.EXPENSE) exp = amt;
         }
       });

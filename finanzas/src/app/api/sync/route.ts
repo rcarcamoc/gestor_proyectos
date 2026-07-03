@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/prisma";
-import { TransactionType, TransactionSource, TransactionStatus, DebtStatus } from "@/generated/client";
+import { TransactionType, TransactionSource, TransactionStatus, DebtStatus } from "@prisma/client";
 
 import bcrypt from "bcryptjs";
 

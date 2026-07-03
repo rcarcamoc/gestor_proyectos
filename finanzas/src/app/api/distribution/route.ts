@@ -36,91 +36,62 @@ export async function GET(request: Request) {
   const androidPeriod = parseBillingPeriod(billingPeriod);
 
   try {
-    // 2. Fetch all members (users) of the household
-    const members = await prisma.userHousehold.findMany({
-      where: { householdId },
-      include: { user: true }
-    });
-
-    // 3. Fetch salaries from the new Salary table for this period
-    const dbSalaries = await prisma.salary.findMany({
-      where: { householdId, period: androidPeriod }
-    });
-
-    // 4. Construct user income list
-    const incomeResults: { name: string; userId: string | null; income: number }[] = [];
-
-    if (dbSalaries.length > 0) {
-      // Loop through all registered members of the household first
-      for (const m of members) {
-        const salary = dbSalaries.find(s => s.userId === m.userId);
-        incomeResults.push({
-          name: m.user.name || m.user.email,
-          userId: m.userId,
-          income: salary ? Number(salary.amount) : 0
-        });
-      }
-
-      // Also add fictional (dummy) users who have salaries in this period
-      const dummySalaries = dbSalaries.filter(s => !s.userId && s.dummyUserName);
-      for (const ds of dummySalaries) {
-        incomeResults.push({
-          name: ds.dummyUserName || "Ficticio",
-          userId: null,
-          income: Number(ds.amount)
-        });
-      }
-    } else {
-      // Fallback: sum incomes from transactions (compat) - Grouped in single query
-      const memberUserIds = members.map(m => m.userId);
-      const incomesSum = await prisma.transaction.groupBy({
-        by: ['userId'],
+    // 2. Fetch all members, salaries, categories, and expenses in parallel
+    const [members, dbSalaries, categories, allExpensesList] = await Promise.all([
+      prisma.userHousehold.findMany({
+        where: { householdId },
+        include: { user: true }
+      }),
+      prisma.salary.findMany({
+        where: { householdId, period: androidPeriod }
+      }),
+      prisma.category.findMany({
         where: {
-          userId: { in: memberUserIds },
-          type: 'INCOME',
+          OR: [
+            { householdId },
+            { isDefault: true }
+          ]
+        }
+      }),
+      prisma.transaction.findMany({
+        where: {
+          householdId,
+          type: 'EXPENSE',
           billingPeriod,
           ignored: false,
+          scope: 'HOUSEHOLD',
           deletedAt: null
-        },
-        _sum: {
-          amount: true
         }
+      })
+    ]);
+
+    // 3. Construct user income list
+    const incomeResults: { name: string; userId: string | null; income: number }[] = [];
+
+    // Loop through all registered members of the household first
+    for (const m of members) {
+      const salary = dbSalaries.find(s => s.userId === m.userId);
+      incomeResults.push({
+        name: m.user.name || m.user.email,
+        userId: m.userId,
+        income: salary ? Number(salary.amount) : 0
       });
-      
-      for (const m of members) {
-        const match = incomesSum.find(i => i.userId === m.userId);
-        incomeResults.push({
-          name: m.user.name || m.user.email,
-          userId: m.userId,
-          income: match ? Number(match._sum.amount || 0) : 0
-        });
-      }
     }
 
-    // 5. Get "Tarjeta titular" category
-    const categories = await prisma.category.findMany({
-      where: {
-        OR: [
-          { householdId },
-          { isDefault: true }
-        ]
-      }
-    });
+    // Also add fictional (dummy) users who have salaries in this period
+    const dummySalaries = dbSalaries.filter(s => !s.userId && s.dummyUserName);
+    for (const ds of dummySalaries) {
+      incomeResults.push({
+        name: ds.dummyUserName || "Ficticio",
+        userId: null,
+        income: Number(ds.amount)
+      });
+    }
+
+    // 4. Get "Tarjeta titular" category
     const categoryTarjetaTitular = categories.find(c =>
       c.name.toLowerCase() === "tarjeta titular"
     );
-
-    // 6. Get all household expenses in this period
-    const allExpensesList = await prisma.transaction.findMany({
-      where: {
-        householdId,
-        type: 'EXPENSE',
-        billingPeriod,
-        ignored: false,
-        scope: 'HOUSEHOLD',
-        deletedAt: null
-      }
-    });
 
     const totalExpenses = allExpensesList.reduce((acc, t) => acc + Number(t.amount), 0);
 

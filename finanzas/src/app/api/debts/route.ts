@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth/options";
 import { prisma } from "@/lib/prisma";
-import { DebtStatus } from "@/generated/client";
+import { DebtStatus } from "@prisma/client";
 import { authenticateBasicAuth } from "@/lib/basicAuth";
 
 async function checkHouseholdMembership(userId: string, householdId: string) {

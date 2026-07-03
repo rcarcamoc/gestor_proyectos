@@ -14,13 +14,32 @@ import { Label } from '@/components/ui/label';
 import { Loader2, PlusCircle } from 'lucide-react';
 import { formatBillingPeriod, getMonthOptions } from '@/lib/utils';
 
+function parseBillingPeriod(billingPeriod: string): string {
+  if (!billingPeriod) return '';
+  const parts = billingPeriod.split(" - ");
+  if (parts.length !== 2) return billingPeriod;
+  const monthName = parts[0];
+  const year = parts[1];
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const monthIdx = monthNames.indexOf(monthName);
+  if (monthIdx === -1) return billingPeriod;
+  const month = String(monthIdx + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 export default function DistributionPage() {
   const { selectedScope, selectedPeriod } = useScope();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSalaryModalOpen, setIsSalaryModalOpen] = useState(false);
-  const [salaryForm, setSalaryForm] = useState({ userId: '', amount: '', date: new Date().toISOString().split('T')[0] });
+  const [salaryForm, setSalaryForm] = useState({ 
+    userId: '', 
+    amount: '', 
+    date: new Date().toISOString().split('T')[0],
+    period: '',
+    newPersonName: ''
+  });
   const [addingSalary, setAddingSalary] = useState(false);
 
   useEffect(() => {
@@ -47,15 +66,47 @@ export default function DistributionPage() {
     setLoading(false);
   };
 
+  // Keep salary form period and date in sync with global selected period when opening
+  const openModal = () => {
+    const parsed = parseBillingPeriod(selectedPeriod);
+    setSalaryForm({
+      userId: '',
+      amount: '',
+      date: parsed ? `${parsed}-01` : new Date().toISOString().split('T')[0],
+      period: parsed || '',
+      newPersonName: ''
+    });
+    setIsSalaryModalOpen(true);
+  };
+
+  const fetchDistribution = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/finanzas/api/distribution?householdId=${selectedScope}&billingPeriod=${encodeURIComponent(selectedPeriod)}`);
+      if (res.ok) setData(await res.json());
+      else if (res.status === 401) toast.error("Sesión expirada");
+    } catch (err) {
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
   const handleAddSalary = async () => {
     if (!salaryForm.userId || !salaryForm.amount) return toast.error("Completa todos los campos");
+    
+    const isNewPerson = salaryForm.userId === 'NEW_PERSON';
+    if (isNewPerson && !salaryForm.newPersonName.trim()) {
+      return toast.error("Por favor ingresa el nombre de la nueva persona");
+    }
+
     setAddingSalary(true);
     try {
-      const selectedMember = data?.distribution?.find((d: any) => 
+      const selectedMember = isNewPerson ? null : data?.distribution?.find((d: any) => 
         (d.userId && d.userId === salaryForm.userId) || d.name === salaryForm.userId
       );
-      const isDummy = !selectedMember || !selectedMember.userId;
-      const period = salaryForm.date.substring(0, 7); // format: "YYYY-MM"
+      const isDummy = isNewPerson || !selectedMember || !selectedMember.userId;
+      const period = salaryForm.period || salaryForm.date.substring(0, 7); // format: "YYYY-MM"
+      const dummyUserName = isNewPerson ? salaryForm.newPersonName.trim() : (isDummy ? (selectedMember?.name || salaryForm.userId) : null);
 
       const res = await fetch('/finanzas/api/salaries', {
         method: 'POST',
@@ -65,13 +116,13 @@ export default function DistributionPage() {
           period: period,
           amount: parseFloat(salaryForm.amount),
           targetUserId: isDummy ? null : selectedMember.userId,
-          dummyUserName: isDummy ? (selectedMember?.name || salaryForm.userId) : null
+          dummyUserName: isDummy ? dummyUserName : null
         })
       });
       if (res.ok) {
         toast.success("Sueldo registrado exitosamente");
         setIsSalaryModalOpen(false);
-        setSalaryForm({ userId: '', amount: '', date: new Date().toISOString().split('T')[0] });
+        setSalaryForm({ userId: '', amount: '', date: new Date().toISOString().split('T')[0], period: '', newPersonName: '' });
         fetchDistribution();
       } else {
         toast.error("Error al registrar sueldo");
@@ -98,7 +149,7 @@ export default function DistributionPage() {
           {data && (
             <Button 
                 className="bg-emerald-600 hover:bg-emerald-700 rounded-full px-6 shadow-sm hover:shadow-md transition-all duration-300"
-                onClick={() => setIsSalaryModalOpen(true)}
+                onClick={openModal}
             >
                 <PlusCircle className="h-4 w-4 mr-2" />
                 Añadir Sueldo
@@ -220,14 +271,14 @@ export default function DistributionPage() {
         </div>
       )}
       <Dialog open={isSalaryModalOpen} onOpenChange={setIsSalaryModalOpen}>
-        <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-md">
+        <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-md bg-white">
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl text-stone-800">Registrar Sueldo</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="space-y-2">
                 <Label>Integrante</Label>
-                <Select value={salaryForm.userId} onValueChange={(v) => setSalaryForm({...salaryForm, userId: v || ''})}>
+                <Select value={salaryForm.userId} onValueChange={(v) => setSalaryForm({...salaryForm, userId: v || '', newPersonName: ''})}>
                     <SelectTrigger className="rounded-xl border-stone-200 h-12">
                         <SelectValue placeholder="Seleccionar persona..." />
                     </SelectTrigger>
@@ -235,9 +286,22 @@ export default function DistributionPage() {
                         {data?.distribution?.map((m: any) => (
                             <SelectItem key={m.userId || m.name} value={m.userId || m.name}>{m.name}</SelectItem>
                         ))}
+                        <SelectItem value="NEW_PERSON">+ Registrar otra persona...</SelectItem>
                     </SelectContent>
                 </Select>
             </div>
+            {salaryForm.userId === 'NEW_PERSON' && (
+                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <Label>Nombre de la nueva persona</Label>
+                    <Input 
+                        type="text" 
+                        placeholder="Ej: María" 
+                        className="rounded-xl border-stone-200 h-12"
+                        value={salaryForm.newPersonName}
+                        onChange={(e) => setSalaryForm({...salaryForm, newPersonName: e.target.value})}
+                    />
+                </div>
+            )}
             <div className="space-y-2">
                 <Label>Monto (Sueldo)</Label>
                 <Input 
@@ -249,12 +313,35 @@ export default function DistributionPage() {
                 />
             </div>
             <div className="space-y-2">
+                <Label>Periodo</Label>
+                <Select 
+                    value={salaryForm.period} 
+                    onValueChange={(v) => {
+                        const newDate = v ? `${v}-01` : salaryForm.date;
+                        setSalaryForm({...salaryForm, period: v || '', date: newDate});
+                    }}
+                >
+                    <SelectTrigger className="rounded-xl border-stone-200 h-12">
+                        <SelectValue placeholder="Seleccionar periodo..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                        {getMonthOptions().map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
+            <div className="space-y-2">
                 <Label>Fecha</Label>
                 <Input 
                     type="date" 
                     className="rounded-xl border-stone-200 h-12"
                     value={salaryForm.date}
-                    onChange={(e) => setSalaryForm({...salaryForm, date: e.target.value})}
+                    onChange={(e) => {
+                        const dateVal = e.target.value;
+                        const periodVal = dateVal ? dateVal.substring(0, 7) : salaryForm.period;
+                        setSalaryForm({...salaryForm, date: dateVal, period: periodVal});
+                    }}
                 />
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { authenticateBasicAuth } from "@/lib/basicAuth";
-import { TransactionType } from "@/generated/client";
+import { TransactionType } from "@prisma/client";
 
 export async function GET(req: Request) {
   const user = await authenticateBasicAuth(req);
@@ -41,8 +41,10 @@ export async function GET(req: Request) {
     : { householdId };
 
   // Fetch all related entities in parallel
+  // Fetch all related entities in parallel
   const [
-    transactions,
+    personalTransactions,
+    householdTransactions,
     categories,
     budgets,
     salaries,
@@ -50,13 +52,47 @@ export async function GET(req: Request) {
     debts,
     members
   ] = await Promise.all([
+    // A. Personal transactions
     prisma.transaction.findMany({
       where: {
         deletedAt: null,
-        OR: [
-          { householdId },
-          { userId: user.id }
-        ],
+        userId: user.id,
+        householdId: null,
+        ...(billingPeriod ? { billingPeriod } : {}),
+        ...(sinceDate ? { updatedAt: { gt: sinceDate } } : {})
+      },
+      select: {
+        id: true,
+        externalId: true,
+        amount: true,
+        date: true,
+        type: true,
+        description: true,
+        cardType: true,
+        billingPeriod: true,
+        ignored: true,
+        createdAt: true,
+        updatedAt: true,
+        scope: true,
+        userId_internal: true,
+        category: {
+          select: {
+            name: true
+          }
+        },
+        creator: {
+          select: {
+            name: true,
+            email: true
+          }
+        }
+      }
+    }),
+    // B. Household transactions
+    prisma.transaction.findMany({
+      where: {
+        deletedAt: null,
+        householdId,
         ...(billingPeriod ? { billingPeriod } : {}),
         ...(sinceDate ? { updatedAt: { gt: sinceDate } } : {})
       },
@@ -130,6 +166,9 @@ export async function GET(req: Request) {
       include: { user: { select: { id: true, name: true, email: true } } }
     })
   ]);
+
+  const transactions = [...personalTransactions, ...householdTransactions]
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 
   let deletedIds: string[] = [];
   if (sinceDate) {

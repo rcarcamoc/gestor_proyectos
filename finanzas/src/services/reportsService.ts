@@ -2,21 +2,52 @@ import { prisma } from "@/lib/prisma";
 import { getBudgets } from "./budgetService";
 import { detectOutliers, detectRecurrence, getPredictions, calculateBehaviorScore } from "./advancedInsightsService";
 
+function getLastNPeriods(startPeriod: string, n = 6): string[] {
+  const parts = startPeriod.split("-");
+  const year = parseInt(parts[0]);
+  const month = parseInt(parts[1]);
+  const date = new Date(year, month - 1, 1);
+  const periods: string[] = [];
+  
+  for (let i = 0; i < n; i++) {
+    const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    periods.push(`${d.getFullYear()}-${m}`);
+  }
+  return periods.reverse();
+}
+
+function getPeriodDate(periodLabel: string): Date {
+  if (/^\d{4}-\d{2}$/.test(periodLabel)) {
+    const parts = periodLabel.split("-");
+    return new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, 1);
+  }
+  const parts = periodLabel.split(" - ");
+  if (parts.length !== 2) return new Date();
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const monthIdx = monthNames.indexOf(parts[0]);
+  return new Date(parseInt(parts[1]), monthIdx === -1 ? 0 : monthIdx, 1);
+}
+
 export async function generateMonthlyReport(params: { month: number; year: number; userId: string; householdId?: string; billingPeriod?: string }) {
   const { month, year, userId, householdId, billingPeriod } = params;
   
   const startOfMonth = new Date(year, month - 1, 1);
   const endOfMonth = new Date(year, month, 0, 23, 59, 59);
 
-  // Build where filter robustly
   const targetPeriod = billingPeriod || `${year}-${String(month).padStart(2, "0")}`;
-  
+  const periods = getLastNPeriods(targetPeriod, 6);
+
+  // We want to fetch 6 months of data in a single query
+  const firstPeriodParts = periods[0].split("-");
+  const startOf6Months = new Date(parseInt(firstPeriodParts[0]), parseInt(firstPeriodParts[1]) - 1, 1);
+
   const periodOrDateCondition = {
     OR: [
-      { billingPeriod: targetPeriod },
+      { billingPeriod: { in: periods } },
       {
         billingPeriod: null,
-        date: { gte: startOfMonth, lte: endOfMonth }
+        date: { gte: startOf6Months, lte: endOfMonth }
       }
     ]
   };
@@ -42,7 +73,7 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   }
 
   // 1. Fetch data in parallel
-  const [transactions, categories, budgets, accounts] = await Promise.all([
+  const [allTransactions, categories, budgets, accounts, salaries] = await Promise.all([
     prisma.transaction.findMany({
       where: whereFilter,
       include: { category: true },
@@ -60,61 +91,51 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
     getBudgets({ month, year, userId: householdId ? undefined : userId, householdId }),
     prisma.account.findMany({
       where: householdId ? { householdId } : { userId, householdId: null }
+    }),
+    prisma.salary.findMany({
+      where: {
+        period: { in: periods },
+        ...(householdId ? { householdId } : { userId })
+      }
     })
   ]);
+
+  // Filter transactions for the current period in memory
+  const transactions = allTransactions.filter(t => 
+    t.billingPeriod === targetPeriod || 
+    (t.billingPeriod === null && t.date >= startOfMonth && t.date <= endOfMonth)
+  );
 
   // 2. Metrics calculation
   const expensesPerCategory: Record<string, number> = {};
   let totalExpenses = 0;
-  let totalIncome = 0;
 
   transactions.forEach(t => {
     if (t.type === 'EXPENSE') {
       const catName = t.category?.name || 'Sin Categoría';
       expensesPerCategory[catName] = (expensesPerCategory[catName] || 0) + Number(t.amount);
       totalExpenses += Number(t.amount);
-    } else if (t.type === 'INCOME') {
-      totalIncome += Number(t.amount);
     }
   });
 
+  const totalIncome = salaries.filter(s => s.period === targetPeriod).reduce((sum, s) => sum + Number(s.amount), 0);
   const totalBalance = totalIncome - totalExpenses;
 
-  // 3. Evolution (Last 6 months)
+  // 3. Evolution (Last 6 months) calculated completely in memory
   const evolution = [];
-  const now = new Date(year, month - 1, 1);
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthStr = String(d.getMonth() + 1).padStart(2, "0");
-    const periodLabel = `${d.getFullYear()}-${monthStr}`;
+    const periodLabel = periods[5 - i];
+    const d = getPeriodDate(periodLabel);
 
-    const groupWhere: any = {
-      ignored: false,
-      billingPeriod: periodLabel,
-      deletedAt: null
-    };
-
-    if (householdId) {
-      groupWhere.householdId = householdId;
-      groupWhere.scope = 'HOUSEHOLD';
-    } else {
-      groupWhere.OR = [
-        { userId, householdId: null },
-        { userId_internal: userId, scope: 'PERSONAL' }
-      ];
-    }
-
-    const monthlyTxs = await prisma.transaction.groupBy({
-      by: ['type'],
-      where: groupWhere,
-      _sum: { amount: true }
-    });
+    const monthlyTxs = allTransactions.filter(t => t.billingPeriod === periodLabel);
+    const ingresos = salaries.filter(s => s.period === periodLabel).reduce((sum, s) => sum + Number(s.amount), 0);
+    const gastos = monthlyTxs.filter(t => t.type === 'EXPENSE').reduce((sum, t) => sum + Number(t.amount), 0);
 
     evolution.push({
       period: periodLabel,
       month: d.toLocaleString('es-CL', { month: 'short' }),
-      ingresos: Number(monthlyTxs.find(m => m.type === 'INCOME')?._sum.amount || 0),
-      gastos: Number(monthlyTxs.find(m => m.type === 'EXPENSE')?._sum.amount || 0)
+      ingresos,
+      gastos
     });
   }
 
@@ -202,13 +223,13 @@ export async function generateMonthlyReport(params: { month: number; year: numbe
   let projections: any[] = [];
   let behaviorScore: any = null;
 
-  if (householdId && billingPeriod) {
+  if (householdId && targetPeriod) {
     try {
       const [outliers, recurrence, preds, score] = await Promise.all([
-        detectOutliers(householdId, billingPeriod),
-        detectRecurrence(householdId, billingPeriod),
-        getPredictions(householdId, billingPeriod),
-        calculateBehaviorScore(householdId, billingPeriod)
+        detectOutliers(householdId, targetPeriod, allTransactions),
+        detectRecurrence(householdId, targetPeriod, transactions),
+        getPredictions(householdId, targetPeriod, allTransactions, categories),
+        calculateBehaviorScore(householdId, targetPeriod, allTransactions, salaries)
       ]);
       advancedOutliers = outliers;
       advancedInsights = recurrence;

@@ -168,18 +168,6 @@ export async function GET(req: Request) {
       });
     }
 
-    // 2. Household ID / User scope condition
-    if (householdId) {
-      whereFilter.householdId = householdId;
-    } else {
-      andConditions.push({
-        OR: [
-          { userId },
-          { householdId: { in: householdIds } }
-        ]
-      });
-    }
-
     // 3. Uncategorized condition
     if (uncategorized) {
       andConditions.push({
@@ -200,15 +188,47 @@ export async function GET(req: Request) {
       whereFilter.ignored = false;
     }
 
-    const transactions = await prisma.transaction.findMany({
-      where: whereFilter,
-      include: {
-        account: true,
-        category: true,
-      },
-      orderBy: { date: 'desc' },
-      take: billingPeriod ? 1000 : 200,
-    });
+    let transactions;
+    if (householdId) {
+      whereFilter.householdId = householdId;
+      transactions = await prisma.transaction.findMany({
+        where: whereFilter,
+        include: {
+          account: true,
+          category: true,
+        },
+        orderBy: { date: 'desc' },
+        take: billingPeriod ? 1000 : 200,
+      });
+    } else {
+      // Split query into two parallel queries to use indexes and avoid database-side OR scans
+      const limit = billingPeriod ? 1000 : 200;
+      const [personalTxs, householdTxs] = await Promise.all([
+        prisma.transaction.findMany({
+          where: {
+            ...whereFilter,
+            userId,
+            householdId: null
+          },
+          include: { account: true, category: true },
+          orderBy: { date: 'desc' },
+          take: limit
+        }),
+        prisma.transaction.findMany({
+          where: {
+            ...whereFilter,
+            householdId: { in: householdIds }
+          },
+          include: { account: true, category: true },
+          orderBy: { date: 'desc' },
+          take: limit
+        })
+      ]);
+
+      transactions = [...personalTxs, ...householdTxs]
+        .sort((a, b) => b.date.getTime() - a.date.getTime())
+        .slice(0, limit);
+    }
 
     const mappedTransactions = transactions.map(t => ({
       ...t,

@@ -44,13 +44,22 @@ function StatCard({ icon: Icon, iconBg, iconColor, label, value, subtitle, onCli
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="glass-card p-3 text-sm shadow-xl">
-      <p className="font-semibold text-stone-700 mb-1">{label}</p>
-      {payload.map((p: any, i: number) => (
-        <p key={i} style={{ color: p.color }} className="font-medium">
-          {p.name === 'ingresos' ? 'Ingresos' : 'Gastos'}: {fmt(p.value)}
-        </p>
-      ))}
+    <div className="bg-white/95 backdrop-blur-md border border-stone-100 p-4 text-xs shadow-2xl rounded-2xl flex flex-col gap-1.5 min-w-[150px] animate-in fade-in zoom-in-95 duration-200">
+      <p className="font-bold text-stone-800 border-b border-stone-100 pb-1.5 mb-1 text-[11px] uppercase tracking-wider">{label}</p>
+      {payload.map((p: any, i: number) => {
+        const isIngresos = p.name === 'ingresos';
+        return (
+          <div key={i} className="flex items-center justify-between gap-4 font-semibold">
+            <span className="text-stone-400 font-medium flex items-center gap-1.5">
+              <span className={`h-2.5 w-2.5 rounded-full ${isIngresos ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              {isIngresos ? 'Ingresos' : 'Gastos'}
+            </span>
+            <span className={isIngresos ? 'text-emerald-600' : 'text-rose-500'}>
+              {fmt(p.value)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };
@@ -70,7 +79,7 @@ import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { selectedScope, selectedPeriod } = useScope();
+  const { selectedScope, selectedPeriod, setSelectedPeriod } = useScope();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
@@ -135,7 +144,7 @@ export default function DashboardPage() {
               label="Balance del Periodo"
               value={fmt(stats.totalBalance)}
               subtitle="Neto para este periodo"
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod)}
+              onClick={() => router.push('/dashboard/transactions?period=' + selectedPeriod)}
             />
             <StatCard
               icon={ArrowDownRight}
@@ -144,7 +153,7 @@ export default function DashboardPage() {
               label="Gastos del Mes"
               value={fmt(stats.totalExpenses)}
               subtitle={`${stats.budgetVsActual.filter((b: any) => b.isOverBudget).length} categorías excedidas`}
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod + '&type=EXPENSE')}
+              onClick={() => router.push('/dashboard/transactions?period=' + selectedPeriod + '&type=EXPENSE')}
             />
             <StatCard
               icon={ArrowUpRight}
@@ -153,7 +162,7 @@ export default function DashboardPage() {
               label="Ingresos del Mes"
               value={fmt(stats.totalIncome)}
               subtitle={`Meta de ahorro: ${fmt(Math.max(0, stats.totalIncome - stats.totalBudget))}`}
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod + '&type=INCOME')}
+              onClick={() => router.push('/dashboard/transactions?period=' + selectedPeriod + '&type=INCOME')}
             />
             <StatCard
               icon={Activity}
@@ -162,7 +171,7 @@ export default function DashboardPage() {
               label="Promedio Diario"
               value={fmt(stats.dailyAverage || 0)}
               subtitle="Gasto promedio estimado"
-              onClick={() => router.push('/finanzas/dashboard/transactions?period=' + selectedPeriod + '&type=EXPENSE')}
+              onClick={() => router.push('/dashboard/transactions?period=' + selectedPeriod + '&type=EXPENSE')}
             />
           </div>
 
@@ -179,24 +188,34 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart 
                   data={stats.evolution} 
-                  margin={{ top: 0, right: 0, left: -20, bottom: 0 }} 
-                  barCategoryGap="30%"
+                  margin={{ top: 10, right: 0, left: -20, bottom: 0 }} 
+                  barCategoryGap="35%"
                   className="cursor-pointer"
                   onClick={(state) => {
                     if (state && state.activePayload && state.activePayload.length > 0) {
                       const clickedData = state.activePayload[0].payload;
                       if (clickedData && clickedData.period) {
-                        router.push(`/finanzas/dashboard/transactions?period=${clickedData.period}`);
+                        setSelectedPeriod(clickedData.period);
                       }
                     }
                   }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F5F5F4" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#A8A29E', fontSize: 11, fontWeight: 600 }} dy={10} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#A8A29E', fontSize: 11, fontWeight: 600 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F9FAFB', radius: 12 }} />
-                  <Bar dataKey="ingresos" fill="#10B981" radius={[8, 8, 2, 2]} maxBarSize={32} />
-                  <Bar dataKey="gastos" fill="#F43F5E" radius={[8, 8, 2, 2]} maxBarSize={32} />
+                  <defs>
+                    <linearGradient id="colorIngresos" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#34D399" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#059669" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="colorGastos" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FB7185" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#E11D48" stopOpacity={0.8} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" strokeOpacity={0.4} />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#78716C', fontSize: 11, fontWeight: 600 }} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#78716C', fontSize: 11, fontWeight: 600 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: '#F5F5F4', fillOpacity: 0.4, radius: 12 }} />
+                  <Bar dataKey="ingresos" fill="url(#colorIngresos)" radius={[6, 6, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="gastos" fill="url(#colorGastos)" radius={[6, 6, 0, 0]} maxBarSize={28} />
                 </BarChart>
               </ResponsiveContainer>
               <div className="flex gap-6 mt-6 pt-6 border-t border-stone-50">
@@ -248,7 +267,7 @@ export default function DashboardPage() {
                                 <div 
                                     key={i} 
                                     className="flex gap-3 p-3 rounded-2xl bg-rose-50/50 border border-rose-100/50 cursor-pointer hover:bg-rose-100/50 transition-colors"
-                                    onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${alert.categoryId}`)}
+                                    onClick={() => router.push(`/dashboard/transactions?period=${selectedPeriod}&category=${alert.categoryId}`)}
                                 >
                                     <AlertCircle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
                                     <p className="text-xs font-medium text-rose-800 leading-relaxed">{alert.message || alert}</p>
@@ -287,7 +306,7 @@ export default function DashboardPage() {
                                             dataKey="amount"
                                             onClick={(entry) => {
                                               if (entry && entry.id) {
-                                                router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${entry.id}`);
+                                                router.push(`/dashboard/transactions?period=${selectedPeriod}&category=${entry.id}`);
                                               }
                                             }}
                                             className="cursor-pointer"
@@ -313,7 +332,7 @@ export default function DashboardPage() {
                                         <div 
                                             key={i} 
                                             className="flex items-center justify-between text-xs cursor-pointer hover:bg-stone-50 p-1 rounded-lg transition-colors"
-                                            onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${entry.id}`)}
+                                            onClick={() => router.push(`/dashboard/transactions?period=${selectedPeriod}&category=${entry.id}`)}
                                         >
                                             <div className="flex items-center gap-2 truncate">
                                                 <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: entry.color || COLORS[i % COLORS.length] }} />
@@ -406,7 +425,7 @@ export default function DashboardPage() {
                             <div 
                                 key={i} 
                                 className="space-y-4 group cursor-pointer hover:bg-stone-50/50 p-3 rounded-2xl border border-transparent hover:border-stone-100 transition-all duration-300"
-                                onClick={() => router.push(`/finanzas/dashboard/transactions?period=${selectedPeriod}&category=${item.categoryId}`)}
+                                onClick={() => router.push(`/dashboard/transactions?period=${selectedPeriod}&category=${item.categoryId}`)}
                             >
                                 <div className="flex justify-between items-end">
                                     <div>

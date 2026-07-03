@@ -1,4 +1,4 @@
-import { PrismaClient } from '@/generated/client';
+import { PrismaClient } from '@prisma/client';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import fs from 'node:fs';
 import path from 'node:path';

@@ -95,10 +95,12 @@ export default function TransactionsPage() {
     description: '',
     categoryId: '',
     accountId: '',
+    scope: 'HOUSEHOLD',
     date: new Date().toISOString().split('T')[0],
     billingPeriod: formatBillingPeriod(new Date()),
     type: 'EXPENSE'
   });
+  const [newCategoryName, setNewCategoryName] = useState('');
   const { selectedScope, selectedPeriod, setSelectedPeriod } = useScope();
   const [isDeletePeriodOpen, setIsDeletePeriodOpen] = useState(false);
   const [deletePeriod, setDeletePeriod] = useState(formatBillingPeriod(new Date()));
@@ -108,6 +110,15 @@ export default function TransactionsPage() {
   const [selectedAccountFilter, setSelectedAccountFilter] = useState<string>('ALL');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('ALL');
   const [showFilters, setShowFilters] = useState(true);
+
+  useEffect(() => {
+    if (isAddModalOpen) {
+      setNewTx(prev => ({
+        ...prev,
+        scope: selectedScope === 'personal' ? 'PERSONAL' : 'HOUSEHOLD'
+      }));
+    }
+  }, [isAddModalOpen, selectedScope]);
 
   useEffect(() => {
     if (selectedPeriod) {
@@ -157,7 +168,32 @@ export default function TransactionsPage() {
   };
 
   const handleAddTransaction = async () => {
-    if (!newTx.amount || !newTx.accountId) return toast.error("Monto y cuenta son obligatorios");
+    if (!newTx.amount) return toast.error("Monto es obligatorio");
+    
+    // Determine householdId based on scope
+    let targetHouseholdId = null;
+    if (newTx.scope === 'HOUSEHOLD') {
+      targetHouseholdId = selectedScope !== 'personal' ? selectedScope : (households[0]?.id || null);
+      if (!targetHouseholdId && households.length > 0) {
+        targetHouseholdId = households[0].id;
+      }
+    }
+
+    // Determine accountId based on scope
+    let targetAccountId = null;
+    if (newTx.scope === 'PERSONAL') {
+      const personalAcc = accounts.find(a => !a.householdId);
+      targetAccountId = personalAcc ? personalAcc.id : null;
+    } else {
+      const hhAcc = accounts.find(a => a.householdId === targetHouseholdId);
+      targetAccountId = hhAcc ? hhAcc.id : null;
+    }
+
+    // Fallback if no specific account found
+    if (!targetAccountId) {
+      targetAccountId = accounts[0]?.id || null;
+    }
+
     setLoading(true);
     try {
         const res = await fetch('/finanzas/api/transactions', {
@@ -165,7 +201,10 @@ export default function TransactionsPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 ...newTx,
-                amount: Math.abs(parseFloat(newTx.amount))
+                amount: Math.abs(parseFloat(newTx.amount)),
+                householdId: targetHouseholdId,
+                accountId: targetAccountId,
+                scope: newTx.scope
             })
         });
         if (res.ok) {
@@ -176,6 +215,7 @@ export default function TransactionsPage() {
               description: '',
               categoryId: '',
               accountId: '',
+              scope: selectedScope === 'personal' ? 'PERSONAL' : 'HOUSEHOLD',
               date: new Date().toISOString().split('T')[0],
               billingPeriod: selectedPeriod || formatBillingPeriod(new Date()),
               type: 'EXPENSE'
@@ -690,16 +730,16 @@ export default function TransactionsPage() {
       </Card>
 
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="rounded-[2rem] border-stone-100 shadow-2xl max-w-lg">
+        <DialogContent className="rounded-[2.5rem] border border-stone-200/80 bg-white p-8 shadow-2xl max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-serif text-2xl text-stone-800">Nuevo Registro</DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Tipo</Label>
+                    <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Tipo</Label>
                     <Select value={newTx.type} onValueChange={(v) => setNewTx({...newTx, type: v || 'EXPENSE'})}>
-                        <SelectTrigger className="rounded-xl border-stone-200">
+                        <SelectTrigger className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
@@ -709,33 +749,34 @@ export default function TransactionsPage() {
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label>Monto</Label>
+                    <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Monto</Label>
                     <Input 
                         type="number" 
                         placeholder="0" 
-                        className="rounded-xl border-stone-200"
+                        className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400"
                         value={newTx.amount}
                         onChange={(e) => setNewTx({...newTx, amount: e.target.value})}
                     />
                 </div>
             </div>
             <div className="space-y-2">
-                <Label>Descripción</Label>
+                <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Descripción</Label>
                 <Input 
                     placeholder="Ej: Supermercado" 
-                    className="rounded-xl border-stone-200"
+                    className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400"
                     value={newTx.description}
                     onChange={(e) => setNewTx({...newTx, description: e.target.value})}
                 />
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Categoría</Label>
+                    <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Categoría</Label>
                     <Select value={newTx.categoryId} onValueChange={(v) => setNewTx({...newTx, categoryId: v || ''})}>
-                        <SelectTrigger className="rounded-xl border-stone-200">
+                        <SelectTrigger className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400">
                             <SelectValue placeholder="Seleccionar..." />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
+                            <SelectItem value="NEW_CATEGORY">✨ + Nueva Categoría...</SelectItem>
                             {categories.map(c => (
                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                             ))}
@@ -743,25 +784,70 @@ export default function TransactionsPage() {
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label>Cuenta</Label>
-                    <Select value={newTx.accountId} onValueChange={(v) => setNewTx({...newTx, accountId: v || ''})}>
-                        <SelectTrigger className="rounded-xl border-stone-200">
+                    <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Imputación</Label>
+                    <Select value={newTx.scope} onValueChange={(v) => setNewTx({...newTx, scope: v || 'HOUSEHOLD'})}>
+                        <SelectTrigger className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400">
                             <SelectValue placeholder="Seleccionar..." />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">
-                            {accounts.map(a => (
-                                <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                            ))}
+                            <SelectItem value="HOUSEHOLD">🏠 Familia / Compartido</SelectItem>
+                            <SelectItem value="PERSONAL">👤 Personal</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
+
+            {newTx.categoryId === 'NEW_CATEGORY' && (
+              <div className="p-4 bg-stone-50 border border-stone-200/60 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Nombre de la Nueva Categoría</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    placeholder="Ej: Regalos, Educación..." 
+                    className="rounded-xl border-stone-200 bg-white"
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                  />
+                  <Button 
+                    type="button" 
+                    className="bg-stone-800 hover:bg-stone-900 text-white rounded-xl px-4 text-xs font-semibold"
+                    onClick={async () => {
+                      if (!newCategoryName.trim()) return toast.error("Ingresa un nombre");
+                      try {
+                        const targetHouseholdId = selectedScope !== 'personal' ? selectedScope : (households[0]?.id || null);
+                        const res = await fetch('/finanzas/api/categories', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            name: newCategoryName.trim(),
+                            householdId: targetHouseholdId
+                          })
+                        });
+                        if (res.ok) {
+                          const created = await res.json();
+                          setCategories(prev => [...prev, created]);
+                          setNewTx(prev => ({ ...prev, categoryId: created.id }));
+                          setNewCategoryName('');
+                          toast.success("Categoría creada");
+                        } else {
+                          toast.error("Error al crear categoría");
+                        }
+                      } catch (err) {
+                        toast.error("Error de red");
+                      }
+                    }}
+                  >
+                    Crear
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label>Fecha</Label>
+                    <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Fecha</Label>
                     <Input 
                         type="date" 
-                        className="rounded-xl border-stone-200"
+                        className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400"
                         value={newTx.date}
                         onChange={(e) => {
                           const newDate = e.target.value;
@@ -774,9 +860,9 @@ export default function TransactionsPage() {
                     />
                 </div>
                 <div className="space-y-2">
-                    <Label>Periodo de Facturación</Label>
+                    <Label className="text-stone-700 font-semibold text-xs uppercase tracking-wider">Periodo de Facturación</Label>
                     <Select value={newTx.billingPeriod} onValueChange={(v) => v && setNewTx({...newTx, billingPeriod: v})}>
-                        <SelectTrigger className="rounded-xl border-stone-200">
+                        <SelectTrigger className="rounded-xl border-stone-200 bg-stone-50/50 focus:bg-white focus:border-stone-400">
                             <SelectValue placeholder="Seleccionar..." />
                         </SelectTrigger>
                         <SelectContent className="rounded-xl">

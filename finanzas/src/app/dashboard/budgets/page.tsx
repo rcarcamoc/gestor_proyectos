@@ -14,7 +14,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
-  PieChart
+  PieChart,
+  Sparkles
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -32,6 +33,40 @@ export default function BudgetsPage() {
   const [yearStr, monthStr] = (selectedPeriod || '').split('-');
   const year = yearStr ? parseInt(yearStr) : new Date().getFullYear();
   const month = monthStr ? parseInt(monthStr) : new Date().getMonth() + 1;
+  const [inheriting, setInheriting] = useState(false);
+
+  const handleInherit = async () => {
+    if (!confirm("¿Deseas copiar todos los presupuestos del mes anterior a este mes?")) return;
+    setInheriting(true);
+    try {
+      const res = await fetch('/finanzas/api/budgets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'inherit',
+          month,
+          year,
+          householdId: selectedScope === 'personal' ? null : selectedScope
+        })
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        if (result.count > 0) {
+          toast.success(`Se heredaron ${result.count} presupuestos con éxito`);
+          fetchData();
+        } else {
+          toast.info("No se encontraron presupuestos en el mes anterior para copiar.");
+        }
+      } else {
+        toast.error(result.message || "Error al heredar presupuestos");
+      }
+    } catch (err) {
+      toast.error("Error de conexión");
+    } finally {
+      setInheriting(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedPeriod) {
@@ -124,16 +159,28 @@ export default function BudgetsPage() {
           <p className="text-stone-500 mt-1.5 font-medium">Controla tus límites de gasto por categoría.</p>
         </div>
         
-        <div className="flex items-center bg-white border border-stone-100 shadow-sm rounded-full p-1.5">
-          <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-stone-400 hover:text-stone-800" onClick={prevMonth}>
-            <ChevronLeft className="h-5 w-5" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <Button 
+            onClick={handleInherit}
+            disabled={inheriting}
+            variant="outline"
+            className="rounded-full px-5 border-stone-200 text-stone-600 hover:bg-stone-50 transition-all duration-300 font-medium text-sm flex items-center justify-center gap-2 h-11"
+          >
+            {inheriting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-amber-500" />}
+            Heredar del mes anterior
           </Button>
-          <div className="px-6 font-serif text-stone-800 font-bold capitalize min-w-[160px] text-center">
-            {monthName}
+
+          <div className="flex items-center bg-white border border-stone-100 shadow-sm rounded-full p-1.5 justify-between">
+            <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-stone-400 hover:text-stone-800" onClick={prevMonth}>
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="px-6 font-serif text-stone-800 font-bold capitalize min-w-[160px] text-center">
+              {monthName}
+            </div>
+            <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-stone-400 hover:text-stone-800" onClick={nextMonth}>
+              <ChevronRight className="h-5 w-5" />
+            </Button>
           </div>
-          <Button variant="ghost" size="icon" className="rounded-full h-10 w-10 text-stone-400 hover:text-stone-800" onClick={nextMonth}>
-            <ChevronRight className="h-5 w-5" />
-          </Button>
         </div>
       </div>
 

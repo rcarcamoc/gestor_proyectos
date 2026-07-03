@@ -61,10 +61,7 @@ export async function POST(req: Request) {
     // Check if category already exists (case-insensitive)
     const existing = await prisma.category.findFirst({
       where: {
-        name: {
-          equals: trimmedName,
-          mode: "insensitive"
-        },
+        name: trimmedName,
         OR: [
           { userId },
           { householdId: householdId || null },

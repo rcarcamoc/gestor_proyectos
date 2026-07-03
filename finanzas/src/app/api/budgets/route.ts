@@ -36,6 +36,46 @@ export async function POST(req: Request) {
   if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
   const data = await req.json();
+  const { action, month, year, householdId } = data;
+
+  if (action === "inherit") {
+    if (!month || !year) {
+      return NextResponse.json({ message: "month and year are required" }, { status: 400 });
+    }
+    const prevMonth = month === 1 ? 12 : month - 1;
+    const prevYear = month === 1 ? year - 1 : year;
+
+    try {
+      const prevBudgets = await getBudgets({
+        month: prevMonth,
+        year: prevYear,
+        userId: householdId ? undefined : userId,
+        householdId: householdId || undefined
+      });
+
+      if (prevBudgets.length === 0) {
+        return NextResponse.json({ message: "No previous budgets found to inherit", count: 0 });
+      }
+
+      const inherited = [];
+      for (const pb of prevBudgets) {
+        const budget = await upsertBudget({
+          limit: Number(pb.limit),
+          month,
+          year,
+          categoryId: pb.categoryId,
+          userId: householdId ? undefined : userId,
+          householdId: householdId || undefined
+        });
+        inherited.push(budget);
+      }
+
+      return NextResponse.json({ message: "Budgets inherited successfully", count: inherited.length });
+    } catch (err) {
+      console.error("Budget inheritance error:", err);
+      return NextResponse.json({ message: "Error inheriting budgets" }, { status: 500 });
+    }
+  }
 
   try {
     let categoryId = data.categoryId;

@@ -24,7 +24,8 @@ export async function POST(req: Request) {
       categoryName,
       householdId,
       billingPeriod,
-      externalId
+      externalId,
+      scope
     } = await req.json();
 
     const finalBillingPeriod = billingPeriod || formatBillingPeriod(date);
@@ -86,6 +87,7 @@ export async function POST(req: Request) {
           accountId: resolvedAccountId,
           categoryId: resolvedCategoryId,
           householdId,
+          scope: scope || "HOUSEHOLD",
           billingPeriod: finalBillingPeriod,
           userId: userId, // The owner
           userId_internal: userId, // The creator
